@@ -1,0 +1,21 @@
+.env
+*.log
+
+# Rails
+rails-app/log/*
+rails-app/tmp/*
+!rails-app/log/.keep
+!rails-app/tmp/.keep
+rails-app/storage/*
+!rails-app/storage/.keep
+rails-app/.byebug_history
+rails-app/config/master.key
+rails-app/public/assets
+
+# Node / wa-service
+wa-service/node_modules/
+wa-service/dist/
+wa-service/auth/
+
+# macOS
+.DS_Store
