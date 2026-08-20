@@ -386,6 +386,7 @@ DEPENDENCIES
   brakeman
   bundler-audit
   debug
+  fugit
   image_processing (~> 1.2)
   importmap-rails
   jbuilder
