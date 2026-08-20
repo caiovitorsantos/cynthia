@@ -1,0 +1,10 @@
+<div
+  id="connection_status"
+  <% if @status == "qr_pending" %>
+    data-controller="poller"
+    data-poller-url-value="<%= connection_path(format: :turbo_stream) %>"
+    data-poller-interval-value="5000"
+  <% end %>
+>
+  <%= render "status" %>
+</div>

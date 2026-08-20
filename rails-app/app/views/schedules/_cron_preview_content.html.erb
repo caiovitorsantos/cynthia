@@ -1,0 +1,16 @@
+<div class="mt-2 text-sm">
+  <% if cron %>
+    <p class="text-gray-700"><%= rough_frequency_in_words(cron.rough_frequency) %></p>
+    <ul class="mt-1 list-disc list-inside text-gray-500">
+      <% t = Time.current %>
+      <% 3.times do %>
+        <% t = cron.next_time(t) %>
+        <li><%= t.to_t.in_time_zone(timezone).strftime("%d/%m/%Y %H:%M") %></li>
+      <% end %>
+    </ul>
+  <% elsif params[:cron_expression].present? %>
+    <p class="text-red-600">Expressão cron inválida.</p>
+  <% else %>
+    <p class="text-gray-400">Preencha o cron acima e clique em "Pré-visualizar".</p>
+  <% end %>
+</div>

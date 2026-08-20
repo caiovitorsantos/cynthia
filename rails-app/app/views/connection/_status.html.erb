@@ -1,0 +1,38 @@
+<div class="space-y-4">
+  <p>
+    Status:
+    <span class="font-mono px-2 py-1 rounded <%=
+      case @status
+      when "connected" then "bg-green-100 text-green-800"
+      when "qr_pending" then "bg-yellow-100 text-yellow-800"
+      else "bg-red-100 text-red-800"
+      end
+    %>">
+      <%= @status %>
+    </span>
+  </p>
+
+  <% if @status == "qr_pending" %>
+    <div>
+      <p class="mb-2 text-sm text-gray-600">
+        Escaneie com o WhatsApp — use sempre um número secundário/descartável.
+      </p>
+      <% if @qr.present? %>
+        <%= image_tag @qr, alt: "QR Code", class: "w-64 h-64 border" %>
+      <% else %>
+        <p class="text-sm text-gray-500">Gerando QR Code...</p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @status == "connected" %>
+    <%= button_to "Encerrar sessão (logout)", logout_connection_path,
+          method: :post,
+          class: "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700",
+          data: { turbo_confirm: "Tem certeza? Isso vai desconectar o WhatsApp e exigir um novo QR Code." } %>
+  <% end %>
+
+  <% if @status == "unreachable" %>
+    <p class="text-sm text-gray-600">Não foi possível falar com o wa-service. Verifique se o container está no ar.</p>
+  <% end %>
+</div>

@@ -7,8 +7,27 @@ class Schedule < ApplicationRecord
   validate :cron_expression_xor_run_at
   validate :cron_expression_is_valid
   validate :template_variables_present
+  validate :variables_json_is_valid
+
+  # Atributo virtual para editar `variables` (jsonb) como texto no formulário admin.
+  def variables_json
+    @variables_json_raw || variables.to_json
+  end
+
+  def variables_json=(value)
+    @variables_json_raw = value
+    self.variables = value.present? ? JSON.parse(value) : {}
+  rescue JSON::ParserError
+    @variables_json_invalid = true
+  end
 
   private
+
+  def variables_json_is_valid
+    return unless @variables_json_invalid
+
+    errors.add(:variables, 'não é um JSON válido, ex: {"nome": "Caio"}')
+  end
 
   def cron_expression_xor_run_at
     return if cron_expression.present? != run_at.present?

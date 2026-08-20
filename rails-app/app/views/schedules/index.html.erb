@@ -1,0 +1,43 @@
+<% content_for :title, "Agendamentos" %>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Agendamentos</h1>
+  <%= link_to "Novo agendamento", new_schedule_path, class: "bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-800" %>
+</div>
+
+<table class="w-full text-sm border-collapse bg-white shadow rounded overflow-hidden">
+  <thead class="bg-gray-100">
+    <tr class="text-left">
+      <th class="py-2 px-3">Template</th>
+      <th class="py-2 px-3">Grupo</th>
+      <th class="py-2 px-3">Recorrência</th>
+      <th class="py-2 px-3">Próxima execução</th>
+      <th class="py-2 px-3">Ativo</th>
+      <th class="py-2 px-3"></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @schedules.each do |schedule| %>
+      <tr class="border-t">
+        <td class="py-2 px-3"><%= schedule.template.name %></td>
+        <td class="py-2 px-3"><%= schedule.whatsapp_group.name %></td>
+        <td class="py-2 px-3 font-mono text-xs">
+          <%= schedule.cron_expression.presence || "único: #{schedule.run_at&.strftime('%d/%m/%Y %H:%M')}" %>
+        </td>
+        <td class="py-2 px-3"><%= schedule.next_run_at&.strftime("%d/%m/%Y %H:%M") || "—" %></td>
+        <td class="py-2 px-3"><%= schedule.active? ? "Sim" : "Não" %></td>
+        <td class="py-2 px-3 text-right space-x-3">
+          <%= button_to "Enviar teste agora", send_test_schedule_path(schedule), method: :post,
+                class: "text-green-700 hover:underline bg-transparent p-0 inline" %>
+          <%= link_to "Editar", edit_schedule_path(schedule), class: "text-blue-600 hover:underline" %>
+          <%= button_to "Remover", schedule_path(schedule), method: :delete,
+                form: { data: { turbo_confirm: "Remover este agendamento?" }, class: "inline" },
+                class: "text-red-600 hover:underline bg-transparent p-0" %>
+        </td>
+      </tr>
+    <% end %>
+    <% if @schedules.empty? %>
+      <tr><td colspan="6" class="py-4 px-3 text-center text-gray-500">Nenhum agendamento cadastrado.</td></tr>
+    <% end %>
+  </tbody>
+</table>

@@ -1,0 +1,61 @@
+<% content_for :title, "Logs" %>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Logs de envio</h1>
+  <%= form_with url: logs_path, method: :get, class: "flex gap-2" do %>
+    <%= select_tag :status, options_for_select(
+          [["Todos", ""], ["Pendente", "pending"], ["Enviado", "sent"], ["Falhou", "failed"]], @status),
+          onchange: "this.form.requestSubmit()",
+          class: "rounded border-gray-300 text-sm" %>
+  <% end %>
+</div>
+
+<table class="w-full text-sm border-collapse bg-white shadow rounded overflow-hidden">
+  <thead class="bg-gray-100">
+    <tr class="text-left">
+      <th class="py-2 px-3">Grupo</th>
+      <th class="py-2 px-3">Mensagem</th>
+      <th class="py-2 px-3">Status</th>
+      <th class="py-2 px-3">Erro</th>
+      <th class="py-2 px-3">Criado em</th>
+      <th class="py-2 px-3"></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @logs.each do |log| %>
+      <tr class="border-t">
+        <td class="py-2 px-3 font-mono text-xs"><%= log.group_jid %></td>
+        <td class="py-2 px-3 max-w-xs truncate" title="<%= log.rendered_body %>"><%= log.rendered_body %></td>
+        <td class="py-2 px-3">
+          <span class="px-2 py-1 rounded text-xs <%=
+            case log.status
+            when "sent" then "bg-green-100 text-green-800"
+            when "failed" then "bg-red-100 text-red-800"
+            else "bg-gray-100 text-gray-800"
+            end
+          %>"><%= log.status %></span>
+        </td>
+        <td class="py-2 px-3 text-xs text-red-600"><%= log.error_message %></td>
+        <td class="py-2 px-3"><%= log.created_at.strftime("%d/%m/%Y %H:%M") %></td>
+        <td class="py-2 px-3 text-right">
+          <% if log.status == "failed" %>
+            <%= button_to "Reenviar", resend_log_path(log), method: :post,
+                  class: "text-blue-600 hover:underline bg-transparent p-0" %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+    <% if @logs.empty? %>
+      <tr><td colspan="6" class="py-4 px-3 text-center text-gray-500">Nenhum log encontrado.</td></tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @total_pages > 1 %>
+  <div class="mt-4 flex gap-2 text-sm">
+    <% (1..@total_pages).each do |page| %>
+      <%= link_to page, logs_path(status: @status, page: page),
+            class: "px-3 py-1 rounded #{page == @page ? 'bg-gray-900 text-white' : 'bg-white border'}" %>
+    <% end %>
+  </div>
+<% end %>

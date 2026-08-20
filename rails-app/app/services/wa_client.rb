@@ -28,6 +28,10 @@ class WaClient
       handle(connection.get("/qr"))["qr"]
     end
 
+    def logout
+      handle(connection.post("/logout"))
+    end
+
     private
 
     def connection
