@@ -52,6 +52,25 @@ services:
       - /app/node_modules
       - wa_auth:/app/auth
 
+  sidekiq:
+    build:
+      context: ./rails-app
+      dockerfile: Dockerfile.dev
+    command: bundle exec sidekiq
+    env_file: .env
+    environment:
+      WA_SERVICE_URL: http://wa:3001
+    volumes:
+      - ./rails-app:/rails
+      - rails_bundle:/usr/local/bundle
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      wa:
+        condition: service_started
+
 volumes:
   db_data:
   redis_data:

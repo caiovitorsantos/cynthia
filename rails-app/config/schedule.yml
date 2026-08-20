@@ -1,0 +1,7 @@
+dispatch_due_schedules:
+  cron: "* * * * *"
+  class: "DispatchDueSchedulesJob"
+
+sync_groups:
+  cron: "*/30 * * * *"
+  class: "SyncGroupsJob"
