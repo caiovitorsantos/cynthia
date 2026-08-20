@@ -16,12 +16,17 @@ class SendScheduledMessageJob
     )
 
     begin
+      SendGuard.check!(group_jid: schedule.whatsapp_group.jid, message: rendered_body)
       WaClient.send_message(group_jid: schedule.whatsapp_group.jid, message: rendered_body)
       message_log.update!(status: "sent", sent_at: Time.current)
     rescue WaClient::NotConnected => e
       # Problema de sessão, não transiente: não deixa o Sidekiq re-tentar.
       message_log.update!(status: "failed", error_message: e.message)
-    rescue WaClient::Error => e
+    rescue SendGuard::DailyCapReachedError, SendGuard::DuplicateMessageError => e
+      # Bloqueio deliberado de política: não adianta re-tentar em segundos.
+      message_log.update!(status: "failed", error_message: e.message)
+    rescue SendGuard::ThrottledError, WaClient::Error => e
+      # Transiente: deixa o retry padrão do Sidekiq tentar de novo em breve.
       message_log.update!(status: "failed", error_message: e.message)
       raise
     end

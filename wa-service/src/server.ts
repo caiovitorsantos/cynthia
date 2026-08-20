@@ -2,12 +2,31 @@ import "dotenv/config";
 import express from "express";
 import QRCode from "qrcode";
 import pino from "pino";
+import type { WASocket } from "@whiskeysockets/baileys";
 import { requireInternalToken } from "./middleware/auth";
 import * as whatsapp from "./whatsapp";
 
 const logger = pino({ level: "info" });
 const app = express();
 app.use(express.json());
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function randomSeconds(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Delay aleatório + simulação de "digitando" antes de cada envio, para reduzir
+// o risco de detecção de bot pelo WhatsApp.
+async function sendLikeAHuman(sock: WASocket, jid: string, message: string): Promise<void> {
+  await sock.sendPresenceUpdate("composing", jid);
+  await sleep(2_000);
+  await sock.sendPresenceUpdate("paused", jid);
+
+  await sleep(randomSeconds(3, 12) * 1_000);
+
+  await sock.sendMessage(jid, { text: message });
+}
 
 app.get("/health", (_req, res) => {
   res.json({ status: whatsapp.getStatus(), connected: whatsapp.getStatus() === "connected" });
@@ -60,7 +79,7 @@ app.post("/send", async (req, res) => {
     return;
   }
 
-  await sock.sendMessage(group_jid, { text: message });
+  await sendLikeAHuman(sock, group_jid, message);
   res.json({ status: "sent" });
 });
 

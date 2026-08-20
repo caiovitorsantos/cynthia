@@ -3,10 +3,17 @@ class WaClient
   NotConnected = Class.new(Error)
 
   TIMEOUT = 15
+  # /send inclui delay humano proposital no wa-service (até ~14s: 2s de
+  # presença + até 12s aleatório), então precisa de folga acima do timeout padrão.
+  SEND_TIMEOUT = 30
 
   class << self
     def send_message(group_jid:, message:)
-      handle(connection.post("/send", { group_jid: group_jid, message: message }))
+      response = connection.post("/send", { group_jid: group_jid, message: message }) do |req|
+        req.options.timeout = SEND_TIMEOUT
+        req.options.open_timeout = SEND_TIMEOUT
+      end
+      handle(response)
     end
 
     def groups
