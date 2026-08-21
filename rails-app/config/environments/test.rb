@@ -6,6 +6,15 @@
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  # DB Redis separado do dev (mesmo host), para specs nao mexerem no
+  # estado do Sidekiq/SendGuard rodando em desenvolvimento.
+  ENV["REDIS_URL"] = ENV["REDIS_URL"].to_s.sub(%r{/\d+\z}, "") + "/1"
+
+  # DATABASE_URL do .env aponta pro banco de dev e tem prioridade sobre
+  # o database.yml mesmo com RAILS_ENV=test; sem isso, os testes rodariam
+  # (e o db:schema:load bloquearia) no banco de desenvolvimento.
+  ENV["DATABASE_URL"] = ENV["DATABASE_URL"].to_s.sub(/_development\z/, "_test")
+
   # While tests run files are not watched, reloading is not necessary.
   config.enable_reloading = false
 
