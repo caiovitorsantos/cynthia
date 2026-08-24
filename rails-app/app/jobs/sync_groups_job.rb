@@ -28,8 +28,19 @@ class SyncGroupsJob
         synced_at: Time.current
       }
     end
+    rows = rows.uniq { |row| row[:jid] }
 
-    GroupParticipant.upsert_all(rows, unique_by: [ :whatsapp_group_id, :jid ]) if rows.any?
+    if rows.any?
+      GroupParticipant.upsert_all(
+        rows,
+        unique_by: [ :whatsapp_group_id, :jid ],
+        on_duplicate: Arel.sql(
+          "name = COALESCE(EXCLUDED.name, group_participants.name), " \
+          "phone_number = EXCLUDED.phone_number, synced_at = EXCLUDED.synced_at, " \
+          "updated_at = EXCLUDED.updated_at"
+        )
+      )
+    end
     wa_group.group_participants.where.not(jid: rows.map { |row| row[:jid] }).delete_all
   end
 

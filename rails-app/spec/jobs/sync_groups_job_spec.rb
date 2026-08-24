@@ -67,6 +67,48 @@ RSpec.describe SyncGroupsJob do
     expect(group.group_participants.pluck(:jid)).to eq([ "a@s.whatsapp.net" ])
   end
 
+  it "preserva o nome já conhecido quando o wa-service retorna nome nulo (cache frio)" do
+    stub_request(:get, "#{wa_service_url}/groups").to_return(
+      status: 200,
+      body: [ { jid: "g1@g.us", name: "Grupo 1", participants_count: 2, participants: [
+        { jid: "a@s.whatsapp.net", name: "A" }, { jid: "b@s.whatsapp.net", name: "B" }
+      ] } ].to_json,
+      headers: { "Content-Type" => "application/json" }
+    ).then.to_return(
+      status: 200,
+      body: [ { jid: "g1@g.us", name: "Grupo 1", participants_count: 2, participants: [
+        { jid: "a@s.whatsapp.net", name: nil }, { jid: "b@s.whatsapp.net", name: "B" }
+      ] } ].to_json,
+      headers: { "Content-Type" => "application/json" }
+    )
+
+    described_class.new.perform
+    described_class.new.perform
+
+    group = WhatsappGroup.find_by(jid: "g1@g.us")
+    expect(group.group_participants.find_by(jid: "a@s.whatsapp.net").name).to eq("A")
+  end
+
+  it "remove todos os participantes quando participants vem como lista vazia" do
+    stub_request(:get, "#{wa_service_url}/groups").to_return(
+      status: 200,
+      body: [ { jid: "g1@g.us", name: "Grupo 1", participants_count: 2, participants: [
+        { jid: "a@s.whatsapp.net", name: "A" }, { jid: "b@s.whatsapp.net", name: "B" }
+      ] } ].to_json,
+      headers: { "Content-Type" => "application/json" }
+    ).then.to_return(
+      status: 200,
+      body: [ { jid: "g1@g.us", name: "Grupo 1", participants_count: 0, participants: [] } ].to_json,
+      headers: { "Content-Type" => "application/json" }
+    )
+
+    described_class.new.perform
+    described_class.new.perform
+
+    group = WhatsappGroup.find_by(jid: "g1@g.us")
+    expect(group.group_participants.count).to eq(0)
+  end
+
   it "mantém participantes já sincronizados quando o wa-service não envia a chave participants" do
     group = WhatsappGroup.create!(jid: "g1@g.us", name: "Grupo 1")
     GroupParticipant.create!(whatsapp_group: group, jid: "a@s.whatsapp.net", name: "A", phone_number: "a")

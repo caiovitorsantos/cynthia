@@ -39,6 +39,12 @@ async function connect(): Promise<void> {
   sock.ev.on("creds.update", saveCreds);
   sock.ev.on("contacts.upsert", cacheContacts);
   sock.ev.on("contacts.update", cacheContacts);
+  // Dump inicial de contatos (sincronização de histórico). É por aqui que a
+  // grande maioria dos contatos chega — contacts.upsert só cobre contatos
+  // que aparecem depois da sincronização inicial.
+  sock.ev.on("messaging-history.set", ({ contacts }) => {
+    cacheContacts(contacts);
+  });
 
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;

@@ -43,6 +43,14 @@ salvos no celular conectado e conforme mensagens/interações acontecem. O
 `wa-service` hoje não escuta nem armazena esses eventos — isso precisa ser
 adicionado.
 
+**Correção (pós fix wave):** a afirmação acima estava incompleta. O dump
+inicial (a maioria dos contatos) chega via `messaging-history.set`, cujo
+payload já traz um array `contacts` junto com `chats`/`messages`.
+`contacts.upsert`/`contacts.update` só cobrem contatos que aparecem depois
+da sincronização inicial — sozinhos, eles deixam o cache frio na maior parte
+do tempo após um restart do `wa-service`. `wa-service/src/whatsapp.ts`
+agora escuta os três eventos.
+
 **Limitação conhecida:** grupos com `addressingMode: "lid"` (endereçamento
 anônimo) têm JIDs de participante que não são números de telefone reais —
 `@{{numero}}` não é útil nesses grupos. Caso raro, documentado aqui e não

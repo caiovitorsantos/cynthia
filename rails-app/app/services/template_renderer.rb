@@ -28,7 +28,7 @@ class TemplateRenderer
         variables.fetch(key) { raise MissingVariableError, "Variável não preenchida: #{key}" }
       end
 
-      Result.new(body, mentioned_jids)
+      Result.new(body, mentioned_jids.uniq)
     end
 
     private
