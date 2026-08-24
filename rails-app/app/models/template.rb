@@ -1,5 +1,5 @@
 class Template < ApplicationRecord
-  VARIABLE_PATTERN = /\{\{(\w+)\}\}/
+  VARIABLE_PATTERN = /(?<!@)\{\{(\w+)\}\}/
 
   has_many :schedules, dependent: :restrict_with_error
 
