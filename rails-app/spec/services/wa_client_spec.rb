@@ -30,5 +30,25 @@ RSpec.describe WaClient do
         described_class.send_message(group_jid: "g@g.us", message: "oi")
       }.to raise_error(WaClient::Error)
     end
+
+    it "inclui mentions no payload quando presente" do
+      stub = stub_request(:post, "#{base_url}/send")
+        .with(body: hash_including("mentions" => [ "5511999999999@s.whatsapp.net" ]))
+        .to_return(status: 200, body: { status: "sent" }.to_json)
+
+      described_class.send_message(group_jid: "g@g.us", message: "oi", mentions: [ "5511999999999@s.whatsapp.net" ])
+
+      expect(stub).to have_been_requested
+    end
+
+    it "não inclui a chave mentions quando não informado" do
+      stub = stub_request(:post, "#{base_url}/send")
+        .with { |req| !JSON.parse(req.body).key?("mentions") }
+        .to_return(status: 200, body: { status: "sent" }.to_json)
+
+      described_class.send_message(group_jid: "g@g.us", message: "oi")
+
+      expect(stub).to have_been_requested
+    end
   end
 end

@@ -8,8 +8,11 @@ class WaClient
   SEND_TIMEOUT = 30
 
   class << self
-    def send_message(group_jid:, message:)
-      response = connection.post("/send", { group_jid: group_jid, message: message }) do |req|
+    def send_message(group_jid:, message:, mentions: [])
+      payload = { group_jid: group_jid, message: message }
+      payload[:mentions] = mentions if mentions.present?
+
+      response = connection.post("/send", payload) do |req|
         req.options.timeout = SEND_TIMEOUT
         req.options.open_timeout = SEND_TIMEOUT
       end
