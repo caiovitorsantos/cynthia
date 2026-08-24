@@ -59,6 +59,10 @@ app.get("/groups", async (_req, res) => {
     jid: group.id,
     name: group.subject,
     participants_count: group.participants.length,
+    participants: group.participants.map((participant) => ({
+      jid: participant.id,
+      name: whatsapp.getContactName(participant.id),
+    })),
   }));
 
   res.json(list);
