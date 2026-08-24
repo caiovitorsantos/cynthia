@@ -3,6 +3,7 @@ import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   type WASocket,
+  type Contact,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import pino from "pino";
@@ -16,6 +17,17 @@ let sock: WASocket | undefined;
 let status: ConnectionStatus = "disconnected";
 let lastQR: string | undefined;
 
+const contactNames = new Map<string, string>();
+
+function cacheContacts(contacts: Partial<Contact>[]): void {
+  for (const contact of contacts) {
+    const name = contact.name ?? contact.notify;
+    if (contact.id && name) {
+      contactNames.set(contact.id, name);
+    }
+  }
+}
+
 async function connect(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState("./auth");
 
@@ -25,6 +37,8 @@ async function connect(): Promise<void> {
   });
 
   sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("contacts.upsert", cacheContacts);
+  sock.ev.on("contacts.update", cacheContacts);
 
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -72,6 +86,10 @@ export function getStatus(): ConnectionStatus {
 
 export function getLastQR(): string | undefined {
   return lastQR;
+}
+
+export function getContactName(jid: string): string | undefined {
+  return contactNames.get(jid);
 }
 
 export async function logout(): Promise<void> {
