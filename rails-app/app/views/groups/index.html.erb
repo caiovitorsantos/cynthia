@@ -18,7 +18,7 @@
   <tbody>
     <% @groups.each do |group| %>
       <tr class="border-t">
-        <td class="py-2 px-3"><%= group.name %></td>
+        <td class="py-2 px-3"><%= link_to group.name, group_path(group), class: "text-blue-700 hover:underline" %></td>
         <td class="py-2 px-3 font-mono text-xs"><%= group.jid %></td>
         <td class="py-2 px-3"><%= group.participants_count %></td>
         <td class="py-2 px-3"><%= group.synced_at&.strftime("%d/%m/%Y %H:%M") %></td>

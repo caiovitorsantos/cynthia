@@ -3,6 +3,11 @@ class GroupsController < ApplicationController
     @groups = WhatsappGroup.order(:name)
   end
 
+  def show
+    @group = WhatsappGroup.find(params[:id])
+    @participants = @group.group_participants.order(:name)
+  end
+
   def sync
     SyncGroupsJob.new.perform
     redirect_to groups_path, notice: "Grupos sincronizados."

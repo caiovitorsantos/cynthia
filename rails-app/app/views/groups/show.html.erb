@@ -1,0 +1,33 @@
+<%# rails-app/app/views/groups/show.html.erb %>
+<% content_for :title, @group.name %>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold"><%= @group.name %></h1>
+  <%= link_to "Voltar", groups_path, class: "text-sm text-gray-600 hover:underline" %>
+</div>
+
+<p class="text-xs text-gray-500 mb-4">
+  Use estes nomes ou números com <code class="font-mono">@{{nome}}</code> ou
+  <code class="font-mono">@{{numero}}</code> no corpo de um template para mencionar
+  o participante ao enviar para este grupo.
+</p>
+
+<table class="w-full text-sm border-collapse bg-white shadow rounded overflow-hidden">
+  <thead class="bg-gray-100">
+    <tr class="text-left">
+      <th class="py-2 px-3">Nome</th>
+      <th class="py-2 px-3">Número</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @participants.each do |participant| %>
+      <tr class="border-t">
+        <td class="py-2 px-3"><%= participant.name.presence || "—" %></td>
+        <td class="py-2 px-3 font-mono text-xs"><%= participant.phone_number %></td>
+      </tr>
+    <% end %>
+    <% if @participants.empty? %>
+      <tr><td colspan="2" class="py-4 px-3 text-center text-gray-500">Nenhum participante sincronizado ainda.</td></tr>
+    <% end %>
+  </tbody>
+</table>
