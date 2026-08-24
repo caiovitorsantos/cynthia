@@ -18,14 +18,15 @@ function randomSeconds(min: number, max: number): number {
 
 // Delay aleatório + simulação de "digitando" antes de cada envio, para reduzir
 // o risco de detecção de bot pelo WhatsApp.
-async function sendLikeAHuman(sock: WASocket, jid: string, message: string): Promise<void> {
+async function sendLikeAHuman(sock: WASocket, jid: string, message: string, mentions?: string[]): Promise<void> {
   await sock.sendPresenceUpdate("composing", jid);
   await sleep(2_000);
   await sock.sendPresenceUpdate("paused", jid);
 
   await sleep(randomSeconds(3, 12) * 1_000);
 
-  await sock.sendMessage(jid, { text: message });
+  const content = mentions && mentions.length > 0 ? { text: message, mentions } : { text: message };
+  await sock.sendMessage(jid, content);
 }
 
 app.get("/health", (_req, res) => {
@@ -76,14 +77,19 @@ app.post("/send", async (req, res) => {
     return;
   }
 
-  const { group_jid, message } = req.body ?? {};
+  const { group_jid, message, mentions } = req.body ?? {};
 
   if (typeof group_jid !== "string" || typeof message !== "string") {
     res.status(400).json({ error: "invalid_params" });
     return;
   }
 
-  await sendLikeAHuman(sock, group_jid, message);
+  if (mentions !== undefined && (!Array.isArray(mentions) || !mentions.every((m) => typeof m === "string"))) {
+    res.status(400).json({ error: "invalid_params" });
+    return;
+  }
+
+  await sendLikeAHuman(sock, group_jid, message, mentions);
   res.json({ status: "sent" });
 });
 
