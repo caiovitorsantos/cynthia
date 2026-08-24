@@ -6,18 +6,18 @@ class SendScheduledMessageJob
   def perform(schedule_id)
     schedule = Schedule.find(schedule_id)
     variables = schedule.template.default_variables.merge(schedule.variables)
-    rendered_body = TemplateRenderer.call(schedule.template, variables)
+    result = TemplateRenderer.call(schedule.template, variables, whatsapp_group: schedule.whatsapp_group)
 
     message_log = MessageLog.create!(
       schedule: schedule,
       group_jid: schedule.whatsapp_group.jid,
-      rendered_body: rendered_body,
+      rendered_body: result.body,
       status: "pending"
     )
 
     begin
-      SendGuard.check!(group_jid: schedule.whatsapp_group.jid, message: rendered_body)
-      WaClient.send_message(group_jid: schedule.whatsapp_group.jid, message: rendered_body)
+      SendGuard.check!(group_jid: schedule.whatsapp_group.jid, message: result.body)
+      WaClient.send_message(group_jid: schedule.whatsapp_group.jid, message: result.body, mentions: result.mentioned_jids)
       message_log.update!(status: "sent", sent_at: Time.current)
     rescue WaClient::NotConnected => e
       # Problema de sessão, não transiente: não deixa o Sidekiq re-tentar.
