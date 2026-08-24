@@ -10,9 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_120004) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "group_participants", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "jid", null: false
+    t.string "name"
+    t.string "phone_number"
+    t.datetime "synced_at"
+    t.datetime "updated_at", null: false
+    t.bigint "whatsapp_group_id", null: false
+    t.index ["whatsapp_group_id", "jid"], name: "index_group_participants_on_whatsapp_group_id_and_jid", unique: true
+    t.index ["whatsapp_group_id"], name: "index_group_participants_on_whatsapp_group_id"
+  end
 
   create_table "message_logs", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -63,6 +75,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_120004) do
     t.index ["jid"], name: "index_whatsapp_groups_on_jid", unique: true
   end
 
+  add_foreign_key "group_participants", "whatsapp_groups"
   add_foreign_key "message_logs", "schedules"
   add_foreign_key "schedules", "templates"
   add_foreign_key "schedules", "whatsapp_groups"
