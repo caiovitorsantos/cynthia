@@ -15,9 +15,14 @@ Rails.application.routes.draw do
 
   resources :templates
 
-  resources :groups, only: [ :index, :show ] do
+  resources :groups, only: [ :index, :show, :update, :destroy ] do
+    member do
+      post :leave
+    end
     collection do
       post :sync
+      post :leave_selected
+      post :destroy_selected
     end
   end
 

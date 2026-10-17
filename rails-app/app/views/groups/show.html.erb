@@ -2,32 +2,60 @@
 <% content_for :title, @group.name %>
 
 <div class="flex items-center justify-between mb-6">
-  <h1 class="text-2xl font-bold"><%= @group.name %></h1>
-  <%= link_to "Voltar", groups_path, class: "text-sm text-gray-600 hover:underline" %>
+  <h1 class="text-2xl font-semibold text-wa-text"><%= @group.name %></h1>
+  <div class="flex items-center gap-4">
+    <%= link_to "Voltar", groups_path, class: "text-sm text-gray-600 hover:underline" %>
+    <% schedules_warning = @group.schedules.any? ? " Os #{@group.schedules.count} agendamentos deste grupo também serão apagados." : "" %>
+    <%= button_to "Remover da lista", group_path(@group), method: :delete,
+          form: { data: { turbo_confirm: "Remover #{@group.name} do painel? Ele volta na próxima sincronização se você ainda for membro.#{schedules_warning}" } },
+          class: "text-sm text-red-600 hover:underline cursor-pointer" %>
+    <%= button_to "Sair do grupo", leave_group_path(@group), method: :post,
+          form: { data: { turbo_confirm: "Sair de #{@group.name} no WhatsApp? Não dá para desfazer pelo painel.#{schedules_warning}" } },
+          class: "text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-4 py-2 cursor-pointer" %>
+  </div>
 </div>
 
-<p class="text-xs text-gray-500 mb-4">
+<p class="text-xs text-wa-muted mb-4">
   Use estes nomes ou números com <code class="font-mono">@{{nome}}</code> ou
   <code class="font-mono">@{{numero}}</code> no corpo de um template para mencionar
-  o participante ao enviar para este grupo.
+  o participante ao enviar para este grupo. O tipo e o nome na lista alimentam
+  <code class="font-mono">{{lista_mensais}}</code>, <code class="font-mono">{{mencoes_mensais}}</code>
+  e <code class="font-mono">{{lista_espera}}</code>.
 </p>
 
-<table class="w-full text-sm border-collapse bg-white shadow rounded overflow-hidden">
-  <thead class="bg-gray-100">
-    <tr class="text-left">
-      <th class="py-2 px-3">Nome</th>
-      <th class="py-2 px-3">Número</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @participants.each do |participant| %>
-      <tr class="border-t">
-        <td class="py-2 px-3"><%= participant.name.presence || "—" %></td>
-        <td class="py-2 px-3 font-mono text-xs"><%= participant.phone_number %></td>
+<%= form_with url: group_path(@group), method: :patch do %>
+  <table class="w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
+    <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
+      <tr class="text-left">
+        <th class="py-2 px-3">Nome</th>
+        <th class="py-2 px-3">Número</th>
+        <th class="py-2 px-3">Tipo</th>
+        <th class="py-2 px-3">Nome na lista</th>
       </tr>
-    <% end %>
-    <% if @participants.empty? %>
-      <tr><td colspan="2" class="py-4 px-3 text-center text-gray-500">Nenhum participante sincronizado ainda.</td></tr>
-    <% end %>
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      <% @participants.each do |participant| %>
+        <tr class="border-t border-gray-100 hover:bg-wa-panel/60">
+          <td class="py-2 px-3"><%= participant.name.presence || "—" %></td>
+          <td class="py-2 px-3 font-mono text-xs"><%= participant.phone_number %></td>
+          <td class="py-2 px-3">
+            <%= select_tag "participants[#{participant.id}][role]",
+                  options_for_select(GroupParticipant::ROLES.map { |role| [ role.capitalize, role ] }, participant.role),
+                  include_blank: "—", class: "rounded border-gray-300 text-sm" %>
+          </td>
+          <td class="py-2 px-3">
+            <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
+                  placeholder: participant.name, class: "rounded border-gray-300 text-sm w-full" %>
+          </td>
+        </tr>
+      <% end %>
+      <% if @participants.empty? %>
+        <tr><td colspan="4" class="py-4 px-3 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <% if @participants.any? %>
+    <%= submit_tag "Salvar membros", class: "btn-wa mt-4" %>
+  <% end %>
+<% end %>
