@@ -53,7 +53,7 @@
       <%= f.select :template_id, ::Template.order(:name).pluck(:name, :id), { selected: rule.template_id.to_i, include_blank: "— escolha —" }, class: "mt-1" %>
     </div>
 
-    <fieldset>
+    <fieldset class="min-w-0">
       <legend class="font-medium">Categorias de membros</legend>
       <p class="text-xs text-wa-muted mb-2">
         <strong>Fixa</strong>: aparece em <code>{{presenca}}</code> e é cobrada de resposta em <code>{{pendentes}}</code>.
@@ -80,7 +80,7 @@
       </table>
     </fieldset>
 
-    <fieldset class="grid sm:grid-cols-2 gap-3">
+    <fieldset class="grid sm:grid-cols-2 gap-3 min-w-0">
       <legend class="font-medium mb-1">Respostas</legend>
       <div>
         <%= f.label :confirm_emojis, "Emojis que confirmam (separados por espaço)", class: "block text-xs text-wa-muted" %>
@@ -97,7 +97,7 @@
       </div>
     </fieldset>
 
-    <fieldset class="grid sm:grid-cols-3 gap-3">
+    <fieldset class="grid sm:grid-cols-3 gap-3 min-w-0">
       <legend class="font-medium mb-1">Formato das listas</legend>
       <div>
         <%= f.label :list_style, "Estilo", class: "block text-xs text-wa-muted" %>

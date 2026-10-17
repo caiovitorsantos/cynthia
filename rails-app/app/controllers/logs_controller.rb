@@ -9,6 +9,7 @@ class LogsController < ApplicationController
     @page = params[:page].presence&.to_i || 1
     @total_pages = (scope.count / PER_PAGE.to_f).ceil
     @logs = scope.limit(PER_PAGE).offset((@page - 1) * PER_PAGE)
+    @group_names = WhatsappGroup.where(jid: @logs.map(&:group_jid)).pluck(:jid, :name).to_h
   end
 
   def resend

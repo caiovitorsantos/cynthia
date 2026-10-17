@@ -1,11 +1,11 @@
 <% content_for :title, "Agendamentos" %>
 
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
   <h1 class="text-2xl font-semibold text-wa-text">Agendamentos</h1>
   <%= link_to "Novo agendamento", new_schedule_path, class: "btn-wa" %>
 </div>
 
-<table class="w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
+<table class="table-cards w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
   <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
     <tr class="text-left">
       <th class="py-2 px-3">Template</th>
@@ -19,14 +19,14 @@
   <tbody>
     <% @schedules.each do |schedule| %>
       <tr class="border-t border-gray-100 hover:bg-wa-panel/60">
-        <td class="py-2 px-3"><%= schedule.template.name %></td>
-        <td class="py-2 px-3"><%= schedule.whatsapp_group.name %></td>
-        <td class="py-2 px-3 font-mono text-xs">
+        <td data-label="Template" class="py-2 px-3"><%= schedule.template.name %></td>
+        <td data-label="Grupo" class="py-2 px-3"><%= schedule.whatsapp_group.name %></td>
+        <td data-label="Recorrência" class="py-2 px-3 font-mono text-xs">
           <%= schedule.cron_expression.presence || "único: #{schedule.run_at&.strftime('%d/%m/%Y %H:%M')}" %>
         </td>
-        <td class="py-2 px-3"><%= schedule.next_run_at&.strftime("%d/%m/%Y %H:%M") || "—" %></td>
-        <td class="py-2 px-3"><%= schedule.active? ? "Sim" : "Não" %></td>
-        <td class="py-2 px-3 text-right space-x-3">
+        <td data-label="Próxima" class="py-2 px-3"><%= schedule.next_run_at&.strftime("%d/%m/%Y %H:%M") || "—" %></td>
+        <td data-label="Ativo" class="py-2 px-3"><%= schedule.active? ? "Sim" : "Não" %></td>
+        <td class="py-2 px-3 sm:text-right space-x-3">
           <%= button_to "Enviar teste agora", send_test_schedule_path(schedule), method: :post,
                 class: "text-wa-green hover:underline bg-transparent p-0 inline" %>
           <%= link_to "Editar", edit_schedule_path(schedule), class: "text-wa-teal hover:underline" %>

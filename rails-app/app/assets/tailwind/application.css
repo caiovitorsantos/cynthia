@@ -27,3 +27,55 @@
     @apply inline-block bg-wa-green text-white font-medium px-5 py-2 rounded-full shadow-sm hover:bg-wa-green-dark cursor-pointer;
   }
 }
+
+/* Tabelas viram cartões no celular: cada <td data-label="..."> mostra o rótulo ao lado do valor. */
+@media (max-width: 639px) {
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards, .table-cards tbody, .table-cards tr {
+    display: block;
+  }
+
+  .table-cards tr {
+    padding: 0.5rem 0;
+  }
+
+  .table-cards td {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+    justify-items: start;
+    padding: 0.25rem 1rem;
+    text-align: left;
+  }
+
+  .table-cards td[data-label]::before {
+    content: attr(data-label);
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-wa-muted);
+  }
+
+  .table-cards td > input, .table-cards td > select, .table-cards td > span.block {
+    justify-self: stretch;
+  }
+
+  .table-cards td:not([data-label]) {
+    display: block;
+  }
+
+  .table-cards td:empty {
+    display: none;
+  }
+}
+
+/* Abas roláveis sem barra de rolagem visível, como no app. */
+.no-scrollbar {
+  scrollbar-width: none;
+}

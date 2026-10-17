@@ -1,9 +1,9 @@
 <%# rails-app/app/views/groups/show.html.erb %>
 <% content_for :title, @group.name %>
 
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
   <h1 class="text-2xl font-semibold text-wa-text"><%= @group.name %></h1>
-  <div class="flex items-center gap-4">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
     <%= link_to "Voltar", groups_path, class: "text-sm text-gray-600 hover:underline" %>
     <% schedules_warning = @group.schedules.any? ? " Os #{@group.schedules.count} agendamentos deste grupo também serão apagados." : "" %>
     <%= button_to "Remover da lista", group_path(@group), method: :delete,
@@ -47,7 +47,7 @@
 <% end %>
 
 <%= form_with url: group_path(@group), method: :patch do %>
-  <table class="w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
+  <table class="table-cards w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
     <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
       <tr class="text-left">
         <th class="py-2 px-3">Nome</th>
@@ -62,19 +62,19 @@
     <tbody>
       <% @participants.each do |participant| %>
         <tr class="border-t border-gray-100 hover:bg-wa-panel/60">
-          <td class="py-2 px-3"><%= participant.name.presence || "—" %></td>
-          <td class="py-2 px-3 font-mono text-xs"><%= participant.phone_number %></td>
+          <td data-label="Nome" class="py-2 px-3"><%= participant.name.presence || "—" %></td>
+          <td data-label="Número" class="py-2 px-3 font-mono text-xs"><%= participant.phone_number %></td>
           <% if @attendance_rule %>
-            <td class="py-2 px-3">
+            <td data-label="Categoria" class="py-2 px-3">
               <%= select_tag "participants[#{participant.id}][role]",
                     options_for_select(@attendance_settings["categories"].map { |category| [ category["name"], category["key"] ] }, participant.role),
                     include_blank: "—", class: "rounded border-gray-300 text-sm" %>
             </td>
-            <td class="py-2 px-3">
+            <td data-label="Nome na lista" class="py-2 px-3">
               <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
                     placeholder: participant.name, class: "rounded border-gray-300 text-sm w-full" %>
             </td>
-            <td class="py-2 px-3 text-center"><%= Attendance.mark(@attendance_settings, @statuses[participant.id]) if @statuses.key?(participant.id) %></td>
+            <td data-label="Presença" class="py-2 px-3 text-center"><%= Attendance.mark(@attendance_settings, @statuses[participant.id]) if @statuses.key?(participant.id) %></td>
           <% end %>
         </tr>
       <% end %>
