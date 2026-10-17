@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -37,6 +37,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_130000) do
     t.bigint "whatsapp_group_id", null: false
     t.index ["whatsapp_group_id", "jid"], name: "index_group_participants_on_whatsapp_group_id_and_jid", unique: true
     t.index ["whatsapp_group_id"], name: "index_group_participants_on_whatsapp_group_id"
+  end
+
+  create_table "group_rules", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "kind", null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "whatsapp_group_id", null: false
+    t.index ["whatsapp_group_id", "kind"], name: "index_group_rules_on_whatsapp_group_id_and_kind", unique: true
+    t.index ["whatsapp_group_id"], name: "index_group_rules_on_whatsapp_group_id"
   end
 
   create_table "message_logs", force: :cascade do |t|
@@ -74,7 +84,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_130000) do
 
   create_table "templates", force: :cascade do |t|
     t.boolean "active", default: true, null: false
-    t.boolean "attendance", default: false, null: false
     t.text "body", null: false
     t.datetime "created_at", null: false
     t.jsonb "default_variables", default: {}, null: false
@@ -93,9 +102,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_130000) do
     t.index ["jid"], name: "index_whatsapp_groups_on_jid", unique: true
   end
 
-  add_foreign_key "attendances", "group_participants"
-  add_foreign_key "attendances", "message_logs"
+  add_foreign_key "attendances", "group_participants", on_delete: :cascade
+  add_foreign_key "attendances", "message_logs", on_delete: :cascade
   add_foreign_key "group_participants", "whatsapp_groups"
+  add_foreign_key "group_rules", "whatsapp_groups"
   add_foreign_key "message_logs", "message_logs", column: "round_id"
   add_foreign_key "message_logs", "schedules"
   add_foreign_key "schedules", "templates"

@@ -28,8 +28,9 @@ RSpec.describe SendScheduledMessageJob do
   end
 
   describe "rodadas de presença" do
-    let(:lista) { Template.create!(name: "Presença", body: "PRESENÇA {{data}}", attendance: true) }
-    let(:lembrete) { Template.create!(name: "Lembrete", body: "Faltam: {{mencoes_pendentes}}") }
+    let(:lista) { Template.create!(name: "Presença", body: "PRESENÇA {{data}}") }
+    let(:lembrete) { Template.create!(name: "Lembrete", body: "Faltam: {{pendentes}}") }
+    let!(:rule) { group.group_rules.create!(kind: "attendance", template_id: lista.id) }
 
     # Dois envios seguidos cairiam no throttle; aqui só interessa o encadeamento.
     before { allow(SendGuard).to receive(:check!) }
@@ -46,8 +47,8 @@ RSpec.describe SendScheduledMessageJob do
       follow_up = send_with(lembrete, "MSG2")
 
       expect(round.wa_message_id).to eq("MSG1")
-      expect(MessageLog.current_round(group)).to eq(round)
-      expect(follow_up.round).to eq(round)
+      expect(Attendance.current_round(rule)).to eq(round)
+      expect(follow_up.round_id).to eq(round.id)
     end
   end
 

@@ -1,15 +1,19 @@
-# Eventos do wa-service (reações e respostas em grupos). Autenticado pelo INTERNAL_API_TOKEN.
+# Eventos do wa-service (reações e respostas em grupos), repassados às regras do grupo.
+# Autenticado pelo INTERNAL_API_TOKEN.
 class WebhooksController < ActionController::API
   before_action :authenticate
 
   def whatsapp
-    AttendanceRecorder.call(
+    group = WhatsappGroup.find_by(jid: params.require(:group_jid))
+    event = {
       kind: params.require(:kind),
       message_id: params.require(:message_id),
       participant_jid: params.require(:participant_jid),
       push_name: params[:push_name],
       text: params[:text].to_s
-    )
+    }
+
+    group&.group_rules&.each { |rule| rule.handler.handle_event(rule, event) }
     head :no_content
   end
 

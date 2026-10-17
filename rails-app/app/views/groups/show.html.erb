@@ -15,20 +15,34 @@
   </div>
 </div>
 
+<section class="bg-white rounded-lg shadow-sm p-4 mb-6">
+  <h2 class="text-sm font-semibold uppercase tracking-wide text-wa-muted mb-3">Regras do grupo</h2>
+
+  <% if @attendance_rule %>
+    <%= render "group_rules/attendance", rule: @attendance_rule, group: @group %>
+  <% else %>
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p class="font-medium">Lista de presença</p>
+        <p class="text-xs text-wa-muted">Membros mensais/avulsos/espera, confirmação por reação ✅/❌ e listas automáticas.</p>
+      </div>
+      <%= button_to "Ativar", group_rules_path(@group), params: { kind: "attendance" }, method: :post, class: "btn-wa text-sm" %>
+    </div>
+  <% end %>
+</section>
+
 <p class="text-xs text-wa-muted mb-4">
   Use estes nomes ou números com <code class="font-mono">@{{nome}}</code> ou
   <code class="font-mono">@{{numero}}</code> no corpo de um template para mencionar
-  o participante ao enviar para este grupo. O tipo e o nome na lista alimentam
-  <code class="font-mono">{{lista_mensais}}</code>, <code class="font-mono">{{mencoes_mensais}}</code>
-  e <code class="font-mono">{{lista_espera}}</code>.
+  o participante ao enviar para este grupo.
 </p>
-
 <% if @round %>
   <p class="mb-4 text-sm">
     <strong>Lista de presença de <%= @round.sent_at.in_time_zone(@round.schedule.timezone).strftime("%d/%m %H:%M") %>:</strong>
-    <%= @statuses.values.count("confirmed") %> confirmado(s) ✅,
-    <%= @statuses.values.count("declined") %> cancelado(s) ❌,
-    <%= @participants.count { |participant| participant.role == "mensal" && !@statuses.key?(participant.id) } %> mensal(is) sem resposta.
+    <% fixed_keys = Attendance.fixed_keys(@attendance_rule) %>
+    <%= @statuses.values.count("confirmed") %> confirmado(s),
+    <%= @statuses.values.count("declined") %> cancelado(s),
+    <%= @participants.count { |participant| fixed_keys.include?(participant.role) && !@statuses.key?(participant.id) } %> fixo(s) sem resposta.
   </p>
 <% end %>
 
@@ -38,9 +52,11 @@
       <tr class="text-left">
         <th class="py-2 px-3">Nome</th>
         <th class="py-2 px-3">Número</th>
-        <th class="py-2 px-3">Tipo</th>
-        <th class="py-2 px-3">Nome na lista</th>
-        <th class="py-2 px-3">Presença</th>
+        <% if @attendance_rule %>
+          <th class="py-2 px-3">Categoria</th>
+          <th class="py-2 px-3">Nome na lista</th>
+          <th class="py-2 px-3">Presença</th>
+        <% end %>
       </tr>
     </thead>
     <tbody>
@@ -48,25 +64,27 @@
         <tr class="border-t border-gray-100 hover:bg-wa-panel/60">
           <td class="py-2 px-3"><%= participant.name.presence || "—" %></td>
           <td class="py-2 px-3 font-mono text-xs"><%= participant.phone_number %></td>
-          <td class="py-2 px-3">
-            <%= select_tag "participants[#{participant.id}][role]",
-                  options_for_select(GroupParticipant::ROLES.map { |role| [ role.capitalize, role ] }, participant.role),
-                  include_blank: "—", class: "rounded border-gray-300 text-sm" %>
-          </td>
-          <td class="py-2 px-3">
-            <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
-                  placeholder: participant.name, class: "rounded border-gray-300 text-sm w-full" %>
-          </td>
-          <td class="py-2 px-3 text-center"><%= { "confirmed" => "✅", "declined" => "❌" }[@statuses[participant.id]] %></td>
+          <% if @attendance_rule %>
+            <td class="py-2 px-3">
+              <%= select_tag "participants[#{participant.id}][role]",
+                    options_for_select(@attendance_settings["categories"].map { |category| [ category["name"], category["key"] ] }, participant.role),
+                    include_blank: "—", class: "rounded border-gray-300 text-sm" %>
+            </td>
+            <td class="py-2 px-3">
+              <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
+                    placeholder: participant.name, class: "rounded border-gray-300 text-sm w-full" %>
+            </td>
+            <td class="py-2 px-3 text-center"><%= Attendance.mark(@attendance_settings, @statuses[participant.id]) if @statuses.key?(participant.id) %></td>
+          <% end %>
         </tr>
       <% end %>
       <% if @participants.empty? %>
-        <tr><td colspan="5" class="py-4 px-3 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
+        <tr><td colspan="<%= @attendance_rule ? 5 : 2 %>" class="py-4 px-3 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
       <% end %>
     </tbody>
   </table>
 
-  <% if @participants.any? %>
+  <% if @attendance_rule && @participants.any? %>
     <%= submit_tag "Salvar membros", class: "btn-wa mt-4" %>
   <% end %>
 <% end %>

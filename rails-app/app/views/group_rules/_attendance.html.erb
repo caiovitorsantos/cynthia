@@ -1,0 +1,146 @@
+<%# Bloco da regra "Lista de presença" na página do grupo. %>
+<% settings = Attendance.settings(rule) %>
+<% template = ::Template.find_by(id: rule.template_id) %>
+<% fixed = settings["categories"].select { |category| category["fixed"] } %>
+<% fixed_count = group.group_participants.where(role: fixed.map { |category| category["key"] }).count %>
+<% schedule = template && group.schedules.where(template: template, active: true).order(:next_run_at).first %>
+
+<div class="flex items-start justify-between gap-4">
+  <div>
+    <p class="font-medium">Lista de presença <span class="text-xs text-wa-teal bg-wa-bubble rounded-full px-2 py-0.5 ml-1">ativa</span></p>
+    <p class="text-xs text-wa-muted">Cada envio do template da lista abre uma rodada; reações confirmam ou cancelam.</p>
+  </div>
+  <%= button_to "Desativar", group_rule_path(group, rule), method: :delete,
+        form: { data: { turbo_confirm: "Desativar a lista de presença deste grupo? Configuração, categorias dos membros e respostas ficam guardadas." } },
+        class: "text-sm text-red-600 hover:underline cursor-pointer" %>
+</div>
+
+<ol class="mt-4 space-y-2 text-sm">
+  <li class="flex items-center gap-2">
+    <span><%= template ? "✅" : "⚠️" %></span>
+    <span><strong>1. Template da lista:</strong> <%= template&.name || "nenhum escolhido" %></span>
+    <% unless template %><span class="text-wa-muted">→ escolha em "Configurar regra" abaixo</span><% end %>
+  </li>
+  <li class="flex items-center gap-2">
+    <span><%= fixed_count.positive? ? "✅" : "⚠️" %></span>
+    <span><strong>2. Membros fixos:</strong> <%= fixed_count %> marcado(s) como <%= fixed.map { |category| category["name"] }.to_sentence(two_words_connector: " ou ", last_word_connector: " ou ").presence || "categoria fixa (nenhuma definida)" %></span>
+    <% unless fixed_count.positive? %><span class="text-wa-muted">→ marque na coluna Categoria da tabela abaixo</span><% end %>
+  </li>
+  <li class="flex items-center gap-2">
+    <span><%= schedule&.next_run_at ? "✅" : "⚠️" %></span>
+    <span><strong>3. Agendamento:</strong>
+      <% if schedule %>
+        <%= schedule.cron_expression.present? ? rough_frequency_in_words(Fugit.parse_cron(schedule.cron_expression).rough_frequency) : "envio único" %>,
+        <%= schedule.next_run_at ? "próximo em #{schedule.next_run_at.in_time_zone(schedule.timezone).strftime('%d/%m %H:%M')}" : "sem próximo envio" %>
+      <% else %>
+        nenhum agendamento ativo do template neste grupo
+      <% end %>
+    </span>
+    <% if schedule %>
+      <%= link_to "editar", edit_schedule_path(schedule), class: "text-wa-teal hover:underline" %>
+    <% elsif template %>
+      <%= link_to "→ criar agendamento", new_schedule_path(schedule: { template_id: template.id, whatsapp_group_id: group.id }), class: "text-wa-teal hover:underline" %>
+    <% end %>
+  </li>
+</ol>
+
+<details class="mt-4 border-t border-gray-100 pt-3" <%= "open" unless template %>>
+  <summary class="text-sm font-medium text-wa-teal cursor-pointer">Configurar regra</summary>
+
+  <%= form_with url: group_rule_path(group, rule), method: :patch, scope: :rule, class: "mt-4 space-y-5 text-sm" do |f| %>
+    <div>
+      <%= f.label :template_id, "Template que abre a rodada", class: "block font-medium" %>
+      <%= f.select :template_id, ::Template.order(:name).pluck(:name, :id), { selected: rule.template_id.to_i, include_blank: "— escolha —" }, class: "mt-1" %>
+    </div>
+
+    <fieldset>
+      <legend class="font-medium">Categorias de membros</legend>
+      <p class="text-xs text-wa-muted mb-2">
+        <strong>Fixa</strong>: aparece em <code>{{presenca}}</code> e é cobrada de resposta em <code>{{pendentes}}</code>.
+        Quem confirma sem estar numa categoria fixa entra em <code>{{confirmados}}</code>.
+        Para remover uma categoria, apague o nome. Renomear não muda a variável.
+      </p>
+      <table class="text-sm">
+        <thead class="text-xs text-wa-muted text-left"><tr><th class="pr-3 font-normal">Nome</th><th class="pr-3 font-normal">Fixa</th><th class="font-normal">Variável</th></tr></thead>
+        <tbody>
+          <% (settings["categories"] + [ { "key" => "", "name" => "", "fixed" => false } ]).each_with_index do |category, index| %>
+            <tr>
+              <td class="pr-3 py-1">
+                <%= hidden_field_tag "rule[categories][#{index}][key]", category["key"] %>
+                <%= text_field_tag "rule[categories][#{index}][name]", category["name"], placeholder: (category["key"].empty? ? "nova categoria" : nil) %>
+              </td>
+              <td class="pr-3 py-1 text-center">
+                <%= hidden_field_tag "rule[categories][#{index}][fixed]", "0", id: nil %>
+                <%= check_box_tag "rule[categories][#{index}][fixed]", "1", category["fixed"] %>
+              </td>
+              <td class="py-1 font-mono text-xs text-wa-muted"><%= category["key"].present? ? ":#{category["key"]}" : "" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </fieldset>
+
+    <fieldset class="grid sm:grid-cols-2 gap-3">
+      <legend class="font-medium mb-1">Respostas</legend>
+      <div>
+        <%= f.label :confirm_emojis, "Emojis que confirmam (separados por espaço)", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :confirm_emojis, value: settings["confirm_emojis"], class: "w-full" %>
+      </div>
+      <div>
+        <%= f.label :decline_emojis, "Emojis que cancelam", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :decline_emojis, value: settings["decline_emojis"], class: "w-full" %>
+      </div>
+      <div class="sm:col-span-2 flex items-center gap-2">
+        <%= f.hidden_field :accept_replies, value: "0", id: nil %>
+        <%= f.check_box :accept_replies, { checked: settings["accept_replies"] }, "1", nil %>
+        <%= f.label :accept_replies, "Aceitar respostas citando a lista (além das reações)" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="grid sm:grid-cols-3 gap-3">
+      <legend class="font-medium mb-1">Formato das listas</legend>
+      <div>
+        <%= f.label :list_style, "Estilo", class: "block text-xs text-wa-muted" %>
+        <%= f.select :list_style, Attendance::LIST_STYLES.invert, { selected: settings["list_style"] }, class: "w-full" %>
+      </div>
+      <div>
+        <%= f.label :empty_text, "Texto quando a lista está vazia", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :empty_text, value: settings["empty_text"], class: "w-full" %>
+      </div>
+      <div></div>
+      <div>
+        <%= f.label :confirmed_mark, "Marca de confirmado", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :confirmed_mark, value: settings["confirmed_mark"], class: "w-full" %>
+      </div>
+      <div>
+        <%= f.label :declined_mark, "Marca de cancelado", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :declined_mark, value: settings["declined_mark"], class: "w-full" %>
+      </div>
+      <div>
+        <%= f.label :pending_mark, "Marca de sem resposta", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :pending_mark, value: settings["pending_mark"], placeholder: "(nada)", class: "w-full" %>
+      </div>
+    </fieldset>
+
+    <%= f.submit "Salvar configuração", class: "btn-wa" %>
+  <% end %>
+</details>
+
+<details class="mt-3 border-t border-gray-100 pt-3">
+  <summary class="text-sm font-medium text-wa-teal cursor-pointer">Variáveis para usar nos templates</summary>
+  <table class="mt-3 text-xs">
+    <% [
+         [ "{{lista}}", "nomes dos fixos" ],
+         [ "{{mencoes}}", "fixos marcados (notifica)" ],
+         [ "{{presenca}}", "fixos com a marca de confirmado/cancelado/sem resposta" ],
+         [ "{{confirmados}}", "quem confirmou fora das categorias fixas (avulsos)" ],
+         [ "{{pendentes}}", "marca os fixos que ainda não responderam" ]
+       ].each do |variable, description| %>
+      <tr><td class="font-mono pr-4 py-0.5"><%= variable %></td><td class="text-wa-muted"><%= description %></td></tr>
+    <% end %>
+  </table>
+  <p class="mt-2 text-xs text-wa-muted">
+    Para uma categoria específica, acrescente a chave: <code class="font-mono">{{lista:<%= settings["categories"].first&.dig("key") || "categoria" %>}}</code>.
+    Chaves deste grupo: <%= safe_join(settings["categories"].map { |category| content_tag(:code, ":#{category["key"]}", class: "font-mono") }, ", ") %>.
+  </p>
+</details>

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // Extrai {{variaveis}} do corpo do template ao vivo, espelhando
 // Template::VARIABLE_PATTERN (app/models/template.rb) em JS.
-const VARIABLE_PATTERN = /(?<!@)\{\{(\w+)\}\}/g
+const VARIABLE_PATTERN = /(?<!@)\{\{(\w+(?::\w+)?)\}\}/g
 
 const escapeHtml = (text) =>
   text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char])

@@ -13,5 +13,11 @@ RSpec.describe Template do
 
       expect(template.variable_names).to contain_exactly("aviso")
     end
+
+    it "detecta variáveis com parâmetro" do
+      template = Template.new(body: "{{lista:mensal}} {{pendentes}}")
+
+      expect(template.variable_names).to contain_exactly("lista:mensal", "pendentes")
+    end
   end
 end

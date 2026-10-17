@@ -6,7 +6,8 @@ class SchedulesController < ApplicationController
   end
 
   def new
-    @schedule = Schedule.new(timezone: "America/Sao_Paulo")
+    # Atalhos (ex.: checklist da regra do grupo) podem pré-preencher template e grupo.
+    @schedule = Schedule.new(timezone: "America/Sao_Paulo", **params.fetch(:schedule, {}).permit(:template_id, :whatsapp_group_id).to_h.symbolize_keys)
   end
 
   def create

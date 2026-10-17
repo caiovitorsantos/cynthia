@@ -116,66 +116,10 @@ RSpec.describe TemplateRenderer do
         expect(result.body).to eq("Dezembro")
       end
 
-      it "lista mensais numerados em ordem alfabética, usando o nome na lista" do
-        GroupParticipant.create!(whatsapp_group: group, jid: "2@s.whatsapp.net", phone_number: "2", name: "Caio Feliphe", display_name: "Caio F.", role: "mensal")
-        GroupParticipant.create!(whatsapp_group: group, jid: "1@s.whatsapp.net", phone_number: "1", name: "Adriana", role: "mensal")
-        GroupParticipant.create!(whatsapp_group: group, jid: "3@s.whatsapp.net", phone_number: "3", name: "Ellie", role: "avulso")
-        GroupParticipant.create!(whatsapp_group: group, jid: "4@s.whatsapp.net", phone_number: "4", name: "Luana", role: "espera")
-
-        result = described_class.call(Template.new(body: "{{lista_mensais}}\n--\n{{lista_espera}}"), {}, whatsapp_group: group)
-
-        expect(result.body).to eq("1. Adriana\n2. Caio F.\n--\n1. Luana")
-        expect(result.mentioned_jids).to eq([])
-      end
-
-      it "mencoes_mensais marca cada mensal" do
-        GroupParticipant.create!(whatsapp_group: group, jid: "2@s.whatsapp.net", phone_number: "2", name: "Berto", role: "mensal")
-        GroupParticipant.create!(whatsapp_group: group, jid: "1@s.whatsapp.net", phone_number: "1", name: "Adriana", role: "mensal")
-
-        result = described_class.call(Template.new(body: "{{mencoes_mensais}}"), {}, whatsapp_group: group)
-
-        expect(result.body).to eq("1. @1\n2. @2")
-        expect(result.mentioned_jids).to eq([ "1@s.whatsapp.net", "2@s.whatsapp.net" ])
-      end
-
       it "valor explícito sobrescreve a variável automática" do
         result = described_class.call(Template.new(body: "{{data}}"), { "data" => "amanhã" }, now: now)
 
         expect(result.body).to eq("amanhã")
-      end
-    end
-
-    describe "variáveis de presença" do
-      let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei") }
-      let(:lista) { Template.create!(name: "Presença", body: "x", attendance: true) }
-      let(:schedule) { Schedule.create!(template: lista, whatsapp_group: group, cron_expression: "0 14 * * 2") }
-      let!(:round) { MessageLog.create!(schedule: schedule, group_jid: group.jid, status: "sent", sent_at: Time.current, wa_message_id: "MSG1") }
-      let!(:adriana) { GroupParticipant.create!(whatsapp_group: group, jid: "1@lid", phone_number: "1", name: "Adriana", role: "mensal") }
-      let!(:berto) { GroupParticipant.create!(whatsapp_group: group, jid: "2@lid", phone_number: "2", name: "Berto", role: "mensal") }
-      let!(:caio) { GroupParticipant.create!(whatsapp_group: group, jid: "3@lid", phone_number: "3", name: "Caio", role: "mensal") }
-      let!(:ellie) { GroupParticipant.create!(whatsapp_group: group, jid: "4@lid", phone_number: "4", name: "Ellie") }
-
-      before do
-        round.attendances.create!(group_participant: adriana, status: "confirmed")
-        round.attendances.create!(group_participant: berto, status: "declined")
-        round.attendances.create!(group_participant: ellie, status: "confirmed")
-      end
-
-      it "lista mensais com status, avulsos confirmados e marca pendentes" do
-        template = Template.new(body: "{{presenca_mensais}}\nAvulsos\n{{presenca_avulsos}}\nFaltam: {{mencoes_pendentes}}")
-
-        result = described_class.call(template, {}, whatsapp_group: group)
-
-        expect(result.body).to eq("1. Adriana ✅\n2. Berto ❌\n3. Caio\nAvulsos\n1. Ellie\nFaltam: @3")
-        expect(result.mentioned_jids).to eq([ "3@lid" ])
-      end
-
-      it "sem avulsos confirmados deixa a lista em branco no formato do grupo" do
-        round.attendances.where(group_participant: ellie).destroy_all
-
-        result = described_class.call(Template.new(body: "{{presenca_avulsos}}"), {}, whatsapp_group: group)
-
-        expect(result.body).to eq("1.")
       end
     end
   end

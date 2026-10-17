@@ -6,8 +6,12 @@ class GroupsController < ApplicationController
   def show
     @group = WhatsappGroup.find(params[:id])
     @participants = @group.group_participants.order(:name)
-    @round = MessageLog.current_round(@group)
-    @statuses = @round ? @round.attendances.pluck(:group_participant_id, :status).to_h : {}
+    @attendance_rule = @group.rule("attendance")
+    if @attendance_rule
+      @attendance_settings = Attendance.settings(@attendance_rule)
+      @round = Attendance.current_round(@attendance_rule)
+      @statuses = Attendance.statuses(@attendance_rule)
+    end
   end
 
   def update

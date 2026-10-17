@@ -21,10 +21,7 @@ class SendScheduledMessageJob
     begin
       SendGuard.check!(group_jid: schedule.whatsapp_group.jid, message: result.body)
       response = WaClient.send_message(group_jid: schedule.whatsapp_group.jid, message: result.body, mentions: result.mentioned_jids)
-      message_log.update!(
-        status: "sent", sent_at: Time.current, wa_message_id: response.try(:[], "message_id"),
-        round: schedule.template.follows_attendance? ? MessageLog.current_round(schedule.whatsapp_group) : nil
-      )
+      message_log.mark_sent!(response.try(:[], "message_id"))
     rescue WaClient::NotConnected => e
       # Problema de sessão, não transiente: não deixa o Sidekiq re-tentar.
       message_log.update!(status: "failed", error_message: e.message)

@@ -70,4 +70,37 @@ RSpec.describe "Groups", type: :request do
       expect(flash[:notice]).to include("2 grupo(s)")
     end
   end
+
+  describe "regras do grupo" do
+    let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei") }
+    let(:template) { Template.create!(name: "Presença", body: "oi") }
+
+    before { GroupParticipant.create!(whatsapp_group: group, jid: "1@lid", phone_number: "1", name: "Caio") }
+
+    it "sem regra, a página não mostra as colunas da lista de presença" do
+      get group_path(group)
+
+      expect(response.body).not_to include("Nome na lista")
+      expect(response.body).to include("Ativar")
+    end
+
+    it "ativa, configura o template e desativa a lista de presença" do
+      post group_rules_path(group), params: { kind: "attendance" }
+      rule = group.group_rules.sole
+      expect(rule.kind).to eq("attendance")
+
+      patch group_rule_path(group, rule), params: { rule: { template_id: template.id } }
+      expect(rule.reload.template_id.to_i).to eq(template.id)
+
+      patch group_rule_path(group, rule), params: { rule: { categories: { "0" => { key: "", name: "Titular", fixed: "1" } }, list_style: "dash" } }
+      expect(Attendance.settings(rule.reload)).to include("list_style" => "dash", "categories" => [ { "key" => "titular", "name" => "Titular", "fixed" => true } ])
+      expect(rule.template_id.to_i).to eq(template.id)
+
+      get group_path(group)
+      expect(response.body).to include("Nome na lista", "Titular", "Configurar regra")
+
+      delete group_rule_path(group, rule)
+      expect(group.group_rules.reload).to be_empty
+    end
+  end
 end

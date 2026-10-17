@@ -18,6 +18,7 @@ Rails.application.routes.draw do
   resources :templates
 
   resources :groups, only: [ :index, :show, :update, :destroy ] do
+    resources :rules, only: [ :create, :update, :destroy ], controller: "group_rules"
     member do
       post :leave
     end

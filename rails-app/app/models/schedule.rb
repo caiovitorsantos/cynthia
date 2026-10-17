@@ -45,7 +45,7 @@ class Schedule < ApplicationRecord
     return unless template
 
     provided = variables.to_h.stringify_keys.keys + template.default_variables.to_h.stringify_keys.keys
-    missing = template.variable_names - provided - Template::BUILTIN_VARIABLES
+    missing = template.variable_names - provided - Template::BUILTIN_VARIABLES - template.variable_names.select { |key| whatsapp_group&.provides_variable?(key) }
 
     errors.add(:variables, "faltando valores para: #{missing.join(', ')}") if missing.any?
   end
