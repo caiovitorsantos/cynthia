@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "attendances", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "group_participant_id", null: false
+    t.bigint "message_log_id", null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_participant_id"], name: "index_attendances_on_group_participant_id"
+    t.index ["message_log_id", "group_participant_id"], name: "index_attendances_on_message_log_id_and_group_participant_id", unique: true
+    t.index ["message_log_id"], name: "index_attendances_on_message_log_id"
+  end
 
   create_table "group_participants", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -33,11 +44,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
     t.text "error_message"
     t.string "group_jid"
     t.text "rendered_body"
+    t.bigint "round_id"
     t.bigint "schedule_id"
     t.datetime "sent_at"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.string "wa_message_id"
+    t.index ["round_id"], name: "index_message_logs_on_round_id"
     t.index ["schedule_id"], name: "index_message_logs_on_schedule_id"
+    t.index ["wa_message_id"], name: "index_message_logs_on_wa_message_id"
   end
 
   create_table "schedules", force: :cascade do |t|
@@ -59,6 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
 
   create_table "templates", force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.boolean "attendance", default: false, null: false
     t.text "body", null: false
     t.datetime "created_at", null: false
     t.jsonb "default_variables", default: {}, null: false
@@ -77,7 +93,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
     t.index ["jid"], name: "index_whatsapp_groups_on_jid", unique: true
   end
 
+  add_foreign_key "attendances", "group_participants"
+  add_foreign_key "attendances", "message_logs"
   add_foreign_key "group_participants", "whatsapp_groups"
+  add_foreign_key "message_logs", "message_logs", column: "round_id"
   add_foreign_key "message_logs", "schedules"
   add_foreign_key "schedules", "templates"
   add_foreign_key "schedules", "whatsapp_groups"

@@ -27,6 +27,30 @@ RSpec.describe SendScheduledMessageJob do
     end
   end
 
+  describe "rodadas de presença" do
+    let(:lista) { Template.create!(name: "Presença", body: "PRESENÇA {{data}}", attendance: true) }
+    let(:lembrete) { Template.create!(name: "Lembrete", body: "Faltam: {{mencoes_pendentes}}") }
+
+    # Dois envios seguidos cairiam no throttle; aqui só interessa o encadeamento.
+    before { allow(SendGuard).to receive(:check!) }
+
+    def send_with(template, message_id)
+      stub_request(:post, "#{wa_service_url}/send")
+        .to_return(status: 200, body: { status: "sent", message_id: message_id }.to_json, headers: { "Content-Type" => "application/json" })
+      described_class.new.perform(Schedule.create!(template: template, whatsapp_group: group, cron_expression: "0 14 * * 2").id)
+      MessageLog.order(:id).last
+    end
+
+    it "guarda o id da mensagem e liga o lembrete à rodada atual" do
+      round = send_with(lista, "MSG1")
+      follow_up = send_with(lembrete, "MSG2")
+
+      expect(round.wa_message_id).to eq("MSG1")
+      expect(MessageLog.current_round(group)).to eq(round)
+      expect(follow_up.round).to eq(round)
+    end
+  end
+
   describe "quando o wa-service está desconectado (503)" do
     before do
       stub_request(:post, "#{wa_service_url}/send")

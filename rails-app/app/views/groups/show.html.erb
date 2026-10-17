@@ -23,6 +23,15 @@
   e <code class="font-mono">{{lista_espera}}</code>.
 </p>
 
+<% if @round %>
+  <p class="mb-4 text-sm">
+    <strong>Lista de presença de <%= @round.sent_at.in_time_zone(@round.schedule.timezone).strftime("%d/%m %H:%M") %>:</strong>
+    <%= @statuses.values.count("confirmed") %> confirmado(s) ✅,
+    <%= @statuses.values.count("declined") %> cancelado(s) ❌,
+    <%= @participants.count { |participant| participant.role == "mensal" && !@statuses.key?(participant.id) } %> mensal(is) sem resposta.
+  </p>
+<% end %>
+
 <%= form_with url: group_path(@group), method: :patch do %>
   <table class="w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
     <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
@@ -31,6 +40,7 @@
         <th class="py-2 px-3">Número</th>
         <th class="py-2 px-3">Tipo</th>
         <th class="py-2 px-3">Nome na lista</th>
+        <th class="py-2 px-3">Presença</th>
       </tr>
     </thead>
     <tbody>
@@ -47,10 +57,11 @@
             <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
                   placeholder: participant.name, class: "rounded border-gray-300 text-sm w-full" %>
           </td>
+          <td class="py-2 px-3 text-center"><%= { "confirmed" => "✅", "declined" => "❌" }[@statuses[participant.id]] %></td>
         </tr>
       <% end %>
       <% if @participants.empty? %>
-        <tr><td colspan="4" class="py-4 px-3 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
+        <tr><td colspan="5" class="py-4 px-3 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
       <% end %>
     </tbody>
   </table>

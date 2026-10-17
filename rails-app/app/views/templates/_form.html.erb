@@ -28,11 +28,24 @@
       <code class="font-mono">{{mes_anterior}}</code>, <code class="font-mono">{{lista_mensais}}</code>,
       <code class="font-mono">{{mencoes_mensais}}</code>, <code class="font-mono">{{lista_espera}}</code>.
     </p>
+    <p class="mt-1 text-xs text-wa-muted">
+      Da lista de presença atual do grupo: <code class="font-mono">{{presenca_mensais}}</code> (mensais com ✅/❌),
+      <code class="font-mono">{{presenca_avulsos}}</code> (não-mensais que confirmaram),
+      <code class="font-mono">{{mencoes_pendentes}}</code> (marca mensais que ainda não responderam).
+    </p>
 
     <div class="mt-4 bg-wa-chat rounded-lg p-4">
       <p class="text-xs text-wa-muted mb-2">Prévia</p>
       <div data-template-preview-target="bubble"
            class="w-fit max-w-full bg-wa-bubble rounded-lg rounded-tr-none px-3 py-2 shadow-sm text-sm whitespace-pre-wrap break-words"></div>
+    </div>
+  </div>
+
+  <div class="flex items-start gap-2">
+    <%= f.check_box :attendance, class: "mt-1" %>
+    <div>
+      <%= f.label :attendance, "Lista de presença", class: "text-sm" %>
+      <p class="text-xs text-wa-muted">Cada envio abre uma rodada: reações ✅/❌ (ou respostas citando a mensagem) contam como confirmação/cancelamento.</p>
     </div>
   </div>
 

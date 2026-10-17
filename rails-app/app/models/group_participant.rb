@@ -2,6 +2,7 @@ class GroupParticipant < ApplicationRecord
   ROLES = %w[mensal avulso espera].freeze
 
   belongs_to :whatsapp_group
+  has_many :attendances, dependent: :destroy
 
   validates :jid, presence: true, uniqueness: { scope: :whatsapp_group_id }
   validates :role, inclusion: { in: ROLES }, allow_nil: true

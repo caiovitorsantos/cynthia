@@ -9,6 +9,8 @@ Rails.application.routes.draw do
   post "login" => "sessions#create"
   delete "logout" => "sessions#destroy"
 
+  post "webhooks/whatsapp" => "webhooks#whatsapp"
+
   resource :connection, only: [ :show ], controller: "connection" do
     post :logout
   end

@@ -5,6 +5,8 @@ class TemplateRenderer
 
   MENTION_PATTERN = /@\{\{([^{}]+)\}\}/
 
+  STATUS_EMOJI = { "confirmed" => "✅", "declined" => "❌" }.freeze
+
   MONTHS = %w[Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro].freeze
 
   class << self
@@ -49,7 +51,25 @@ class TemplateRenderer
         mensais = participants(whatsapp_group, "mensal")
         mentioned_jids.concat(mensais.map(&:jid))
         numbered(mensais.map { |participant| "@#{participant.phone_number}" })
+      when "presenca_mensais"
+        statuses = round_statuses(whatsapp_group)
+        numbered(participants(whatsapp_group, "mensal").map { |participant| [ participant.label, STATUS_EMOJI[statuses[participant.id]] ].compact.join(" ") })
+      when "presenca_avulsos"
+        confirmed_ids = round_statuses(whatsapp_group).select { |_, status| status == "confirmed" }.keys
+        avulsos = GroupParticipant.where(id: confirmed_ids).reject { |participant| participant.role == "mensal" }
+        avulsos.any? ? numbered(avulsos.sort_by { |participant| participant.label.to_s.downcase }.map(&:label)) : "1."
+      when "mencoes_pendentes"
+        statuses = round_statuses(whatsapp_group)
+        pendentes = participants(whatsapp_group, "mensal").reject { |participant| statuses.key?(participant.id) }
+        mentioned_jids.concat(pendentes.map(&:jid))
+        pendentes.map { |participant| "@#{participant.phone_number}" }.join(" ")
       end
+    end
+
+    # { group_participant_id => "confirmed"/"declined" } da rodada de presença atual do grupo.
+    def round_statuses(whatsapp_group)
+      round = whatsapp_group && MessageLog.current_round(whatsapp_group)
+      round ? round.attendances.pluck(:group_participant_id, :status).to_h : {}
     end
 
     def participants(whatsapp_group, role)
