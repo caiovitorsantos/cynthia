@@ -87,6 +87,16 @@ RSpec.describe TemplateRenderer do
         expect(result.mentioned_jids).to eq([])
       end
 
+      it "@{{todos}} notifica todos os participantes sem listar os números" do
+        GroupParticipant.create!(whatsapp_group: group, jid: "1@lid", phone_number: "1", name: "Ana")
+        GroupParticipant.create!(whatsapp_group: group, jid: "2@lid", phone_number: "2", name: "Bia")
+
+        result = described_class.call(Template.new(body: "Bom dia @{{todos}}!"), {}, whatsapp_group: group)
+
+        expect(result.body).to eq("Bom dia @todos!")
+        expect(result.mentioned_jids).to contain_exactly("1@lid", "2@lid")
+      end
+
       it "mistura menção com variáveis comuns" do
         GroupParticipant.create!(whatsapp_group: group, jid: "5511999999999@s.whatsapp.net", phone_number: "5511999999999", name: "Caio")
         template = Template.new(body: "Oi @{{Caio}}, hoje é {{dia}}.")

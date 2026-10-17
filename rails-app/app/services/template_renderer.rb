@@ -5,6 +5,10 @@ class TemplateRenderer
 
   MENTION_PATTERN = /@\{\{([^{}]+)\}\}/
 
+  # @{{todos}} menciona todos os participantes sincronizados sem listar os números no texto
+  # (a notificação vai pelas mentions), como o "@todos" do WhatsApp.
+  MENTION_ALL_KEYS = %w[todos all].freeze
+
   MONTHS = %w[Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro].freeze
 
   class << self
@@ -14,8 +18,13 @@ class TemplateRenderer
 
       body = template.body.gsub(MENTION_PATTERN) do
         key = Regexp.last_match(1).strip
-        participant = resolve_mention(key, whatsapp_group)
 
+        if whatsapp_group && MENTION_ALL_KEYS.include?(key.downcase)
+          mentioned_jids.concat(whatsapp_group.group_participants.pluck(:jid))
+          next "@#{key}"
+        end
+
+        participant = resolve_mention(key, whatsapp_group)
         if participant
           mentioned_jids << participant.jid
           "@#{participant.phone_number}"
