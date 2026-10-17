@@ -103,6 +103,43 @@ RSpec.describe Attendance do
     expect(responses.sole.status).to eq("confirmed")
   end
 
+  describe "comando !lista" do
+    def command(text) = described_class.handle_event(rule, { kind: "command", message_id: "X", participant_jid: "", text: text })
+
+    it "responde com a lista atual, ligada à rodada" do
+      record("✅")
+      expect(DeliverMessageJob).to receive(:perform_async) do |log_id, mentions|
+        log = MessageLog.find(log_id)
+        expect(log).to have_attributes(group_jid: group.jid, status: "pending", round_id: round.id)
+        expect(log.rendered_body).to eq("*Lista de presença*\n\n1. Caio ✅\n\n*Avulsos*\n1.")
+        expect(mentions).to eq([])
+      end
+
+      command("  !LISTA ")
+    end
+
+    it "usa o comando e o template configurados" do
+      resposta = Template.create!(name: "Resposta", body: "Agora: {{presenca}}")
+      rule.update!(settings: rule.settings.merge("list_command" => "!quem", "list_reply_template_id" => resposta.id.to_s))
+      expect(DeliverMessageJob).to receive(:perform_async).once
+
+      command("!lista")
+      command("!quem")
+
+      expect(MessageLog.last.rendered_body).to eq("Agora: 1. Caio")
+    end
+
+    it "não responde com o comando desativado ou sem rodada aberta" do
+      expect(DeliverMessageJob).not_to receive(:perform_async)
+
+      rule.update!(settings: rule.settings.merge("list_command" => ""))
+      command("!lista")
+
+      rule.update!(settings: rule.settings.merge("list_command" => "!lista", "template_id" => Template.create!(name: "Outro", body: "x").id))
+      command("!lista")
+    end
+  end
+
   describe "variáveis" do
     let!(:adriana) { GroupParticipant.create!(whatsapp_group: group, jid: "2@lid", phone_number: "2", name: "Adriana", role: "mensal") }
     let!(:berto) { GroupParticipant.create!(whatsapp_group: group, jid: "3@lid", phone_number: "3", name: "Berto Silva", display_name: "Berto", role: "mensal") }

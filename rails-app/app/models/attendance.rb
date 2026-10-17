@@ -15,8 +15,13 @@ module Attendance
     "confirmed_mark" => "✅",
     "declined_mark" => "❌",
     "pending_mark" => "",
-    "empty_text" => "1."
+    "empty_text" => "1.",
+    "list_command" => "!lista",
+    "list_reply_template_id" => nil
   }.freeze
+
+  # Resposta ao comando quando a regra não aponta um template.
+  DEFAULT_LIST_REPLY = "*Lista de presença*\n\n{{presenca}}\n\n*Avulsos*\n{{confirmados}}".freeze
 
   LIST_STYLES = { "numbered" => "Numerada (1. 2. 3.)", "bullet" => "Marcador •", "dash" => "Traço -", "plain" => "Sem marcador" }.freeze
 
@@ -62,7 +67,9 @@ module Attendance
         "confirmed_mark" => params[:confirmed_mark].to_s.strip,
         "declined_mark" => params[:declined_mark].to_s.strip,
         "pending_mark" => params[:pending_mark].to_s.strip,
-        "empty_text" => params[:empty_text].to_s
+        "empty_text" => params[:empty_text].to_s,
+        "list_command" => params[:list_command].to_s.strip.downcase,
+        "list_reply_template_id" => params[:list_reply_template_id].presence
       }.select { |key, _| params.key?(key) } # campo ausente no formulário mantém o valor salvo
     end
 
@@ -91,6 +98,7 @@ module Attendance
     end
 
     def handle_event(rule, event)
+      return reply_with_list(rule) if event[:kind] == "command" && command?(rule, event[:text])
       return if event[:kind] == "reply" && !settings(rule)["accept_replies"]
 
       message_log = MessageLog.find_by(wa_message_id: event[:message_id], group_jid: rule.whatsapp_group.jid)
@@ -139,6 +147,23 @@ module Attendance
     end
 
     private
+
+    def command?(rule, text)
+      command = settings(rule)["list_command"].to_s
+      command.present? && text.to_s.strip.downcase.split.first == command
+    end
+
+    # Responde ao comando com a lista da rodada atual. A resposta fica ligada à rodada,
+    # então reações nela também contam.
+    def reply_with_list(rule)
+      round = current_round(rule)
+      return unless round
+
+      template = ::Template.find_by(id: settings(rule)["list_reply_template_id"]) || ::Template.new(body: DEFAULT_LIST_REPLY)
+      result = TemplateRenderer.call(template, template.default_variables.to_h, whatsapp_group: rule.whatsapp_group)
+      message_log = MessageLog.create!(group_jid: rule.whatsapp_group.jid, rendered_body: result.body, status: "pending", round_id: round.id)
+      DeliverMessageJob.perform_async(message_log.id, result.mentioned_jids)
+    end
 
     def record(rule, round, event)
       group = rule.whatsapp_group

@@ -30,7 +30,7 @@ function cacheContacts(contacts: Partial<Contact>[]): void {
 }
 
 type InboundEvent = {
-  kind: "reaction" | "reply";
+  kind: "reaction" | "reply" | "command";
   group_jid: string;
   message_id: string;
   participant_jid: string;
@@ -38,21 +38,31 @@ type InboundEvent = {
   text: string;
 };
 
-// Reações e respostas que citam uma mensagem, em grupos. O Rails decide se a
-// mensagem citada é uma lista de presença; o resto ele ignora.
+// Reações, respostas que citam uma mensagem e comandos ("!..."), em grupos. O Rails
+// decide o que fazer com cada um; o resto ele ignora.
 function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
   const groupJid = msg.key.remoteJid;
-  const participantJid = msg.key.participant;
-  if (!groupJid?.endsWith("@g.us") || !participantJid || msg.key.fromMe) return undefined;
+  if (!groupJid?.endsWith("@g.us")) return undefined;
+
+  const participantJid = msg.key.participant ?? "";
+  const base = { group_jid: groupJid, participant_jid: participantJid, push_name: msg.pushName ?? null };
+  const text = msg.message?.conversation ?? msg.message?.extendedTextMessage?.text ?? "";
+
+  // Comandos valem também do próprio número conectado (o dono do bot digitando no celular).
+  if (text.trim().startsWith("!")) {
+    return { ...base, kind: "command", message_id: msg.key.id ?? "", text };
+  }
+
+  if (!participantJid || msg.key.fromMe) return undefined;
 
   const reaction = msg.message?.reactionMessage;
   if (reaction?.key?.id) {
-    return { kind: "reaction", group_jid: groupJid, message_id: reaction.key.id, participant_jid: participantJid, push_name: msg.pushName ?? null, text: reaction.text ?? "" };
+    return { ...base, kind: "reaction", message_id: reaction.key.id, text: reaction.text ?? "" };
   }
 
   const extended = msg.message?.extendedTextMessage;
   if (extended?.contextInfo?.stanzaId && extended.text) {
-    return { kind: "reply", group_jid: groupJid, message_id: extended.contextInfo.stanzaId, participant_jid: participantJid, push_name: msg.pushName ?? null, text: extended.text };
+    return { ...base, kind: "reply", message_id: extended.contextInfo.stanzaId, text: extended.text };
   }
 
   return undefined;

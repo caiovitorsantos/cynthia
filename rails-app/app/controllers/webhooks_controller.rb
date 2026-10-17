@@ -8,7 +8,7 @@ class WebhooksController < ActionController::API
     event = {
       kind: params.require(:kind),
       message_id: params.require(:message_id),
-      participant_jid: params.require(:participant_jid),
+      participant_jid: params[:participant_jid].to_s,
       push_name: params[:push_name],
       text: params[:text].to_s
     }

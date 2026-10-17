@@ -36,7 +36,8 @@ mês, sai a cobrança.
 - **Grupos** sincronizados a cada 30 minutos, com participantes. Dá para sair de um grupo ou removê-lo
   do painel, um por vez ou vários de uma vez (a saída em lote roda em segundo plano, com intervalo
   entre cada grupo).
-- **Templates** com variáveis (`{{nome}}`), variáveis automáticas de data e menções (`@{{Caio}}`), e
+- **Templates** com variáveis (`{{nome}}`), variáveis automáticas de data, menções (`@{{Caio}}`) e
+  menção a todos (`@{{todos}}`), e
   prévia ao vivo em balão de conversa com a formatação do WhatsApp (`*negrito*`, `_itálico_`, `~riscado~`).
 - **Agendamentos** recorrentes (cron, com fuso horário) ou de envio único, com botão de envio de teste.
 - **Logs** de cada envio, com status, erro e reenvio.
@@ -45,8 +46,9 @@ mês, sai a cobrança.
 **Regras por grupo (opcionais)**
 
 - **Lista de presença**: o template escolhido abre uma rodada a cada envio. Reações e respostas citando
-  a mensagem viram confirmação ou cancelamento. Tudo é configurável por grupo: categorias de membros,
-  emojis, se respostas por texto contam e o formato das listas.
+  a mensagem viram confirmação ou cancelamento, e qualquer participante pede a lista atual mandando
+  `!lista` no grupo. Tudo é configurável por grupo: categorias de membros, emojis, se respostas por
+  texto contam, o formato das listas, o comando e o template da resposta.
 
 ## Telas
 
@@ -208,7 +210,8 @@ O `SendGuard` bloqueia o envio antes de chegar ao WhatsApp:
 |---|---|---|
 | `DispatchDueSchedulesJob` | a cada minuto | Enfileira os agendamentos com `next_run_at` vencido |
 | `SyncGroupsJob` | a cada 30 min | Atualiza grupos e participantes |
-| `SendScheduledMessageJob` | sob demanda | Renderiza, valida, envia e reagenda |
+| `SendScheduledMessageJob` | sob demanda | Renderiza o agendamento, entrega e reagenda |
+| `DeliverMessageJob` | sob demanda | Passa pelo `SendGuard`, envia e registra o log (agendamentos e respostas a comandos) |
 | `LeaveGroupsJob` | sob demanda | Sai de vários grupos, um por vez |
 
 ## Como rodar
@@ -260,6 +263,7 @@ Escreva o texto com a formatação do WhatsApp e use variáveis:
 | `{{data}}` | Data do envio (`dd/mm`) |
 | `{{mes}}`, `{{mes_num}}`, `{{mes_anterior}}` | `Outubro`, `10`, `Setembro` |
 | `@{{Caio}}` ou `@{{5511999999999}}` | Menciona o participante (pelo nome exato ou pelo número) |
+| `@{{todos}}` (ou `@{{all}}`) | Mostra "@todos" e notifica **todos** os participantes sincronizados, sem listar os números |
 
 As datas usam o fuso do agendamento. Grupos com regras oferecem variáveis extras (abaixo).
 
@@ -295,6 +299,8 @@ Em **Configurar regra**:
 | Estilo da lista | numerada (`1.`), `•`, `-` ou sem marcador |
 | Marcas de confirmado / cancelado / sem resposta | `✅` / `❌` / nada |
 | Texto de lista vazia | `1.` |
+| Comando para pedir a lista | `!lista` (vazio desativa) |
+| Template da resposta ao comando | padrão: presença + avulsos |
 
 Categoria **fixa** quer dizer que a pessoa aparece em `{{presenca}}` e é cobrada em `{{pendentes}}`.
 Quem confirma sem estar numa categoria fixa (um avulso, ou alguém que entrou depois da última
@@ -312,8 +318,12 @@ sincronização) aparece em `{{confirmados}}`.
 
 Nas menções, a mensagem leva `@<número>` e o WhatsApp exibe o nome da pessoa marcada, como nos exemplos.
 
-Reações em mensagens que mostram a rodada (por exemplo, um lembrete com `{{pendentes}}` ou uma lista
-atualizada com `{{presenca}}`) também contam para a mesma rodada. Renomear uma categoria não quebra os
+Reações em mensagens que mostram a rodada (por exemplo, um lembrete com `{{pendentes}}`, uma lista
+atualizada com `{{presenca}}` ou a resposta ao `!lista`) também contam para a mesma rodada.
+
+**Comando `!lista`.** Qualquer participante, inclusive o dono do número conectado, manda `!lista` no
+grupo e o bot responde com a lista da rodada atual. A resposta passa pelos mesmos limites de envio:
+se a lista não mudou, ela não é reenviada em 6 horas. Renomear uma categoria não quebra os
 templates, porque a variável usa a chave mostrada ao lado do nome (`:mensal`).
 
 ### Exemplo completo: grupo de vôlei
@@ -350,8 +360,8 @@ header `Authorization: <INTERNAL_API_TOKEN>`.
 | `POST` | `/logout` | Encerra a sessão e gera um novo QR |
 
 **Webhook (wa-service → Rails):** `POST RAILS_WEBHOOK_URL` (`/webhooks/whatsapp`) com
-`{kind: "reaction" | "reply", group_jid, message_id, participant_jid, push_name, text}`. Uma reação
-removida chega com `text` vazio.
+`{kind: "reaction" | "reply" | "command", group_jid, message_id, participant_jid, push_name, text}`.
+Uma reação removida chega com `text` vazio. Mensagens que começam com `!` chegam como `command`.
 
 ## Desenvolvimento
 
@@ -398,6 +408,5 @@ O `wa-service` roda com `tsx watch`: mudanças em `wa-service/src` recarregam so
 - **Risco de bloqueio** do número, inerente ao uso do Baileys.
 - **Lista copiada e colada não é lida.** Só reações e respostas citando a mensagem viram confirmação.
 - **Uma rodada aberta por grupo:** a mais recente do template da lista.
-- **Sem comando no grupo** (como `!lista`) para pedir a lista atualizada sob demanda.
 - **Lembrete sem pendentes sai mesmo assim**, com `{{pendentes}}` vazio.
 - **Admin único**, com credenciais no `.env`.

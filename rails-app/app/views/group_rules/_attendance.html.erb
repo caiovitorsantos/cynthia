@@ -97,6 +97,22 @@
       </div>
     </fieldset>
 
+    <fieldset class="grid sm:grid-cols-2 gap-3 min-w-0">
+      <legend class="font-medium mb-1">Comando no grupo</legend>
+      <div>
+        <%= f.label :list_command, "Comando para pedir a lista atual", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :list_command, value: settings["list_command"], placeholder: "(desativado)", class: "w-full" %>
+      </div>
+      <div>
+        <%= f.label :list_reply_template_id, "Template da resposta", class: "block text-xs text-wa-muted" %>
+        <%= f.select :list_reply_template_id, ::Template.order(:name).pluck(:name, :id), { selected: settings["list_reply_template_id"].to_i, include_blank: "Padrão (presença + avulsos)" }, class: "w-full" %>
+      </div>
+      <p class="sm:col-span-2 text-xs text-wa-muted">
+        Qualquer participante manda o comando no grupo e recebe a lista da rodada atual. Deixe o comando vazio para desativar.
+        Os limites de envio continuam valendo: a mesma lista não é reenviada em 6h.
+      </p>
+    </fieldset>
+
     <fieldset class="grid sm:grid-cols-3 gap-3 min-w-0">
       <legend class="font-medium mb-1">Formato das listas</legend>
       <div>
