@@ -5,9 +5,8 @@ class SendScheduledMessageJob
 
   def perform(schedule_id)
     schedule = Schedule.find(schedule_id)
-    variables = schedule.template.default_variables.merge(schedule.variables)
     result = TemplateRenderer.call(
-      schedule.template, variables,
+      schedule.template, schedule.variables,
       whatsapp_group: schedule.whatsapp_group, now: Time.current.in_time_zone(schedule.timezone)
     )
 

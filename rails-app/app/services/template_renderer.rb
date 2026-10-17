@@ -12,8 +12,12 @@ class TemplateRenderer
   MONTHS = %w[Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro].freeze
 
   class << self
+    # Prioridade dos valores: variables (ex.: JSON do agendamento) > variáveis do grupo >
+    # padrões do template > automáticas e de regras de grupo.
     def call(template, variables, whatsapp_group: nil, now: Time.current)
-      variables = variables.to_h.stringify_keys
+      variables = template.default_variables.to_h
+        .merge(whatsapp_group&.variables || {})
+        .merge(variables.to_h.stringify_keys)
       mentioned_jids = []
 
       body = template.body.gsub(MENTION_PATTERN) do

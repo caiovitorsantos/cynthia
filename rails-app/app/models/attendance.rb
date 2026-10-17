@@ -160,7 +160,7 @@ module Attendance
       return unless round
 
       template = ::Template.find_by(id: settings(rule)["list_reply_template_id"]) || ::Template.new(body: DEFAULT_LIST_REPLY)
-      result = TemplateRenderer.call(template, template.default_variables.to_h, whatsapp_group: rule.whatsapp_group)
+      result = TemplateRenderer.call(template, {}, whatsapp_group: rule.whatsapp_group)
       message_log = MessageLog.create!(group_jid: rule.whatsapp_group.jid, rendered_body: result.body, status: "pending", round_id: round.id)
       DeliverMessageJob.perform_async(message_log.id, result.mentioned_jids)
     end

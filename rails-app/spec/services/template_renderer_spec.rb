@@ -27,6 +27,18 @@ RSpec.describe TemplateRenderer do
       }.to raise_error(TemplateRenderer::MissingVariableError, /dia/)
     end
 
+    describe "variáveis do grupo" do
+      let(:group) { WhatsappGroup.create!(jid: "g9@g.us", name: "Vôlei", variables: { "pix" => "pix@vôlei", "local" => "Quadra 1" }) }
+
+      it "preenche com os valores do grupo, abaixo dos valores do agendamento" do
+        template = Template.new(body: "PIX {{pix}} em {{local}}", default_variables: { "local" => "padrão", "pix" => "padrão" })
+
+        result = described_class.call(template, { "local" => "Quadra 2" }, whatsapp_group: group)
+
+        expect(result.body).to eq("PIX pix@vôlei em Quadra 2")
+      end
+    end
+
     it "não escapa nada (texto puro, não HTML)" do
       template = Template.new(body: "<b>{{tag}}</b>")
 

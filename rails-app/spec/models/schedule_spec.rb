@@ -16,4 +16,11 @@ RSpec.describe Schedule do
     expect(schedule).not_to be_valid
     expect(schedule.errors[:variables].first).to include("mencoes:mensal")
   end
+
+  it "aceita variáveis definidas no grupo" do
+    template = Template.create!(name: "Cobrança", body: "PIX: {{pix}}")
+    group.update!(variables: { "pix" => "pix@exemplo.com" })
+
+    expect(Schedule.new(template: template, whatsapp_group: group, cron_expression: "0 9 1 * *")).to be_valid
+  end
 end

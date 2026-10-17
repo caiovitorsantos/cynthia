@@ -5,6 +5,15 @@ class WhatsappGroup < ApplicationRecord
 
   validates :jid, presence: true, uniqueness: true
 
+  # Linhas do formulário {nome, valor} → { "nome" => "valor" }. Nome vira chave de variável
+  # válida ({{nome}}); linhas sem nome são descartadas.
+  def self.variables_from(rows)
+    rows.to_h.values.each_with_object({}) do |row, variables|
+      key = row[:name].to_s.strip.parameterize(separator: "_")
+      variables[key] = row[:value].to_s if key.present?
+    end
+  end
+
   def rule(kind)
     group_rules.find { |rule| rule.kind == kind }
   end

@@ -21,6 +21,7 @@ Rails.application.routes.draw do
     resources :rules, only: [ :create, :update, :destroy ], controller: "group_rules"
     member do
       post :leave
+      patch :variables
     end
     collection do
       post :sync

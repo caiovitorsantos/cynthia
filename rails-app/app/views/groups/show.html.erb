@@ -31,6 +31,36 @@
   <% end %>
 </section>
 
+<section class="bg-white rounded-lg shadow-sm p-4 mb-6">
+  <h2 class="text-sm font-semibold uppercase tracking-wide text-wa-muted mb-1">Variáveis do grupo</h2>
+  <p class="text-xs text-wa-muted mb-3">
+    Valores usados por qualquer template enviado a este grupo, como <code class="font-mono">{{pix}}</code>.
+    O JSON do agendamento tem prioridade sobre eles. Para remover, apague o nome.
+  </p>
+
+  <%= form_with url: variables_group_path(@group), method: :patch, class: "space-y-3" do %>
+    <table class="table-cards w-full text-sm">
+      <thead class="text-xs text-wa-muted text-left">
+        <tr><th class="font-normal pb-1 pr-3 w-1/3">Nome</th><th class="font-normal pb-1">Valor</th></tr>
+      </thead>
+      <tbody>
+        <% (@group.variables.to_a + [ [ "", "" ] ]).each_with_index do |(name, value), index| %>
+          <tr>
+            <td data-label="Nome" class="py-1 pr-3 align-top">
+              <%= text_field_tag "variables[#{index}][name]", name, placeholder: (name.empty? ? "nova variável" : nil), class: "w-full font-mono" %>
+              <% if name.present? %><span class="block text-xs text-wa-muted font-mono mt-1">{{<%= name %>}}</span><% end %>
+            </td>
+            <td data-label="Valor" class="py-1 align-top">
+              <%= text_area_tag "variables[#{index}][value]", value, rows: [ value.to_s.lines.count, 1 ].max, class: "w-full" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <%= submit_tag "Salvar variáveis", class: "btn-wa" %>
+  <% end %>
+</section>
+
 <p class="text-xs text-wa-muted mb-4">
   Use estes nomes ou números com <code class="font-mono">@{{nome}}</code> ou
   <code class="font-mono">@{{numero}}</code> no corpo de um template para mencionar

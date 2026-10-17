@@ -103,4 +103,17 @@ RSpec.describe "Groups", type: :request do
       expect(group.group_rules.reload).to be_empty
     end
   end
+
+  it "salva as variáveis do grupo, normaliza o nome e descarta linhas sem nome" do
+    group = WhatsappGroup.create!(jid: "g7@g.us", name: "Vôlei", variables: { "antiga" => "x" })
+
+    patch variables_group_path(group), params: { variables: {
+      "0" => { name: "PIX", value: "pix@exemplo.com" },
+      "1" => { name: "Valor mensal", value: "R$45" },
+      "2" => { name: "", value: "ignorado" }
+    } }
+
+    expect(response).to redirect_to(group_path(group))
+    expect(group.reload.variables).to eq("pix" => "pix@exemplo.com", "valor_mensal" => "R$45")
+  end
 end

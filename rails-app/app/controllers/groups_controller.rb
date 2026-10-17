@@ -29,6 +29,12 @@ class GroupsController < ApplicationController
     redirect_to group_path(group), alert: "Erro ao salvar: #{e.message}"
   end
 
+  def variables
+    group = WhatsappGroup.find(params[:id])
+    group.update!(variables: WhatsappGroup.variables_from(params.fetch(:variables, {}).permit!))
+    redirect_to group_path(group), notice: "Variáveis do grupo atualizadas."
+  end
+
   def leave
     group = WhatsappGroup.find(params[:id])
     WaClient.leave_group(group.jid)

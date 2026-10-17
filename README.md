@@ -39,6 +39,8 @@ mês, sai a cobrança.
 - **Templates** com variáveis (`{{nome}}`), variáveis automáticas de data, menções (`@{{Caio}}`) e
   menção a todos (`@{{todos}}`), e
   prévia ao vivo em balão de conversa com a formatação do WhatsApp (`*negrito*`, `_itálico_`, `~riscado~`).
+- **Variáveis do grupo**: valores como `{{pix}}` ou `{{local}}` definidos uma vez na página do grupo e
+  usados por qualquer template enviado a ele.
 - **Agendamentos** recorrentes (cron, com fuso horário) ou de envio único, com botão de envio de teste.
 - **Logs** de cada envio, com status, erro e reenvio.
 - **Login** por sessão e interface **responsiva** (no celular, tabelas viram cartões).
@@ -185,6 +187,7 @@ erDiagram
     MESSAGE_LOGS |o--o{ MESSAGE_LOGS : "round_id (acompanhamento)"
     GROUP_PARTICIPANTS ||--o{ ATTENDANCES : responde
 
+    WHATSAPP_GROUPS { string jid string name jsonb variables }
     GROUP_PARTICIPANTS { string jid string name string role "categoria da regra" string display_name }
     GROUP_RULES { string kind jsonb settings }
     SCHEDULES { string cron_expression datetime run_at string timezone jsonb variables datetime next_run_at }
@@ -259,13 +262,22 @@ Escreva o texto com a formatação do WhatsApp e use variáveis:
 
 | Variável | Valor |
 |---|---|
-| `{{qualquer_nome}}` | Preenchida pelo JSON do agendamento (ex.: `{"dia": "25/10"}`) |
+| `{{qualquer_nome}}` | Preenchida pelas **variáveis do grupo** ou pelo JSON do agendamento (ex.: `{"dia": "25/10"}`) |
 | `{{data}}` | Data do envio (`dd/mm`) |
 | `{{mes}}`, `{{mes_num}}`, `{{mes_anterior}}` | `Outubro`, `10`, `Setembro` |
 | `@{{Caio}}` ou `@{{5511999999999}}` | Menciona o participante (pelo nome exato ou pelo número) |
 | `@{{todos}}` (ou `@{{all}}`) | Mostra "@todos" e notifica **todos** os participantes sincronizados, sem listar os números |
 
 As datas usam o fuso do agendamento. Grupos com regras oferecem variáveis extras (abaixo).
+
+**Variáveis do grupo.** Na página do grupo, o bloco "Variáveis do grupo" guarda pares nome → valor
+(o valor pode ter várias linhas). Assim o mesmo template serve para grupos diferentes:
+`PIX: {{pix}}` sai com o PIX de cada grupo. Se o mesmo nome existir em mais de um lugar, vale esta
+ordem:
+
+1. JSON do agendamento
+2. Variáveis do grupo
+3. Variáveis automáticas e das regras do grupo
 
 ### 2. Agendamentos
 
@@ -333,7 +345,9 @@ templates, porque a variável usa a chave mostrada ao lado do nome (`:mensal`).
 | Presença (abre a rodada) | `*PRESENÇA {{data}}*`<br>`_Reaja com ✅ ou ❌_`<br><br>`{{mencoes}}`<br><br>`*Avulsos*`<br>`1.` | `0 14 * * 2` |
 | Lembrete | `⏰ Falta confirmar: {{pendentes}}` | `0 16 * * 2` |
 | Lista atualizada | `*PRESENÇA {{data}}*`<br>`{{presenca}}`<br><br>`*Avulsos*`<br>`{{confirmados}}` | `0 17 * * 2` |
-| Cobrança | `*PAGAMENTO {{mes_anterior}}*`<br>`🚨 até 10/{{mes_num}}`<br><br>`{{mencoes}}` | `0 9 1 * *` |
+| Cobrança | `*PAGAMENTO {{mes_anterior}}*`<br>`🚨 até 10/{{mes_num}}`<br><br>`PIX: {{pix}}`<br>`MENSAL: {{valor_mensal}}`<br><br>`{{mencoes}}` | `0 9 1 * *` |
+
+Com as variáveis do grupo `pix` e `valor_mensal`.
 
 ## Criando uma nova regra de grupo
 
