@@ -47,6 +47,7 @@ services:
     build:
       context: ./wa-service
     env_file: .env
+    restart: unless-stopped
     environment:
       RAILS_WEBHOOK_URL: http://rails:3000/webhooks/whatsapp
     volumes:
@@ -59,6 +60,7 @@ services:
       context: ./rails-app
       dockerfile: Dockerfile.dev
     command: bundle exec sidekiq
+    restart: unless-stopped
     env_file: .env
     environment:
       WA_SERVICE_URL: http://wa:3001
