@@ -97,5 +97,52 @@ RSpec.describe TemplateRenderer do
         expect(result.mentioned_jids).to eq([ "5511999999999@s.whatsapp.net" ])
       end
     end
+
+    describe "variáveis automáticas" do
+      let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Grupo 1") }
+      let(:now) { Time.zone.parse("2026-10-13 14:00") }
+
+      it "preenche data e meses a partir de now" do
+        template = Template.new(body: "PRESENÇA {{data}} | {{mes}} ({{mes_num}}) | PAGAMENTO {{mes_anterior}}")
+
+        result = described_class.call(template, {}, now: now)
+
+        expect(result.body).to eq("PRESENÇA 13/10 | Outubro (10) | PAGAMENTO Setembro")
+      end
+
+      it "mes_anterior de janeiro é dezembro" do
+        result = described_class.call(Template.new(body: "{{mes_anterior}}"), {}, now: Time.zone.parse("2027-01-01"))
+
+        expect(result.body).to eq("Dezembro")
+      end
+
+      it "lista mensais numerados em ordem alfabética, usando o nome na lista" do
+        GroupParticipant.create!(whatsapp_group: group, jid: "2@s.whatsapp.net", phone_number: "2", name: "Caio Feliphe", display_name: "Caio F.", role: "mensal")
+        GroupParticipant.create!(whatsapp_group: group, jid: "1@s.whatsapp.net", phone_number: "1", name: "Adriana", role: "mensal")
+        GroupParticipant.create!(whatsapp_group: group, jid: "3@s.whatsapp.net", phone_number: "3", name: "Ellie", role: "avulso")
+        GroupParticipant.create!(whatsapp_group: group, jid: "4@s.whatsapp.net", phone_number: "4", name: "Luana", role: "espera")
+
+        result = described_class.call(Template.new(body: "{{lista_mensais}}\n--\n{{lista_espera}}"), {}, whatsapp_group: group)
+
+        expect(result.body).to eq("1. Adriana\n2. Caio F.\n--\n1. Luana")
+        expect(result.mentioned_jids).to eq([])
+      end
+
+      it "mencoes_mensais marca cada mensal" do
+        GroupParticipant.create!(whatsapp_group: group, jid: "2@s.whatsapp.net", phone_number: "2", name: "Berto", role: "mensal")
+        GroupParticipant.create!(whatsapp_group: group, jid: "1@s.whatsapp.net", phone_number: "1", name: "Adriana", role: "mensal")
+
+        result = described_class.call(Template.new(body: "{{mencoes_mensais}}"), {}, whatsapp_group: group)
+
+        expect(result.body).to eq("1. @1\n2. @2")
+        expect(result.mentioned_jids).to eq([ "1@s.whatsapp.net", "2@s.whatsapp.net" ])
+      end
+
+      it "valor explícito sobrescreve a variável automática" do
+        result = described_class.call(Template.new(body: "{{data}}"), { "data" => "amanhã" }, now: now)
+
+        expect(result.body).to eq("amanhã")
+      end
+    end
   end
 end

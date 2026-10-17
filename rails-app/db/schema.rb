@@ -10,15 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "group_participants", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "display_name"
     t.string "jid", null: false
     t.string "name"
     t.string "phone_number"
+    t.string "role"
     t.datetime "synced_at"
     t.datetime "updated_at", null: false
     t.bigint "whatsapp_group_id", null: false
