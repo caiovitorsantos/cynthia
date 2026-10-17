@@ -1,4 +1,4 @@
-import { rm } from "node:fs/promises";
+import { readdir, rm } from "node:fs/promises";
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
@@ -69,7 +69,9 @@ async function connect(): Promise<void> {
       status = "disconnected";
 
       if (loggedOut) {
-        logger.warn("Sessão encerrada (logout). É necessário novo QR Code.");
+        // Sessão revogada (pelo celular ou pelo WhatsApp): a auth salva não serve mais, gera QR novo.
+        logger.warn("Sessão encerrada (logout). Gerando novo QR Code.");
+        resetSession().catch((err) => logger.error({ err }, "Falha ao gerar nova sessão"));
       } else {
         logger.warn({ statusCode }, "Conexão perdida, reconectando...");
         connect();
@@ -99,17 +101,26 @@ export function getContactName(jid: string): string | undefined {
 }
 
 export async function logout(): Promise<void> {
+  // Sem isso o close do logout dispararia um segundo resetSession em paralelo.
+  sock?.ev.removeAllListeners("connection.update");
+
   try {
     await sock?.logout();
   } catch (err) {
     logger.warn({ err }, "Erro ao encerrar sessão no WhatsApp, limpando estado local mesmo assim");
   }
 
+  await resetSession();
+}
+
+async function resetSession(): Promise<void> {
   status = "disconnected";
   lastQR = undefined;
   sock = undefined;
 
-  await rm("./auth", { recursive: true, force: true });
+  // ./auth é ponto de montagem de volume: apaga o conteúdo, não o diretório (rmdir dá EBUSY).
+  const files = await readdir("./auth").catch(() => []);
+  await Promise.all(files.map((file) => rm(`./auth/${file}`, { recursive: true, force: true })));
 
   await connect();
 }
