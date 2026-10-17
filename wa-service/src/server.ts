@@ -18,7 +18,7 @@ function randomSeconds(min: number, max: number): number {
 
 // Delay aleatório + simulação de "digitando" antes de cada envio, para reduzir
 // o risco de detecção de bot pelo WhatsApp.
-async function sendLikeAHuman(sock: WASocket, jid: string, message: string, mentions?: string[]): Promise<void> {
+async function sendLikeAHuman(sock: WASocket, jid: string, message: string, mentions?: string[]): Promise<string | undefined> {
   await sock.sendPresenceUpdate("composing", jid);
   await sleep(2_000);
   await sock.sendPresenceUpdate("paused", jid);
@@ -26,7 +26,8 @@ async function sendLikeAHuman(sock: WASocket, jid: string, message: string, ment
   await sleep(randomSeconds(3, 12) * 1_000);
 
   const content = mentions && mentions.length > 0 ? { text: message, mentions } : { text: message };
-  await sock.sendMessage(jid, content);
+  const sent = await sock.sendMessage(jid, content);
+  return sent?.key.id ?? undefined;
 }
 
 app.get("/health", (_req, res) => {
@@ -89,8 +90,8 @@ app.post("/send", async (req, res) => {
     return;
   }
 
-  await sendLikeAHuman(sock, group_jid, message, mentions);
-  res.json({ status: "sent" });
+  const messageId = await sendLikeAHuman(sock, group_jid, message, mentions);
+  res.json({ status: "sent", message_id: messageId });
 });
 
 app.post("/groups/leave", async (req, res) => {

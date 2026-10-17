@@ -1,6 +1,7 @@
 import { readdir, rm } from "node:fs/promises";
 import makeWASocket, {
   DisconnectReason,
+  type WAMessage,
   useMultiFileAuthState,
   type WASocket,
   type Contact,
@@ -28,6 +29,51 @@ function cacheContacts(contacts: Partial<Contact>[]): void {
   }
 }
 
+type InboundEvent = {
+  kind: "reaction" | "reply";
+  group_jid: string;
+  message_id: string;
+  participant_jid: string;
+  push_name: string | null;
+  text: string;
+};
+
+// Reações e respostas que citam uma mensagem, em grupos. O Rails decide se a
+// mensagem citada é uma lista de presença; o resto ele ignora.
+function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
+  const groupJid = msg.key.remoteJid;
+  const participantJid = msg.key.participant;
+  if (!groupJid?.endsWith("@g.us") || !participantJid || msg.key.fromMe) return undefined;
+
+  const reaction = msg.message?.reactionMessage;
+  if (reaction?.key?.id) {
+    return { kind: "reaction", group_jid: groupJid, message_id: reaction.key.id, participant_jid: participantJid, push_name: msg.pushName ?? null, text: reaction.text ?? "" };
+  }
+
+  const extended = msg.message?.extendedTextMessage;
+  if (extended?.contextInfo?.stanzaId && extended.text) {
+    return { kind: "reply", group_jid: groupJid, message_id: extended.contextInfo.stanzaId, participant_jid: participantJid, push_name: msg.pushName ?? null, text: extended.text };
+  }
+
+  return undefined;
+}
+
+async function forwardToRails(event: InboundEvent): Promise<void> {
+  const url = process.env.RAILS_WEBHOOK_URL;
+  if (!url) return;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: process.env.INTERNAL_API_TOKEN ?? "" },
+      body: JSON.stringify(event),
+    });
+    if (!response.ok) logger.warn({ status: response.status }, "Webhook do Rails recusou o evento");
+  } catch (err) {
+    logger.warn({ err }, "Falha ao enviar evento ao Rails");
+  }
+}
+
 async function connect(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState("./auth");
 
@@ -44,6 +90,15 @@ async function connect(): Promise<void> {
   // que aparecem depois da sincronização inicial.
   sock.ev.on("messaging-history.set", ({ contacts }) => {
     cacheContacts(contacts);
+  });
+
+  sock.ev.on("messages.upsert", ({ messages, type }) => {
+    if (type !== "notify") return;
+
+    for (const msg of messages) {
+      const event = toInboundEvent(msg);
+      if (event) void forwardToRails(event);
+    }
   });
 
   sock.ev.on("connection.update", (update) => {
