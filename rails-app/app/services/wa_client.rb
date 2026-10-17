@@ -23,6 +23,10 @@ class WaClient
       handle(connection.get("/groups"))
     end
 
+    def leave_group(group_jid)
+      handle(connection.post("/groups/leave", { group_jid: group_jid }))
+    end
+
     def status
       handle(connection.get("/health"))["status"]
     end

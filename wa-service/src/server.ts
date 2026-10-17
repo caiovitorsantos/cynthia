@@ -93,6 +93,25 @@ app.post("/send", async (req, res) => {
   res.json({ status: "sent" });
 });
 
+app.post("/groups/leave", async (req, res) => {
+  const sock = whatsapp.getSocket();
+
+  if (whatsapp.getStatus() !== "connected" || !sock) {
+    res.status(503).json({ error: "not_connected" });
+    return;
+  }
+
+  const { group_jid } = req.body ?? {};
+
+  if (typeof group_jid !== "string" || !group_jid.endsWith("@g.us")) {
+    res.status(400).json({ error: "invalid_params" });
+    return;
+  }
+
+  await sock.groupLeave(group_jid);
+  res.json({ status: "left" });
+});
+
 app.post("/logout", async (_req, res) => {
   await whatsapp.logout();
   res.json({ status: "logged_out" });
