@@ -1,12 +1,12 @@
 <% content_for :title, "Templates" %>
 
 <div class="flex items-center justify-between mb-6">
-  <h1 class="text-2xl font-bold">Templates</h1>
-  <%= link_to "Novo template", new_template_path, class: "bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-800" %>
+  <h1 class="text-2xl font-semibold text-wa-text">Templates</h1>
+  <%= link_to "Novo template", new_template_path, class: "btn-wa" %>
 </div>
 
-<table class="w-full text-sm border-collapse bg-white shadow rounded overflow-hidden">
-  <thead class="bg-gray-100">
+<table class="w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
+  <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
     <tr class="text-left">
       <th class="py-2 px-3">Nome</th>
       <th class="py-2 px-3">Variáveis</th>
@@ -16,12 +16,12 @@
   </thead>
   <tbody>
     <% @templates.each do |template| %>
-      <tr class="border-t">
+      <tr class="border-t border-gray-100 hover:bg-wa-panel/60">
         <td class="py-2 px-3"><%= template.name %></td>
         <td class="py-2 px-3 font-mono text-xs"><%= template.variable_names.join(", ").presence || "—" %></td>
         <td class="py-2 px-3"><%= template.active? ? "Sim" : "Não" %></td>
         <td class="py-2 px-3 text-right space-x-3">
-          <%= link_to "Editar", edit_template_path(template), class: "text-blue-600 hover:underline" %>
+          <%= link_to "Editar", edit_template_path(template), class: "text-wa-teal hover:underline" %>
           <%= button_to "Remover", template_path(template), method: :delete,
                 form: { data: { turbo_confirm: "Remover este template?" }, class: "inline" },
                 class: "text-red-600 hover:underline bg-transparent p-0" %>
@@ -29,7 +29,7 @@
       </tr>
     <% end %>
     <% if @templates.empty? %>
-      <tr><td colspan="4" class="py-4 px-3 text-center text-gray-500">Nenhum template cadastrado.</td></tr>
+      <tr><td colspan="4" class="py-4 px-3 text-center text-wa-muted">Nenhum template cadastrado.</td></tr>
     <% end %>
   </tbody>
 </table>

@@ -5,6 +5,10 @@ Rails.application.routes.draw do
 
   root "connection#show"
 
+  get "login" => "sessions#new"
+  post "login" => "sessions#create"
+  delete "logout" => "sessions#destroy"
+
   resource :connection, only: [ :show ], controller: "connection" do
     post :logout
   end

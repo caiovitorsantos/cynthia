@@ -3,7 +3,7 @@
     Status:
     <span class="font-mono px-2 py-1 rounded <%=
       case @status
-      when "connected" then "bg-green-100 text-green-800"
+      when "connected" then "bg-wa-bubble text-wa-teal"
       when "qr_pending" then "bg-yellow-100 text-yellow-800"
       else "bg-red-100 text-red-800"
       end
@@ -20,7 +20,7 @@
       <% if @qr.present? %>
         <%= image_tag @qr, alt: "QR Code", class: "w-64 h-64 border" %>
       <% else %>
-        <p class="text-sm text-gray-500">Gerando QR Code...</p>
+        <p class="text-sm text-wa-muted">Gerando QR Code...</p>
       <% end %>
     </div>
   <% end %>
@@ -30,6 +30,10 @@
           method: :post,
           class: "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700",
           data: { turbo_confirm: "Tem certeza? Isso vai desconectar o WhatsApp e exigir um novo QR Code." } %>
+  <% end %>
+
+  <% if @status == "disconnected" %>
+    <%= button_to "Gerar novo QR Code", logout_connection_path, method: :post, class: "btn-wa" %>
   <% end %>
 
   <% if @status == "unreachable" %>
