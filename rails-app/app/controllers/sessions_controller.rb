@@ -1,6 +1,6 @@
 class SessionsController < ApplicationController
   skip_before_action :require_login, only: %i[new create]
-  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to login_path, alert: "Muitas tentativas. Respira e tenta daqui a uns minutos." }
+  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to login_path, alert: I18n.t("sessions.create.rate_limited") }
 
   def new
     redirect_to groups_path if logged_in?
@@ -12,14 +12,14 @@ class SessionsController < ApplicationController
       session[:admin] = true
       redirect_to groups_path
     else
-      flash.now[:alert] = "Usuário ou senha errados. Tenta de novo, eu espero. (Mais ou menos.)"
+      flash.now[:alert] = t(".alert")
       render :new, status: :unprocessable_entity
     end
   end
 
   def destroy
     reset_session
-    redirect_to login_path, notice: "Você saiu. Até que enfim, silêncio."
+    redirect_to login_path, notice: t(".notice")
   end
 
   private

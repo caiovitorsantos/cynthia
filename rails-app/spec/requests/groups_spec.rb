@@ -89,7 +89,7 @@ RSpec.describe "Groups", type: :request do
       post destroy_selected_groups_path, params: { ids: [ g1.id, g3.id ] }
 
       expect(WhatsappGroup.pluck(:name)).to eq([ "Grupo 2" ])
-      expect(flash[:notice]).to include("2 grupo(s)")
+      expect(flash[:notice]).to include("2 grupos")
     end
   end
 

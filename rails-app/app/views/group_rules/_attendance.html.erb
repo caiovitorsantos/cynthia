@@ -7,51 +7,47 @@
 
 <div class="flex items-start justify-between gap-4">
   <div>
-    <p class="font-medium">Lista de presença <span class="text-xs text-wa-text bg-wa-bubble rounded-full px-2 py-0.5 ml-1">ativa</span></p>
-    <p class="text-xs text-wa-muted">Cada mensagem de um passo marcado "abre rodada de presença" abre uma rodada; reações confirmam ou cancelam.</p>
+    <p class="font-medium"><%= t("group_rules.names.attendance") %> <span class="text-xs text-wa-text bg-wa-bubble rounded-full px-2 py-0.5 ml-1"><%= t("group_rules.active") %></span></p>
+    <p class="text-xs text-wa-muted"><%= t(".summary") %></p>
   </div>
-  <%= button_to "Desativar", group_rule_path(group, rule), method: :delete,
-        form: { data: { turbo_confirm: "Desativar a lista de presença deste grupo? Configuração e respostas ficam guardadas." } },
+  <%= button_to t("group_rules.deactivate"), group_rule_path(group, rule), method: :delete,
+        form: { data: { turbo_confirm: t(".deactivate_confirm") } },
         class: "text-sm text-red-400 hover:underline cursor-pointer" %>
 </div>
 
 <ol class="mt-4 space-y-2 text-sm">
   <li class="flex items-center gap-2">
     <span><%= tracked.any? ? "✅" : "⚠️" %></span>
-    <span><strong>1. Listas cobradas:</strong> <%= tracked.map(&:name).to_sentence.presence || "nenhuma" %></span>
-    <% if tracked.none? %><span class="text-wa-muted">→ marque em "Configurar" abaixo</span><% end %>
+    <span><strong><%= t(".tracked") %></strong> <%= tracked.map(&:name).to_sentence.presence || t("common.none_f") %></span>
+    <% if tracked.none? %><span class="text-wa-muted"><%= t(".tracked_hint") %></span><% end %>
   </li>
   <li class="flex items-center gap-2">
     <span><%= round_flows.any? ? "✅" : "⚠️" %></span>
-    <span><strong>2. Fluxo que abre a rodada:</strong> <%= round_flows.map(&:name).to_sentence.presence || "nenhum" %></span>
+    <span><strong><%= t(".round_flow") %></strong> <%= round_flows.map(&:name).to_sentence.presence || t("common.none_m") %></span>
     <% if round_flows.none? %>
-      <%= link_to "→ criar rotina", new_group_flow_path(group, trigger: "schedule"), class: "text-wa-teal hover:underline" %>
-      <span class="text-wa-muted">com um passo "Enviar template" marcado "abre rodada"</span>
+      <%= link_to t("group_rules.create_schedule"), new_group_flow_path(group, trigger: "schedule"), class: "text-wa-teal hover:underline" %>
+      <span class="text-wa-muted"><%= t(".round_flow_hint") %></span>
     <% end %>
   </li>
 </ol>
 
 <% if guests.any? %>
-  <p class="mt-3 text-sm"><strong>Convidados na rodada:</strong>
+  <p class="mt-3 text-sm"><strong><%= t(".guests") %></strong>
     <%= guests.map { |name, status| "#{name} #{Attendance.mark(settings, status)}".strip }.to_sentence %></p>
 <% end %>
 <% if unmatched.any? %>
   <p class="mt-3 text-sm bg-yellow-950/40 border border-yellow-800/60 rounded px-3 py-2">
-    ⚠️ <strong>Nomes não reconhecidos nas listas coladas:</strong> <%= unmatched.to_sentence %>.
-    Preencha o "Nome nas listas" do membro com o nome exato (em Membros e listas) para associar.
+    ⚠️ <strong><%= t(".unmatched") %></strong> <%= unmatched.to_sentence %>. <%= t(".unmatched_hint") %>
   </p>
 <% end %>
 
 <details class="mt-4 border-t border-wa-line pt-3" <%= "open" if tracked.none? %>>
-  <summary class="text-sm font-medium text-wa-teal cursor-pointer">Configurar</summary>
+  <summary class="text-sm font-medium text-wa-teal cursor-pointer"><%= t("group_rules.configure") %></summary>
 
   <%= form_with url: group_rule_path(group, rule), method: :patch, scope: :rule, class: "mt-4 space-y-5 text-sm" do |f| %>
     <fieldset class="min-w-0">
-      <legend class="font-medium">Listas cobradas</legend>
-      <p class="text-xs text-wa-muted mb-2">
-        Aparecem em <code>{{presenca}}</code> e são cobradas em <code>{{pendentes}}</code>.
-        Quem confirma sem estar nelas entra em <code>{{confirmados}}</code>.
-      </p>
+      <legend class="font-medium"><%= t(".tracked_title") %></legend>
+      <p class="text-xs text-wa-muted mb-2"><%= t(".tracked_help_html") %></p>
       <%= hidden_field_tag "rule[tracked_lists][]", "", id: nil %>
       <div class="flex flex-wrap gap-x-4 gap-y-1">
         <% lists.each do |list| %>
@@ -60,79 +56,67 @@
             <%= list.name %>
           </label>
         <% end %>
-        <% if lists.empty? %><span class="text-xs text-wa-muted">Crie listas em "Membros e listas" primeiro.</span><% end %>
+        <% if lists.empty? %><span class="text-xs text-wa-muted"><%= t(".no_lists") %></span><% end %>
       </div>
     </fieldset>
 
     <fieldset class="grid sm:grid-cols-2 gap-3 min-w-0">
-      <legend class="font-medium mb-1">Respostas</legend>
+      <legend class="font-medium mb-1"><%= t(".replies") %></legend>
       <div>
-        <%= f.label :confirm_emojis, "Emojis que confirmam (separados por espaço)", class: "block text-xs text-wa-muted" %>
+        <%= f.label :confirm_emojis, t(".confirm_emojis"), class: "block text-xs text-wa-muted" %>
         <%= f.text_field :confirm_emojis, value: settings["confirm_emojis"], class: "w-full" %>
       </div>
       <div>
-        <%= f.label :decline_emojis, "Emojis que cancelam", class: "block text-xs text-wa-muted" %>
+        <%= f.label :decline_emojis, t(".decline_emojis"), class: "block text-xs text-wa-muted" %>
         <%= f.text_field :decline_emojis, value: settings["decline_emojis"], class: "w-full" %>
       </div>
       <div class="sm:col-span-2 flex items-center gap-2">
         <%= f.hidden_field :accept_replies, value: "0", id: nil %>
         <%= f.check_box :accept_replies, { checked: settings["accept_replies"] }, "1", nil %>
-        <%= f.label :accept_replies, "Aceitar respostas citando a lista (além das reações)" %>
+        <%= f.label :accept_replies, t(".accept_replies") %>
       </div>
     </fieldset>
 
     <fieldset class="grid sm:grid-cols-2 gap-3 min-w-0">
-      <legend class="font-medium mb-1">Listas copiadas e coladas no grupo</legend>
+      <legend class="font-medium mb-1"><%= t(".pasted") %></legend>
       <div class="sm:col-span-2 flex items-center gap-2">
         <%= f.hidden_field :read_lists, value: "0", id: nil %>
         <%= f.check_box :read_lists, { checked: settings["read_lists"] }, "1", nil %>
-        <%= f.label :read_lists, "Ler a lista quando alguém copia, marca ✅/❌ e cola no grupo" %>
+        <%= f.label :read_lists, t(".read_lists") %>
       </div>
       <div>
-        <%= f.label :extras_section, "Título da seção de avulsos", class: "block text-xs text-wa-muted" %>
-        <%= f.text_field :extras_section, value: settings["extras_section"], placeholder: "Avulsos", class: "w-full" %>
+        <%= f.label :extras_section, t(".extras_section"), class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :extras_section, value: settings["extras_section"], placeholder: t(".extras_placeholder"), class: "w-full" %>
       </div>
-      <p class="text-xs text-wa-muted self-end">
-        Nessa seção, estar na lista já é confirmar; nomes sem cadastro entram como convidados. Uma lista colada
-        preenche quem ainda não respondeu, mas só a linha da própria pessoa muda uma resposta já registrada.
-      </p>
+      <p class="text-xs text-wa-muted self-end"><%= t(".pasted_help") %></p>
     </fieldset>
 
     <fieldset class="grid sm:grid-cols-3 gap-3 min-w-0">
-      <legend class="font-medium mb-1">Marcas em {{presenca}}</legend>
+      <legend class="font-medium mb-1"><%= t(".marks") %></legend>
       <div>
-        <%= f.label :confirmed_mark, "Confirmado", class: "block text-xs text-wa-muted" %>
+        <%= f.label :confirmed_mark, t(".confirmed"), class: "block text-xs text-wa-muted" %>
         <%= f.text_field :confirmed_mark, value: settings["confirmed_mark"], class: "w-full" %>
       </div>
       <div>
-        <%= f.label :declined_mark, "Cancelado", class: "block text-xs text-wa-muted" %>
+        <%= f.label :declined_mark, t(".declined"), class: "block text-xs text-wa-muted" %>
         <%= f.text_field :declined_mark, value: settings["declined_mark"], class: "w-full" %>
       </div>
       <div>
-        <%= f.label :pending_mark, "Sem resposta", class: "block text-xs text-wa-muted" %>
-        <%= f.text_field :pending_mark, value: settings["pending_mark"], placeholder: "(nada)", class: "w-full" %>
+        <%= f.label :pending_mark, t(".pending"), class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :pending_mark, value: settings["pending_mark"], placeholder: t("common.nothing"), class: "w-full" %>
       </div>
     </fieldset>
 
-    <%= f.submit "Salvar configuração", class: "btn-wa" %>
+    <%= f.submit t("group_rules.save"), class: "btn-wa" %>
   <% end %>
 </details>
 
 <details class="mt-3 border-t border-wa-line pt-3">
-  <summary class="text-sm font-medium text-wa-teal cursor-pointer">Variáveis para usar nos templates</summary>
+  <summary class="text-sm font-medium text-wa-teal cursor-pointer"><%= t("group_rules.variables") %></summary>
   <table class="mt-3 text-xs">
-    <% [
-         [ "{{lista}}", "nomes das listas cobradas" ],
-         [ "{{mencoes}}", "marca as listas cobradas (notifica)" ],
-         [ "{{presenca}}", "listas cobradas com a marca de confirmado/cancelado/sem resposta" ],
-         [ "{{confirmados}}", "quem confirmou fora das listas cobradas (avulsos)" ],
-         [ "{{pendentes}}", "marca quem das listas cobradas ainda não respondeu" ]
-       ].each do |variable, description| %>
-      <tr><td class="font-mono pr-4 py-0.5"><%= variable %></td><td class="text-wa-muted"><%= description %></td></tr>
+    <% %w[lista mencoes presenca confirmados pendentes].each do |variable| %>
+      <tr><td class="font-mono pr-4 py-0.5">{{<%= variable %>}}</td><td class="text-wa-muted"><%= t(".vars.#{variable}") %></td></tr>
     <% end %>
   </table>
-  <p class="mt-2 text-xs text-wa-muted">
-    Para uma lista específica, acrescente a chave: <code class="font-mono">{{presenca:<%= lists.first&.key || "lista" %>}}</code>.
-    Um fluxo de comando (ex.: <code class="font-mono">!lista</code>) que envia um template com essas variáveis mostra a rodada atual no grupo.
-  </p>
+  <p class="mt-2 text-xs text-wa-muted"><%= t(".vars_help_html", key: lists.first&.key || "lista") %></p>
 </details>

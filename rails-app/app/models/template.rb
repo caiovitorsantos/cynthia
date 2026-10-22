@@ -23,7 +23,7 @@ class Template < ApplicationRecord
     used_by = whatsapp_group.flows.select { |flow| flow.template_ids.include?(id) }
     return if used_by.empty?
 
-    errors.add(:base, "usado pelos fluxos: #{used_by.map(&:name).join(', ')}")
+    errors.add(:base, :used_by_flows, flows: used_by.map(&:name).join(", "))
     throw :abort
   end
 end

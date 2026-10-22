@@ -16,6 +16,7 @@ const formatWhatsapp = (text) =>
 
 export default class extends Controller {
   static targets = ["body", "output", "bubble"]
+  static values = { none: String }
 
   connect() {
     this.update()
@@ -25,7 +26,7 @@ export default class extends Controller {
     const matches = [...this.bodyTarget.value.matchAll(VARIABLE_PATTERN)]
     const names = [...new Set(matches.map((match) => match[1]))]
 
-    this.outputTarget.textContent = names.length > 0 ? names.join(", ") : "nenhuma variável detectada"
+    this.outputTarget.textContent = names.length > 0 ? names.join(", ") : this.noneValue
     this.bubbleTarget.innerHTML = formatWhatsapp(this.bodyTarget.value) || "&nbsp;"
   }
 }

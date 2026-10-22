@@ -1,24 +1,24 @@
-<% content_for :title, "Grupos" %>
+<% content_for :title, t(".title") %>
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-  <h1 class="text-2xl font-semibold text-wa-text">Grupos</h1>
-  <%= button_to "Sincronizar agora", sync_groups_path, method: :post,
+  <h1 class="text-2xl font-semibold text-wa-text"><%= t(".title") %></h1>
+  <%= button_to t(".sync"), sync_groups_path, method: :post,
         class: "btn-wa" %>
 </div>
 
-<%= form_with url: destroy_selected_groups_path, data: { controller: "select-all" } do %>
+<%= form_with url: destroy_selected_groups_path, data: { controller: "select-all", select_all_one_value: t(".selected", count: 1), select_all_other_value: t(".selected", count: "%{count}") } do %>
   <div data-select-all-target="bar" hidden
        class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3 rounded-lg bg-wa-surface shadow-sm border border-red-900/60 px-4 py-2">
     <span data-select-all-target="count" class="text-sm font-medium"></span>
     <button type="submit" formaction="<%= leave_selected_groups_path %>"
-            data-turbo-confirm="Sair dos grupos selecionados no WhatsApp? Listas, templates e fluxos deles também serão apagados."
+            data-turbo-confirm="<%= t(".leave_confirm") %>"
             class="text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-4 py-1.5 cursor-pointer">
-      Sair dos grupos no WhatsApp
+      <%= t(".leave") %>
     </button>
     <button type="submit"
-            data-turbo-confirm="Remover os grupos selecionados do painel? Listas, templates e fluxos deles também serão apagados."
+            data-turbo-confirm="<%= t(".remove_confirm") %>"
             class="text-sm text-red-400 hover:underline cursor-pointer">
-      Remover do painel
+      <%= t(".remove") %>
     </button>
   </div>
 
@@ -26,28 +26,28 @@
     <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
       <tr class="text-left">
         <th class="py-2 px-3 w-8">
-          <input type="checkbox" aria-label="Selecionar todos" data-select-all-target="all" data-action="select-all#toggleAll">
+          <input type="checkbox" aria-label="<%= t(".select_all") %>" data-select-all-target="all" data-action="select-all#toggleAll">
         </th>
-        <th class="py-2 px-3">Grupo</th>
-        <th class="py-2 px-3">Automação</th>
-        <th class="py-2 px-3">Sincronizado</th>
+        <th class="py-2 px-3"><%= t(".group") %></th>
+        <th class="py-2 px-3"><%= t(".automation") %></th>
+        <th class="py-2 px-3"><%= t(".synced") %></th>
       </tr>
     </thead>
     <tbody>
       <% @groups.each do |group| %>
         <tr class="border-t border-wa-line hover:bg-wa-panel/60">
           <td class="py-2 px-3">
-            <%= check_box_tag "ids[]", group.id, false, id: "group_#{group.id}", aria: { label: "Selecionar #{group.name}" },
+            <%= check_box_tag "ids[]", group.id, false, id: "group_#{group.id}", aria: { label: t(".select", name: group.name) },
                   data: { select_all_target: "item", action: "select-all#refresh" } %>
           </td>
-          <td data-label="Grupo" class="py-2 px-3">
+          <td data-label="<%= t(".group") %>" class="py-2 px-3">
             <%= link_to group.name, group_path(group), class: "text-wa-teal font-medium hover:underline" %>
-            <span class="block text-xs text-wa-muted"><%= pluralize(group.participants_count.to_i, "membro", plural: "membros") %></span>
+            <span class="block text-xs text-wa-muted"><%= t("common.members", count: group.participants_count.to_i) %></span>
           </td>
-          <td data-label="Automação" class="py-2 px-3">
+          <td data-label="<%= t(".automation") %>" class="py-2 px-3">
             <div class="flex flex-wrap gap-1 text-xs">
               <% if group.flows_count.positive? %>
-                <span class="rounded-full bg-wa-bubble text-wa-text px-2 py-0.5"><%= pluralize(group.flows_count, "fluxo", plural: "fluxos") %></span>
+                <span class="rounded-full bg-wa-bubble text-wa-text px-2 py-0.5"><%= t("common.flows", count: group.flows_count) %></span>
               <% end %>
               <% group.group_rules.each do |rule| %>
                 <span class="rounded-full bg-wa-panel text-wa-text px-2 py-0.5"><%= rule.name %></span>
@@ -57,11 +57,11 @@
               <% end %>
             </div>
           </td>
-          <td data-label="Sincronizado" class="py-2 px-3 text-xs text-wa-muted"><%= group.synced_at&.strftime("%d/%m %H:%M") || "—" %></td>
+          <td data-label="<%= t(".synced") %>" class="py-2 px-3 text-xs text-wa-muted"><%= group.synced_at ? l(group.synced_at, format: :short_date) : "—" %></td>
         </tr>
       <% end %>
       <% if @groups.empty? %>
-        <tr><td colspan="4" class="py-4 px-3 text-center text-wa-muted">Nenhum grupo ainda. Conecta um número e sincroniza, se não for pedir muito.</td></tr>
+        <tr><td colspan="4" class="py-4 px-3 text-center text-wa-muted"><%= t(".empty") %></td></tr>
       <% end %>
     </tbody>
   </table>

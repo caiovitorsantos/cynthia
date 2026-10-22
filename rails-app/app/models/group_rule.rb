@@ -8,7 +8,6 @@
 #   handle_event(rule, event)                     reação, resposta ou lista colada no grupo
 class GroupRule < ApplicationRecord
   HANDLERS = { "attendance" => "Attendance", "billing" => "Billing" }.freeze
-  NAMES = { "attendance" => "Lista de presença", "billing" => "Cobrança mensal" }.freeze
 
   belongs_to :whatsapp_group
 
@@ -19,6 +18,6 @@ class GroupRule < ApplicationRecord
   end
 
   def name
-    NAMES.fetch(kind)
+    I18n.t("group_rules.names.#{kind}")
   end
 end

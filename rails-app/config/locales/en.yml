@@ -1,31 +1,539 @@
-# Files in the config/locales directory are used for internationalization and
-# are automatically loaded by Rails. If you want to use locales other than
-# English, add the necessary files in this directory.
-#
-# To use the locales, use `I18n.t`:
-#
-#     I18n.t "hello"
-#
-# In views, this is aliased to just `t`:
-#
-#     <%= t("hello") %>
-#
-# To use a different locale, set it with `I18n.locale`:
-#
-#     I18n.locale = :es
-#
-# This would use the information in config/locales/es.yml.
-#
-# To learn more about the API, please read the Rails Internationalization guide
-# at https://guides.rubyonrails.org/i18n.html.
-#
-# Be aware that YAML interprets the following case-insensitive strings as
-# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
-# must be quoted to be interpreted as strings. For example:
-#
-#     en:
-#       "yes": yup
-#       enabled: "ON"
-
-en:
-  hello: "Hello world"
+# Traduções do painel e da Cynth.ia. Ao mudar uma chave aqui, mude também nos outros idiomas (spec/i18n_spec.rb confere).
+"en":
+  date:
+    formats:
+      day_month: "%m/%d"
+      default: "%m/%d/%Y"
+    month_names:
+      - ~
+      - "January"
+      - "February"
+      - "March"
+      - "April"
+      - "May"
+      - "June"
+      - "July"
+      - "August"
+      - "September"
+      - "October"
+      - "November"
+      - "December"
+    abbr_day_names:
+      - "Sun"
+      - "Mon"
+      - "Tue"
+      - "Wed"
+      - "Thu"
+      - "Fri"
+      - "Sat"
+    day_names:
+      - "Sunday"
+      - "Monday"
+      - "Tuesday"
+      - "Wednesday"
+      - "Thursday"
+      - "Friday"
+      - "Saturday"
+  time:
+    formats:
+      long_date: "%m/%d/%Y %H:%M"
+      short_date: "%m/%d %H:%M"
+      default: "%m/%d/%Y %H:%M"
+    am: "am"
+    pm: "pm"
+  support:
+    array:
+      words_connector: ", "
+      two_words_connector: " and "
+      last_word_connector: ", and "
+  errors:
+    format: "%{attribute} %{message}"
+    messages:
+      blank: "can't be blank"
+      taken: "has already been taken"
+      inclusion: "is not included in the list"
+      invalid: "is invalid"
+      required: "must exist"
+  activerecord:
+    models:
+      flow: "Flow"
+      template: "Template"
+    attributes:
+      flow:
+        name: "Name"
+        trigger: "Trigger"
+        command: "Command"
+        cron_expression: "Cron"
+        run_at: "Date and time"
+        steps: "Step"
+      template:
+        name: "Name"
+        body: "Body"
+      member_list:
+        name: "Name"
+        key: "Key"
+      whatsapp_group:
+        list_style: "Format"
+        locale: "Language"
+    errors:
+      messages:
+        required: "must exist"
+      models:
+        flow:
+          attributes:
+            command:
+              command_format: "must be one word starting with !, e.g. !list"
+            base:
+              cron_xor_run_at: "Pick a cron or a one-time date, not both"
+            cron_expression:
+              invalid_cron: "is not a valid cron expression"
+            steps:
+              empty_steps: "add at least one step"
+              unknown_step: "%{step}: unknown type"
+              sender_only: "%{step}: only works with a command trigger"
+              choose_list: "%{step}: pick the list"
+              variable_name: "%{step}: name the variable"
+              choose_template: "%{step}: pick the template"
+              missing_variables: "%{step}: \"%{template}\" uses variables with no value: %{variables}"
+        template:
+          attributes:
+            base:
+              used_by_flows: "used by flows: %{flows}"
+  cynthia:
+    signature: "_😒 Cynth.ia_ | _— Cynth.ia, against her will_ | _Cynth.ia. You're welcome, I guess._ | _ugh. — Cynth.ia_"
+  locales:
+    label: "Language"
+    "pt-BR": "Português"
+    en: "English"
+    es: "Español"
+  common:
+    edit: "Edit"
+    remove: "Remove"
+    nothing: "(nothing)"
+    none_f: "none"
+    none_m: "none"
+    members:
+      one: "%{count} member"
+      other: "%{count} members"
+    flows:
+      one: "%{count} flow"
+      other: "%{count} flows"
+  flow_steps:
+    send_message: "Send template"
+    add_to_list: "Add whoever sent the command to a list"
+    remove_from_list: "Remove whoever sent the command from a list"
+    clear_list: "Clear list"
+    set_variable: "Set group variable"
+  flow_triggers:
+    schedule: "Schedule (routine)"
+    command: "Command in the group"
+  lists:
+    styles:
+      numbered: "Numbered (1. 2. 3.)"
+      bullet: "Bullet •"
+      dash: "Dash -"
+      plain: "No marker"
+  layouts:
+    application:
+      sign_in: "Sign in"
+      groups: "Groups"
+      logs: "Logs"
+    account:
+      title: "Account"
+      signed_in_as_html: "Signed in as <strong>%{user}</strong>"
+      close: "Close"
+      checking: "Checking connection…"
+      language: "Panel language"
+      sign_out: "Sign out"
+  connection:
+    show:
+      title: "Connection"
+    status:
+      states:
+        connected: "connected"
+        qr_pending: "waiting for QR code"
+        disconnected: "disconnected"
+        unreachable: "wa-service is down"
+      scan: "Scan it with WhatsApp. Always use a secondary number."
+      generating: "Generating QR code…"
+      disconnect: "Disconnect this number"
+      disconnect_confirm: "Sure? This disconnects WhatsApp and needs a new QR code."
+      new_qr: "Generate new QR code"
+      unreachable: "Couldn't reach wa-service. Check if the container is up."
+    logout:
+      notice: "Disconnected. Scan the QR again whenever you feel like it."
+      alert: "Couldn't disconnect: %{error}. Classic."
+  home:
+    show:
+      page_title: "Cynth.ia · your group's admin"
+      kicker: "WhatsApp group automation"
+      headline_html: "Cynth<span class=\"text-wa-green\">.ia</span> runs your group."
+      subheadline: "Reluctantly. But she does."
+      intro: "Attendance lists, who confirmed, who vanished, who didn't pay, reminders right on time. Everything the group admin does by hand, Cynth.ia does on her own. She just complains a little."
+      cta: "Open the panel"
+      how_link: "How it works ↓"
+      art_alt: "Cynth.ia, a pixel art group admin, bored and typing in front of a computer that says UGH"
+      chat:
+        title: "Meanwhile, in the volleyball group…"
+        group: "Tuesday Volleyball"
+        members: "Adriana, Bruno, Carla, you…"
+        list_command: "!list"
+        list_reply_html: "<strong>ATTENDANCE 10/21</strong>\n\n1. Adriana ✅\n2. Bruno ❌\n3. Carla ✅\n4. Diego\n\n<strong>Drop-ins</strong>\n1. Pedro\n\n<em>😒 Cynth.ia</em>"
+        wait_command: "!waitlist"
+        wait_reply_html: "Diego joined the waitlist 👍\n\n<em>— Cynth.ia, against her will</em>"
+        thanks: "Thanks, Cynth.ia!"
+        seen: "Cynth.ia saw it and didn't reply. 😒"
+      features:
+        title: "What she does (sighing)"
+        lists:
+          title: "Member lists"
+          text: "Monthly, drop-in, waitlist, paid: anyone in as many lists as you want, and lists turn into text in messages."
+        flows:
+          title: "Routines and commands"
+          text: "Every Tuesday at 2pm, every 1st of the month, or when someone sends !list in the group. You build the steps."
+        attendance:
+          title: "Attendance list"
+          text: "A ✅/❌ reaction or that same old copy-pasted list: she reads it, checks it and won't let stale copies mess things up."
+        billing:
+          title: "Monthly billing"
+          text: "Monthly fees and drop-in days, who paid with 💰 and who's been owing for 3 months. She remembers. Every month."
+      how:
+        title: "How it works"
+        connect:
+          title: "Connect a number"
+          text: "Scan the QR code with a secondary number. Cynth.ia joins the groups it's in."
+        organize:
+          title: "Organize the group"
+          text: "Mark who's monthly, drop-in or waitlist, save the payment info and write templates the group's way."
+        relax:
+          title: "Leave it to her"
+          text: "Create routines and commands. She sends, checks, collects and replies. Rolling her eyes."
+      disclaimer: "Self-hosted. Uses an unofficial WhatsApp library: prefer a secondary number."
+  sessions:
+    new:
+      title: "Sign in"
+      greeting: "Ugh… you again? Fine, come in."
+      username: "Username"
+      password: "Password"
+      submit: "Sign in"
+    create:
+      alert: "Wrong username or password. Try again, I'll wait. (Sort of.)"
+      rate_limited: "Too many attempts. Breathe and try again in a few minutes."
+    destroy:
+      notice: "You're out. Finally, some silence."
+  groups:
+    not_connected: "WhatsApp isn't connected. Connect it in your account, top corner, and I'll carry on."
+    index:
+      title: "Groups"
+      sync: "Sync now"
+      selected:
+        one: "1 group selected"
+        other: "%{count} groups selected"
+      leave: "Leave groups on WhatsApp"
+      leave_confirm: "Leave the selected groups on WhatsApp? Their lists, templates and flows will be deleted too."
+      remove: "Remove from panel"
+      remove_confirm: "Remove the selected groups from the panel? Their lists, templates and flows will be deleted too."
+      select_all: "Select all"
+      select: "Select %{name}"
+      group: "Group"
+      automation: "Automation"
+      synced: "Synced"
+      empty: "No groups yet. Connect a number and sync, if it's not too much to ask."
+    show:
+      back: "← Groups"
+      more: "More actions"
+      remove: "Remove from panel"
+      remove_confirm: "Remove %{name} from the panel? It comes back on the next sync if you're still a member. This group's lists, templates and flows will be deleted too."
+      leave: "Leave group on WhatsApp"
+      leave_confirm: "Leave %{name} on WhatsApp? It can't be undone from the panel. This group's lists, templates and flows will be deleted too."
+      tabs:
+        membros: "Members and lists"
+        fluxos: "Flows"
+        templates: "Templates"
+        variaveis: "Variables"
+        regras: "Rules"
+      filter_all: "All"
+      filter_none: "None"
+      filter_label: "Filter members by list"
+      mentions_html: "One-off mentions: <code class=\"font-mono\">@{{name}}</code> or <code class=\"font-mono\">@{{number}}</code>; <code class=\"font-mono\">@{{todos}}</code> pings everyone."
+      round: "Attendance round from %{at}:"
+      round_counts: "%{confirmed} confirmed, %{declined} declined."
+      member:
+        name: "Name"
+        number: "Number"
+        display_name: "Name in lists"
+        lists: "Lists"
+        attendance: "Attendance"
+      members_empty: "Nobody here yet. Sync the groups."
+      save_members: "Save members"
+      lists:
+        manage: "Manage lists (create, rename, format)"
+        help_html: "A person can be in several lists. In templates: <code class=\"font-mono\">{{lista:key}}</code> (names) and <code class=\"font-mono\">{{mencoes:key}}</code> (mentions people). To delete a list, clear its name; renaming keeps the key."
+        name: "Name"
+        key: "Key"
+        members: "Members"
+        new: "new list"
+        style: "Format"
+        empty_text: "Text when the list is empty"
+        save: "Save lists"
+      flows:
+        title: "Flows and routines"
+        new_schedule: "New routine"
+        new_command: "New command"
+        help: "A trigger (a time or a command in the group) and steps in order: send a template, change lists, set variables."
+        name: "Name"
+        trigger: "Trigger"
+        steps: "Steps"
+        inactive: "inactive"
+        once: "one-time"
+        next: "next: %{at}"
+        no_next: "no next run"
+        run: "Run now"
+        run_confirm: "Run \"%{name}\" now? Messages go to the real group."
+        remove_confirm: "Remove the flow \"%{name}\"?"
+        empty: "No flows. I'm off and I like it that way. If you insist: create a template and a routine that sends it."
+      templates:
+        title: "Templates"
+        new: "New template"
+        remove_confirm: "Remove the template \"%{name}\"?"
+        empty: "No templates. Total silence. Love it."
+      variables:
+        title: "Group variables"
+        help_html: "Values used by this group's templates, like <code class=\"font-mono\">{{pix}}</code>. Flows can change them with the \"Set variable\" step. To remove one, clear its name."
+        name: "Name"
+        value: "Value"
+        new: "new variable"
+        signature: "Cynth.ia's signature on command replies"
+        no_signature: "(no signature)"
+        signature_help_html: "Goes at the end of command-flow messages. Separate several with <code class=\"font-mono\">|</code> and she picks one at random per message. Empty means no signature; routines never get one."
+        locale: "Message language in the group"
+        locale_help: "Applies to what Cynth.ia generates herself: month names ({{mes}}, {{mes_anterior}}) and the default signature. Templates are whatever you write."
+        save: "Save variables and signature"
+      rules:
+        title: "Rules"
+        activate: "Turn on"
+        descriptions:
+          attendance: "Confirmation by ✅/❌ reaction or pasted list on the message that opens the round, plus attendance variables."
+          billing: "Last month's fees and drop-in days, payment marked with 💰 on the pasted list or in the panel."
+    update:
+      notice: "Members saved. Now I know who's who. How thrilling."
+      alert: "Didn't save: %{error}"
+    variables:
+      notice: "Variables saved. I'll remember. Unfortunately."
+    lists:
+      notice: "Lists saved. Organization. Love it. (Not.)"
+      alert: "Didn't save the lists: %{error}"
+    leave:
+      notice: "Left %{name}. No goodbyes, just how I like it."
+      alert: "Couldn't leave the group: %{error}"
+    destroy:
+      notice: "Took %{name} off the panel. It comes back on the next sync if you're still in it."
+    leave_selected:
+      notice:
+        one: "Leaving 1 group, so I don't look like a bot. Ironic. Reload to follow along."
+        other: "Leaving %{count} groups, one at a time, so I don't look like a bot. Ironic. Reload to follow along."
+    destroy_selected:
+      notice:
+        one: "1 group off the panel. Less work."
+        other: "%{count} groups off the panel. Less work."
+    sync:
+      notice: "Synced. Same old groups."
+      alert: "Couldn't sync: %{error}"
+  group_rules:
+    names:
+      attendance: "Attendance list"
+      billing: "Monthly billing"
+    active: "on"
+    deactivate: "Turn off"
+    configure: "Configure"
+    save: "Save settings"
+    variables: "Variables for templates"
+    create_schedule: "→ create routine"
+    attendance:
+      summary: "Each message from a step marked \"opens attendance round\" opens a round; reactions confirm or decline."
+      deactivate_confirm: "Turn off this group's attendance list? Settings and replies are kept."
+      tracked: "1. Tracked lists:"
+      tracked_hint: "→ pick them in \"Configure\" below"
+      round_flow: "2. Flow that opens the round:"
+      round_flow_hint: "with a \"Send template\" step marked \"opens round\""
+      guests: "Guests in this round:"
+      unmatched: "Names not recognized in pasted lists:"
+      unmatched_hint: "Fill in the member's \"Name in lists\" with that exact name (in Members and lists) to link it."
+      tracked_title: "Tracked lists"
+      tracked_help_html: "They show up in <code>{{presenca}}</code> and get chased in <code>{{pendentes}}</code>. Anyone confirming outside them goes into <code>{{confirmados}}</code>."
+      no_lists: "Create lists in \"Members and lists\" first."
+      replies: "Replies"
+      confirm_emojis: "Emojis that confirm (space-separated)"
+      decline_emojis: "Emojis that decline"
+      accept_replies: "Accept replies quoting the list (besides reactions)"
+      pasted: "Lists copied and pasted in the group"
+      read_lists: "Read the list when someone copies it, marks ✅/❌ and pastes it"
+      extras_section: "Drop-in section title"
+      extras_placeholder: "Drop-ins"
+      pasted_help: "In that section, being on the list means confirmed; unknown names come in as guests. A pasted list fills in whoever hasn't replied, but only a person's own line changes a reply already recorded."
+      marks: "Marks in {{presenca}}"
+      confirmed: "Confirmed"
+      declined: "Declined"
+      pending: "No reply"
+      vars:
+        lista: "names in the tracked lists"
+        mencoes: "mentions the tracked lists (notifies)"
+        presenca: "tracked lists with the confirmed/declined/no-reply mark"
+        confirmados: "who confirmed outside the tracked lists (drop-ins)"
+        pendentes: "mentions who in the tracked lists hasn't replied"
+      vars_help_html: "For a specific list, add its key: <code class=\"font-mono\">{{presenca:%{key}}}</code>. A command flow (e.g. <code class=\"font-mono\">!list</code>) that sends a template with these variables shows the current round in the group."
+    billing:
+      summary: "A \"Send template\" step marked \"opens billing\" bills last month: monthly fees and days for drop-ins who confirmed."
+      deactivate_confirm: "Turn off billing for this group? Charges and payments are kept."
+      charged: "1. Lists that pay monthly:"
+      billing_flow: "2. Flow that opens billing:"
+      billing_flow_hint: "with a \"Send template\" step marked \"opens billing\""
+      unmatched: "Names with %{mark} not recognized:"
+      unmatched_hint: "Fill in the member's \"Name in lists\" with that name, or mark the payment below."
+      period: "Billing for %{month}/%{year}:"
+      paid_count: "%{paid} of %{total} paid"
+      who: "Who"
+      kind: "Type"
+      paid: "Paid"
+      monthly: "monthly fee"
+      daily: "drop-in %{date}"
+      months_due:
+        one: "1 month due"
+        other: "%{count} months due"
+      pending: "pending"
+      undo: "Undo"
+      mark_paid: "Mark paid"
+      charged_title: "Lists that pay monthly"
+      charged_help: "Anyone who confirmed a round in the month without being in them pays a drop-in day."
+      paid_emojis: "Emojis that mark paid on the pasted list (the first shows in the list)"
+      vars:
+        cobranca_mensais: "monthly members: paid ones with %{mark}, unpaid ones mentioned (and \"3x\" if owing more than a month)"
+        cobranca_avulsos: "drop-ins by day played, same format"
+        pendentes_pagamento: "mentions everyone still owing (for the reminder)"
+      vars_help: "When someone copies the bill, adds %{mark} to a name and pastes it in the group, the payment is recorded. The copy is recognized by its first line, same as the message that opened billing."
+    create:
+      notice: "Rule \"%{name}\" turned on. One more responsibility for me. Great."
+      alert: "Couldn't turn on the rule: %{errors}"
+    update:
+      notice: "Rule \"%{name}\" updated. Noted."
+    destroy:
+      notice: "Rule \"%{name}\" turned off. Finally."
+  flows:
+    new:
+      title: "New flow"
+    edit:
+      title: "Edit flow"
+    frequency:
+      minutes:
+        one: "every minute"
+        other: "every %{count} minutes"
+      hours:
+        one: "every hour"
+        other: "every %{count} hours"
+      days:
+        one: "every day"
+        other: "every %{count} days"
+    when:
+      daily: "every day at %{time}"
+      monthly: "every month on day %{day} at %{time}"
+      weekly: "%{days} at %{time}"
+      weekdays: "Monday to Friday"
+      every:
+        - "every Sunday"
+        - "every Monday"
+        - "every Tuesday"
+        - "every Wednesday"
+        - "every Thursday"
+        - "every Friday"
+        - "every Saturday"
+    cron_preview:
+      invalid: "Invalid cron expression."
+      hint: "Fill in the cron above and click \"See next runs\"."
+    form:
+      name: "Name"
+      name_placeholder: "Open attendance list"
+      trigger: "Trigger"
+      when: "When it runs"
+      repeat: "Repeat"
+      modes:
+        once: "Once"
+        daily: "Every day"
+        weekly: "Every week"
+        monthly: "Every month"
+        custom: "Advanced (cron)"
+      monthday: "Day of month"
+      time: "Time"
+      run_at: "Date and time"
+      weekdays: "Days of the week"
+      cron: "Cron (minute hour day month weekday)"
+      timezone: "Time zone"
+      preview: "See next runs"
+      command: "Command"
+      command_help_html: "Any member sends the command in the group and the flow runs. In templates and step values: <code class=\"font-mono\">{{remetente}}</code> (who sent it) and <code class=\"font-mono\">{{argumento}}</code> (the text after the command, e.g. \"!pix key@x\" → \"key@x\")."
+      steps: "Steps (run in order)"
+      steps_help: "Back-to-back messages go out ~%{seconds}s apart, so it doesn't look like spam."
+      step_number: "Step %{n}"
+      add_step: "+ Add step"
+      active: "Active"
+      save: "Save flow"
+    step:
+      up: "Move up"
+      down: "Move down"
+      remove: "Remove step"
+      type: "What to do"
+      choose: "— pick one —"
+      template: "Template"
+      list: "List"
+      variable: "Variable"
+      value: "Value"
+      opens_round: "opens attendance round"
+      opens_billing: "opens last month's billing"
+    create:
+      notice: "Flow created. More work for me. Great."
+    update:
+      notice: "Flow updated. Fine, noted."
+    destroy:
+      notice: "Flow deleted. One less. Won't miss it."
+    run:
+      notice: "Fine, running \"%{name}\" now. Happy?"
+  templates:
+    new:
+      title: "New template"
+    edit:
+      title: "Edit template"
+    form:
+      name: "Name"
+      body: "Body (use {{variable}} for placeholders)"
+      detected: "Detected variables:"
+      none_detected: "no variables detected"
+      builtin_html: "Automatic (filled in when sending): <code class=\"font-mono\">{{data}}</code> (dd/mm), <code class=\"font-mono\">{{mes}}</code> (month), <code class=\"font-mono\">{{mes_num}}</code>, <code class=\"font-mono\">{{mes_anterior}}</code> (last month)."
+      mentions_html: "Mentions: <code class=\"font-mono\">@{{Name}}</code> or <code class=\"font-mono\">@{{5511999999999}}</code> mentions a person; <code class=\"font-mono\">@{{todos}}</code> pings every group member. Lists, variables and rules of %{group} (e.g. <code class=\"font-mono\">{{lista:mensal}}</code>, <code class=\"font-mono\">{{pix}}</code>, <code class=\"font-mono\">{{presenca}}</code>) are listed on the group page. In command flows: <code class=\"font-mono\">{{remetente}}</code> (sender) and <code class=\"font-mono\">{{argumento}}</code> (the text after the command)."
+      preview: "Preview"
+      active: "Active"
+      save: "Save template"
+    create:
+      notice: "Template created. What prose. Wow."
+    update:
+      notice: "Template updated. Same message, different words."
+    destroy:
+      notice: "Template deleted. One less thing for me to send."
+      alert: "Can't delete it: %{errors}. Take it out of the flows first."
+  logs:
+    index:
+      title: "Logs"
+      heading: "Send log"
+      all: "All"
+      statuses:
+        pending: "pending"
+        sent: "sent"
+        failed: "failed"
+      group: "Group"
+      message: "Message"
+      status: "Status"
+      error: "Error"
+      created_at: "Created at"
+      resend: "Resend"
+      empty: "Nothing sent yet. Peace."
+    resend:
+      notice: "Resent. You're welcome."
+      alert: "Couldn't resend: %{error}"

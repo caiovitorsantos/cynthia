@@ -1,0 +1,539 @@
+# Traduções do painel e da Cynth.ia. Ao mudar uma chave aqui, mude também nos outros idiomas (spec/i18n_spec.rb confere).
+"pt-BR":
+  date:
+    formats:
+      day_month: "%d/%m"
+      default: "%d/%m/%Y"
+    month_names:
+      - ~
+      - "Janeiro"
+      - "Fevereiro"
+      - "Março"
+      - "Abril"
+      - "Maio"
+      - "Junho"
+      - "Julho"
+      - "Agosto"
+      - "Setembro"
+      - "Outubro"
+      - "Novembro"
+      - "Dezembro"
+    abbr_day_names:
+      - "Dom"
+      - "Seg"
+      - "Ter"
+      - "Qua"
+      - "Qui"
+      - "Sex"
+      - "Sáb"
+    day_names:
+      - "Domingo"
+      - "Segunda"
+      - "Terça"
+      - "Quarta"
+      - "Quinta"
+      - "Sexta"
+      - "Sábado"
+  time:
+    formats:
+      long_date: "%d/%m/%Y %H:%M"
+      short_date: "%d/%m %H:%M"
+      default: "%d/%m/%Y %H:%M"
+    am: "am"
+    pm: "pm"
+  support:
+    array:
+      words_connector: ", "
+      two_words_connector: " e "
+      last_word_connector: " e "
+  errors:
+    format: "%{attribute} %{message}"
+    messages:
+      blank: "não pode ficar em branco"
+      taken: "já está em uso"
+      inclusion: "não é válido"
+      invalid: "não é válido"
+      required: "é obrigatório"
+  activerecord:
+    models:
+      flow: "Fluxo"
+      template: "Template"
+    attributes:
+      flow:
+        name: "Nome"
+        trigger: "Gatilho"
+        command: "Comando"
+        cron_expression: "Cron"
+        run_at: "Data e hora"
+        steps: "Passo"
+      template:
+        name: "Nome"
+        body: "Corpo"
+      member_list:
+        name: "Nome"
+        key: "Chave"
+      whatsapp_group:
+        list_style: "Formato"
+        locale: "Idioma"
+    errors:
+      messages:
+        required: "é obrigatório"
+      models:
+        flow:
+          attributes:
+            command:
+              command_format: "deve ser uma palavra começando com !, ex: !lista"
+            base:
+              cron_xor_run_at: "Informe o cron ou a data do envio único, não os dois"
+            cron_expression:
+              invalid_cron: "não é uma expressão cron válida"
+            steps:
+              empty_steps: "adicione pelo menos um passo"
+              unknown_step: "%{step}: tipo desconhecido"
+              sender_only: "%{step}: só funciona com gatilho de comando"
+              choose_list: "%{step}: escolha a lista"
+              variable_name: "%{step}: informe o nome da variável"
+              choose_template: "%{step}: escolha o template"
+              missing_variables: "%{step}: \"%{template}\" usa variáveis sem valor: %{variables}"
+        template:
+          attributes:
+            base:
+              used_by_flows: "usado pelos fluxos: %{flows}"
+  cynthia:
+    signature: "_😒 Cynth.ia_ | _— Cynth.ia, contra a vontade_ | _Cynth.ia. De nada, eu acho._ | _ugh. — Cynth.ia_"
+  locales:
+    label: "Idioma"
+    "pt-BR": "Português"
+    en: "English"
+    es: "Español"
+  common:
+    edit: "Editar"
+    remove: "Remover"
+    nothing: "(nada)"
+    none_f: "nenhuma"
+    none_m: "nenhum"
+    members:
+      one: "%{count} membro"
+      other: "%{count} membros"
+    flows:
+      one: "%{count} fluxo"
+      other: "%{count} fluxos"
+  flow_steps:
+    send_message: "Enviar template"
+    add_to_list: "Pôr quem mandou o comando numa lista"
+    remove_from_list: "Tirar quem mandou o comando de uma lista"
+    clear_list: "Esvaziar lista"
+    set_variable: "Definir variável do grupo"
+  flow_triggers:
+    schedule: "Horário (rotina)"
+    command: "Comando no grupo"
+  lists:
+    styles:
+      numbered: "Numerada (1. 2. 3.)"
+      bullet: "Marcador •"
+      dash: "Traço -"
+      plain: "Sem marcador"
+  layouts:
+    application:
+      sign_in: "Entrar"
+      groups: "Grupos"
+      logs: "Logs"
+    account:
+      title: "Conta"
+      signed_in_as_html: "Logado como <strong>%{user}</strong>"
+      close: "Fechar"
+      checking: "Verificando conexão…"
+      language: "Idioma do painel"
+      sign_out: "Sair do painel"
+  connection:
+    show:
+      title: "Conexão"
+    status:
+      states:
+        connected: "conectado"
+        qr_pending: "aguardando QR Code"
+        disconnected: "desconectado"
+        unreachable: "wa-service fora do ar"
+      scan: "Escaneie com o WhatsApp. Use sempre um número secundário."
+      generating: "Gerando QR Code…"
+      disconnect: "Desconectar este número"
+      disconnect_confirm: "Tem certeza? Isso desconecta o WhatsApp e exige um novo QR Code."
+      new_qr: "Gerar novo QR Code"
+      unreachable: "Não consegui falar com o wa-service. Vê se o container está no ar."
+    logout:
+      notice: "Desconectei. Escaneia o QR de novo quando der vontade."
+      alert: "Não consegui desconectar: %{error}. Clássico."
+  home:
+    show:
+      page_title: "Cynth.ia · a administradora do seu grupo"
+      kicker: "Automação de grupos de WhatsApp"
+      headline_html: "Cynth<span class=\"text-wa-green\">.ia</span> cuida do seu grupo."
+      subheadline: "De má vontade, mas cuida."
+      intro: "Lista de presença, quem confirmou, quem sumiu, quem não pagou, lembrete na hora certa. Tudo o que o admin do grupo faz na mão, a Cynth.ia faz sozinha. Ela só reclama um pouco."
+      cta: "Entrar no painel"
+      how_link: "Como funciona ↓"
+      art_alt: "Cynth.ia, administradora de grupos em pixel art, entediada digitando na frente de um computador que diz UGH"
+      chat:
+        title: "Enquanto isso, no grupo do vôlei…"
+        group: "Vôlei de Terça"
+        members: "Adriana, Bruno, Carla, você…"
+        list_command: "!lista"
+        list_reply_html: "<strong>PRESENÇA 21/10</strong>\n\n1. Adriana ✅\n2. Bruno ❌\n3. Carla ✅\n4. Diego\n\n<strong>Avulsos</strong>\n1. Pedro\n\n<em>😒 Cynth.ia</em>"
+        wait_command: "!espera"
+        wait_reply_html: "Diego entrou na espera 👍\n\n<em>— Cynth.ia, contra a vontade</em>"
+        thanks: "Valeu, Cynth.ia!"
+        seen: "Cynth.ia visualizou e não respondeu. 😒"
+      features:
+        title: "O que ela faz (suspirando)"
+        lists:
+          title: "Listas de membros"
+          text: "Mensal, avulso, espera, pagou: cada um em quantas listas quiser, e as listas viram texto nas mensagens."
+        flows:
+          title: "Rotinas e comandos"
+          text: "Toda terça às 14h, todo dia 1 do mês, ou quando alguém manda !lista no grupo. Você monta os passos."
+        attendance:
+          title: "Lista de presença"
+          text: "Reação ✅/❌ ou aquela lista copiada e colada de sempre: ela lê, confere e não deixa cópia velha bagunçar."
+        billing:
+          title: "Cobrança do mês"
+          text: "Mensalidades e diárias dos avulsos, quem pagou com 💰 e quem está devendo há 3 meses. Ela lembra. Todo mês."
+      how:
+        title: "Como funciona"
+        connect:
+          title: "Conecte um número"
+          text: "Escaneie o QR Code com um número secundário. A Cynth.ia entra nos grupos em que ele está."
+        organize:
+          title: "Organize o grupo"
+          text: "Marque quem é mensal, avulso ou espera, cadastre o PIX e escreva os templates do jeito do grupo."
+        relax:
+          title: "Deixe com ela"
+          text: "Crie rotinas e comandos. Ela manda, confere, cobra e responde. Revirando os olhos."
+      disclaimer: "Self-hosted. Usa uma biblioteca não oficial do WhatsApp: prefira um número secundário."
+  sessions:
+    new:
+      title: "Entrar"
+      greeting: "Ugh… de novo você? Entra logo, vai."
+      username: "Usuário"
+      password: "Senha"
+      submit: "Entrar"
+    create:
+      alert: "Usuário ou senha errados. Tenta de novo, eu espero. (Mais ou menos.)"
+      rate_limited: "Muitas tentativas. Respira e tenta daqui a uns minutos."
+    destroy:
+      notice: "Você saiu. Até que enfim, silêncio."
+  groups:
+    not_connected: "O WhatsApp não está conectado. Conecta lá na sua conta, no canto de cima, que eu continuo."
+    index:
+      title: "Grupos"
+      sync: "Sincronizar agora"
+      selected:
+        one: "1 grupo selecionado"
+        other: "%{count} grupos selecionados"
+      leave: "Sair dos grupos no WhatsApp"
+      leave_confirm: "Sair dos grupos selecionados no WhatsApp? Listas, templates e fluxos deles também serão apagados."
+      remove: "Remover do painel"
+      remove_confirm: "Remover os grupos selecionados do painel? Listas, templates e fluxos deles também serão apagados."
+      select_all: "Selecionar todos"
+      select: "Selecionar %{name}"
+      group: "Grupo"
+      automation: "Automação"
+      synced: "Sincronizado"
+      empty: "Nenhum grupo ainda. Conecta um número e sincroniza, se não for pedir muito."
+    show:
+      back: "← Grupos"
+      more: "Mais ações"
+      remove: "Remover do painel"
+      remove_confirm: "Remover %{name} do painel? Ele volta na próxima sincronização se você ainda for membro. Listas, templates e fluxos deste grupo também serão apagados."
+      leave: "Sair do grupo no WhatsApp"
+      leave_confirm: "Sair de %{name} no WhatsApp? Não dá para desfazer pelo painel. Listas, templates e fluxos deste grupo também serão apagados."
+      tabs:
+        membros: "Membros e listas"
+        fluxos: "Fluxos"
+        templates: "Templates"
+        variaveis: "Variáveis"
+        regras: "Regras"
+      filter_all: "Todos"
+      filter_none: "Nenhuma"
+      filter_label: "Filtrar membros por lista"
+      mentions_html: "Menções avulsas: <code class=\"font-mono\">@{{nome}}</code> ou <code class=\"font-mono\">@{{numero}}</code>; <code class=\"font-mono\">@{{todos}}</code> notifica todos."
+      round: "Rodada de presença de %{at}:"
+      round_counts: "%{confirmed} confirmado(s), %{declined} cancelado(s)."
+      member:
+        name: "Nome"
+        number: "Número"
+        display_name: "Nome nas listas"
+        lists: "Listas"
+        attendance: "Presença"
+      members_empty: "Ninguém por aqui ainda. Sincroniza os grupos."
+      save_members: "Salvar membros"
+      lists:
+        manage: "Gerenciar listas (criar, renomear, formato)"
+        help_html: "Uma pessoa pode estar em várias listas. Nos templates: <code class=\"font-mono\">{{lista:chave}}</code> (nomes) e <code class=\"font-mono\">{{mencoes:chave}}</code> (marca as pessoas). Para apagar uma lista, apague o nome; renomear não muda a chave."
+        name: "Nome"
+        key: "Chave"
+        members: "Membros"
+        new: "nova lista"
+        style: "Formato"
+        empty_text: "Texto quando a lista está vazia"
+        save: "Salvar listas"
+      flows:
+        title: "Fluxos e rotinas"
+        new_schedule: "Nova rotina"
+        new_command: "Novo comando"
+        help: "Um gatilho (horário ou comando no grupo) e passos em ordem: enviar template, mexer em listas, definir variáveis."
+        name: "Nome"
+        trigger: "Gatilho"
+        steps: "Passos"
+        inactive: "inativo"
+        once: "envio único"
+        next: "próximo: %{at}"
+        no_next: "sem próximo envio"
+        run: "Executar agora"
+        run_confirm: "Executar \"%{name}\" agora? As mensagens vão para o grupo de verdade."
+        remove_confirm: "Remover o fluxo \"%{name}\"?"
+        empty: "Nenhum fluxo. Tô de folga e prefiro assim. Se insistir: crie um template e uma rotina que o envia."
+      templates:
+        title: "Templates"
+        new: "Novo template"
+        remove_confirm: "Remover o template \"%{name}\"?"
+        empty: "Nenhum template. Silêncio absoluto. Adoro."
+      variables:
+        title: "Variáveis do grupo"
+        help_html: "Valores usados pelos templates deste grupo, como <code class=\"font-mono\">{{pix}}</code>. Fluxos podem alterá-las com o passo \"Definir variável\". Para remover, apague o nome."
+        name: "Nome"
+        value: "Valor"
+        new: "nova variável"
+        signature: "Assinatura da Cynth.ia nas respostas a comandos"
+        no_signature: "(sem assinatura)"
+        signature_help_html: "Vai no fim das mensagens de fluxos de comando. Separe várias com <code class=\"font-mono\">|</code> e ela sorteia uma por mensagem. Vazio não assina; rotinas nunca levam assinatura."
+        locale: "Idioma das mensagens no grupo"
+        locale_help: "Vale para o que a Cynth.ia gera sozinha: nomes de mês ({{mes}}, {{mes_anterior}}) e a assinatura padrão. Templates são o texto que você escreve."
+        save: "Salvar variáveis e assinatura"
+      rules:
+        title: "Regras"
+        activate: "Ativar"
+        descriptions:
+          attendance: "Confirmação por reação ✅/❌ ou lista colada na mensagem que abre a rodada, e variáveis de presença."
+          billing: "Mensalidades e diárias de avulsos do mês anterior, pagamento marcado com 💰 na lista colada ou no painel."
+    update:
+      notice: "Membros salvos. Agora eu sei quem é quem. Que emoção."
+      alert: "Não salvei: %{error}"
+    variables:
+      notice: "Variáveis salvas. Vou lembrar. Infelizmente."
+    lists:
+      notice: "Listas salvas. Organização. Adoro. (Não.)"
+      alert: "Não salvei as listas: %{error}"
+    leave:
+      notice: "Saí do grupo %{name}. Sem despedida, do jeito que eu gosto."
+      alert: "Não consegui sair do grupo: %{error}"
+    destroy:
+      notice: "Tirei %{name} do painel. Ele volta na próxima sincronização se você ainda estiver nele."
+    leave_selected:
+      notice:
+        one: "Saindo de 1 grupo, pra não parecer robô. Irônico. Recarrega pra acompanhar."
+        other: "Saindo de %{count} grupos, um de cada vez, pra não parecer robô. Irônico. Recarrega pra acompanhar."
+    destroy_selected:
+      notice:
+        one: "1 grupo fora do painel. Menos trabalho."
+        other: "%{count} grupos fora do painel. Menos trabalho."
+    sync:
+      notice: "Sincronizei. Os mesmos grupos de sempre."
+      alert: "Não consegui sincronizar: %{error}"
+  group_rules:
+    names:
+      attendance: "Lista de presença"
+      billing: "Cobrança mensal"
+    active: "ativa"
+    deactivate: "Desativar"
+    configure: "Configurar"
+    save: "Salvar configuração"
+    variables: "Variáveis para usar nos templates"
+    create_schedule: "→ criar rotina"
+    attendance:
+      summary: "Cada mensagem de um passo marcado \"abre rodada de presença\" abre uma rodada; reações confirmam ou cancelam."
+      deactivate_confirm: "Desativar a lista de presença deste grupo? Configuração e respostas ficam guardadas."
+      tracked: "1. Listas cobradas:"
+      tracked_hint: "→ marque em \"Configurar\" abaixo"
+      round_flow: "2. Fluxo que abre a rodada:"
+      round_flow_hint: "com um passo \"Enviar template\" marcado \"abre rodada\""
+      guests: "Convidados na rodada:"
+      unmatched: "Nomes não reconhecidos nas listas coladas:"
+      unmatched_hint: "Preencha o \"Nome nas listas\" do membro com o nome exato (em Membros e listas) para associar."
+      tracked_title: "Listas cobradas"
+      tracked_help_html: "Aparecem em <code>{{presenca}}</code> e são cobradas em <code>{{pendentes}}</code>. Quem confirma sem estar nelas entra em <code>{{confirmados}}</code>."
+      no_lists: "Crie listas em \"Membros e listas\" primeiro."
+      replies: "Respostas"
+      confirm_emojis: "Emojis que confirmam (separados por espaço)"
+      decline_emojis: "Emojis que cancelam"
+      accept_replies: "Aceitar respostas citando a lista (além das reações)"
+      pasted: "Listas copiadas e coladas no grupo"
+      read_lists: "Ler a lista quando alguém copia, marca ✅/❌ e cola no grupo"
+      extras_section: "Título da seção de avulsos"
+      extras_placeholder: "Avulsos"
+      pasted_help: "Nessa seção, estar na lista já é confirmar; nomes sem cadastro entram como convidados. Uma lista colada preenche quem ainda não respondeu, mas só a linha da própria pessoa muda uma resposta já registrada."
+      marks: "Marcas em {{presenca}}"
+      confirmed: "Confirmado"
+      declined: "Cancelado"
+      pending: "Sem resposta"
+      vars:
+        lista: "nomes das listas cobradas"
+        mencoes: "marca as listas cobradas (notifica)"
+        presenca: "listas cobradas com a marca de confirmado/cancelado/sem resposta"
+        confirmados: "quem confirmou fora das listas cobradas (avulsos)"
+        pendentes: "marca quem das listas cobradas ainda não respondeu"
+      vars_help_html: "Para uma lista específica, acrescente a chave: <code class=\"font-mono\">{{presenca:%{key}}}</code>. Um fluxo de comando (ex.: <code class=\"font-mono\">!lista</code>) que envia um template com essas variáveis mostra a rodada atual no grupo."
+    billing:
+      summary: "Um passo \"Enviar template\" marcado \"abre cobrança\" cobra o mês anterior: mensalidades e diárias dos avulsos que confirmaram presença."
+      deactivate_confirm: "Desativar a cobrança deste grupo? Cobranças e pagamentos ficam guardados."
+      charged: "1. Listas que pagam mensalidade:"
+      billing_flow: "2. Fluxo que abre a cobrança:"
+      billing_flow_hint: "com um passo \"Enviar template\" marcado \"abre cobrança\""
+      unmatched: "Nomes com %{mark} não reconhecidos:"
+      unmatched_hint: "Preencha o \"Nome nas listas\" do membro com esse nome, ou marque o pagamento abaixo."
+      period: "Cobrança de %{month}/%{year}:"
+      paid_count: "%{paid} de %{total} pagas"
+      who: "Quem"
+      kind: "Tipo"
+      paid: "Pago"
+      monthly: "mensalidade"
+      daily: "avulso %{date}"
+      months_due:
+        one: "1 mês em aberto"
+        other: "%{count} meses em aberto"
+      pending: "pendente"
+      undo: "Desfazer"
+      mark_paid: "Marcar pago"
+      charged_title: "Listas que pagam mensalidade"
+      charged_help: "Quem confirmou presença numa rodada do mês sem estar nelas paga diária de avulso."
+      paid_emojis: "Emojis que marcam pago na lista colada (o primeiro aparece na lista)"
+      vars:
+        cobranca_mensais: "mensalistas: quem pagou com %{mark}, quem não pagou marcado (e \"3x\" se deve mais de um mês)"
+        cobranca_avulsos: "avulsos por dia jogado, no mesmo formato"
+        pendentes_pagamento: "marca todo mundo que ainda deve (para o lembrete)"
+      vars_help: "Quando alguém copia a cobrança, põe %{mark} no nome e cola no grupo, o pagamento é registrado. A cópia é reconhecida pela primeira linha, igual à da mensagem que abriu a cobrança."
+    create:
+      notice: "Regra \"%{name}\" ativada. Mais uma responsabilidade pra mim. Legal."
+      alert: "Não deu pra ativar a regra: %{errors}"
+    update:
+      notice: "Regra \"%{name}\" atualizada. Anotado."
+    destroy:
+      notice: "Regra \"%{name}\" desativada. Finalmente."
+  flows:
+    new:
+      title: "Novo fluxo"
+    edit:
+      title: "Editar fluxo"
+    frequency:
+      minutes:
+        one: "a cada 1 minuto"
+        other: "a cada %{count} minutos"
+      hours:
+        one: "a cada 1 hora"
+        other: "a cada %{count} horas"
+      days:
+        one: "a cada 1 dia"
+        other: "a cada %{count} dias"
+    when:
+      daily: "todo dia às %{time}"
+      monthly: "todo dia %{day} do mês às %{time}"
+      weekly: "%{days} às %{time}"
+      weekdays: "de segunda a sexta"
+      every:
+        - "todo domingo"
+        - "toda segunda"
+        - "toda terça"
+        - "toda quarta"
+        - "toda quinta"
+        - "toda sexta"
+        - "todo sábado"
+    cron_preview:
+      invalid: "Expressão cron inválida."
+      hint: "Preencha o cron acima e clique em \"Ver próximos envios\"."
+    form:
+      name: "Nome"
+      name_placeholder: "Abrir lista de presença"
+      trigger: "Gatilho"
+      when: "Quando roda"
+      repeat: "Repetir"
+      modes:
+        once: "Uma vez"
+        daily: "Todo dia"
+        weekly: "Toda semana"
+        monthly: "Todo mês"
+        custom: "Avançado (cron)"
+      monthday: "Dia do mês"
+      time: "Horário"
+      run_at: "Data e hora"
+      weekdays: "Dias da semana"
+      cron: "Cron (minuto hora dia mês dia-da-semana)"
+      timezone: "Fuso horário"
+      preview: "Ver próximos envios"
+      command: "Comando"
+      command_help_html: "Qualquer participante manda o comando no grupo e o fluxo roda. Nos templates e valores dos passos: <code class=\"font-mono\">{{remetente}}</code> (quem mandou) e <code class=\"font-mono\">{{argumento}}</code> (o texto depois do comando, ex.: \"!pix chave@x\" → \"chave@x\")."
+      steps: "Passos (executados em ordem)"
+      steps_help: "Mensagens seguidas saem com ~%{seconds}s de intervalo, para não parecer spam."
+      step_number: "Passo %{n}"
+      add_step: "+ Adicionar passo"
+      active: "Ativo"
+      save: "Salvar fluxo"
+    step:
+      up: "Mover para cima"
+      down: "Mover para baixo"
+      remove: "Remover passo"
+      type: "O que fazer"
+      choose: "— escolha —"
+      template: "Template"
+      list: "Lista"
+      variable: "Variável"
+      value: "Valor"
+      opens_round: "abre rodada de presença"
+      opens_billing: "abre cobrança do mês anterior"
+    create:
+      notice: "Fluxo criado. Mais trabalho pra mim. Ótimo."
+    update:
+      notice: "Fluxo atualizado. Tá, anotei."
+    destroy:
+      notice: "Fluxo apagado. Um a menos. Não vou sentir falta."
+    run:
+      notice: "Tá bom, rodando \"%{name}\" agora. Satisfeito?"
+  templates:
+    new:
+      title: "Novo template"
+    edit:
+      title: "Editar template"
+    form:
+      name: "Nome"
+      body: "Corpo (use {{variavel}} para placeholders)"
+      detected: "Variáveis detectadas:"
+      none_detected: "nenhuma variável detectada"
+      builtin_html: "Automáticas (preenchidas no envio): <code class=\"font-mono\">{{data}}</code> (dd/mm), <code class=\"font-mono\">{{mes}}</code>, <code class=\"font-mono\">{{mes_num}}</code>, <code class=\"font-mono\">{{mes_anterior}}</code>."
+      mentions_html: "Menções: <code class=\"font-mono\">@{{Nome}}</code> ou <code class=\"font-mono\">@{{5511999999999}}</code> marca uma pessoa; <code class=\"font-mono\">@{{todos}}</code> notifica todos os participantes do grupo. Listas, variáveis e regras de %{group} (ex.: <code class=\"font-mono\">{{lista:mensal}}</code>, <code class=\"font-mono\">{{pix}}</code>, <code class=\"font-mono\">{{presenca}}</code>) estão listados na página do grupo. Em fluxos de comando: <code class=\"font-mono\">{{remetente}}</code> e <code class=\"font-mono\">{{argumento}}</code> (o texto depois do comando)."
+      preview: "Prévia"
+      active: "Ativo"
+      save: "Salvar template"
+    create:
+      notice: "Template criado. Que texto. Uau."
+    update:
+      notice: "Template atualizado. Mesma mensagem, outras palavras."
+    destroy:
+      notice: "Template apagado. Menos uma coisa pra eu mandar."
+      alert: "Não dá pra apagar: %{errors}. Tira dos fluxos primeiro."
+  logs:
+    index:
+      title: "Logs"
+      heading: "Logs de envio"
+      all: "Todos"
+      statuses:
+        pending: "pendente"
+        sent: "enviado"
+        failed: "falhou"
+      group: "Grupo"
+      message: "Mensagem"
+      status: "Status"
+      error: "Erro"
+      created_at: "Criado em"
+      resend: "Reenviar"
+      empty: "Nada enviado ainda. Paz."
+    resend:
+      notice: "Reenviei. De nada."
+      alert: "Não consegui reenviar: %{error}"

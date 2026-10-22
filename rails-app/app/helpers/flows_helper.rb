@@ -1,19 +1,10 @@
 module FlowsHelper
-  WEEKDAYS = [ "todo domingo", "toda segunda", "toda terça", "toda quarta", "toda quinta", "toda sexta", "todo sábado" ].freeze
-  WEEKDAYS_SHORT = %w[dom seg ter qua qui sex sáb].freeze
-
   # Fugit::Cron#rough_frequency devolve segundos brutos (ex: 86400), não texto.
   def rough_frequency_in_words(seconds)
     case seconds
-    when 0...3_600
-      minutes = seconds / 60
-      "a cada #{pluralize(minutes, 'minuto', plural: 'minutos')}"
-    when 3_600...86_400
-      hours = seconds / 3_600
-      "a cada #{pluralize(hours, 'hora', plural: 'horas')}"
-    else
-      days = seconds / 86_400
-      "a cada #{pluralize(days, 'dia', plural: 'dias')}"
+    when 0...3_600 then t("flows.frequency.minutes", count: seconds / 60)
+    when 3_600...86_400 then t("flows.frequency.hours", count: seconds / 3_600)
+    else t("flows.frequency.days", count: seconds / 86_400)
     end
   end
 
@@ -34,21 +25,21 @@ module FlowsHelper
     end
   end
 
-  # "toda terça às 14:00", "seg, qua e sex às 9:00", "todo dia 1 às 9:00"; senão a frequência aproximada.
+  # "toda terça às 14:00", "seg, qua e sex às 9:00", "todo dia 1 do mês às 9:00"; senão a frequência aproximada.
   def cron_in_words(expression)
     cron = simple_cron(expression)
     return rough_frequency_in_words(Fugit.parse_cron(expression).rough_frequency) unless cron
 
     case cron[:mode]
-    when "daily" then "todo dia às #{cron[:time]}"
-    when "monthly" then "todo dia #{cron[:monthday]} do mês às #{cron[:time]}"
+    when "daily" then t("flows.when.daily", time: cron[:time])
+    when "monthly" then t("flows.when.monthly", day: cron[:monthday], time: cron[:time])
     else
       days = cron[:weekdays]
-      label = if days == (1..5).to_a then "de segunda a sexta"
-      elsif days.one? then WEEKDAYS[days.first]
-      else days.map { |day| WEEKDAYS_SHORT[day] }.to_sentence(two_words_connector: " e ", last_word_connector: " e ")
+      label = if days == (1..5).to_a then t("flows.when.weekdays")
+      elsif days.one? then t("flows.when.every")[days.first]
+      else days.map { |day| t("date.abbr_day_names")[day].downcase }.to_sentence
       end
-      "#{label} às #{cron[:time]}"
+      t("flows.when.weekly", days: label, time: cron[:time])
     end
   end
 end

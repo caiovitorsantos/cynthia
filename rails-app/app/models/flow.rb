@@ -2,14 +2,14 @@
 # em ordem. Fluxo de horário é a "rotina". Os passos são os componentes de STEPS; os que agem
 # sobre "quem mandou" só fazem sentido em fluxos de comando.
 class Flow < ApplicationRecord
-  TRIGGERS = { "schedule" => "Horário (rotina)", "command" => "Comando no grupo" }.freeze
+  TRIGGERS = %w[schedule command].freeze
 
   STEPS = {
-    "send_message" => { label: "Enviar template", fields: %w[template_id opens_round opens_billing] },
-    "add_to_list" => { label: "Pôr quem mandou o comando numa lista", fields: %w[list_key], sender: true },
-    "remove_from_list" => { label: "Tirar quem mandou o comando de uma lista", fields: %w[list_key], sender: true },
-    "clear_list" => { label: "Esvaziar lista", fields: %w[list_key] },
-    "set_variable" => { label: "Definir variável do grupo", fields: %w[name value] }
+    "send_message" => { fields: %w[template_id opens_round opens_billing] },
+    "add_to_list" => { fields: %w[list_key], sender: true },
+    "remove_from_list" => { fields: %w[list_key], sender: true },
+    "clear_list" => { fields: %w[list_key] },
+    "set_variable" => { fields: %w[name value] }
   }.freeze
 
   # Disponíveis nos templates e valores de passos de um fluxo de comando.
@@ -21,8 +21,8 @@ class Flow < ApplicationRecord
   normalizes :command, with: ->(value) { value.strip.downcase.presence }
 
   validates :name, presence: true
-  validates :trigger, inclusion: { in: TRIGGERS.keys }
-  validates :command, presence: true, format: { with: /\A!\S+\z/, message: "deve ser uma palavra começando com !, ex: !lista" }, if: :command?
+  validates :trigger, inclusion: { in: TRIGGERS }
+  validates :command, presence: true, format: { with: /\A!\S+\z/, message: :command_format }, if: :command?
   validate :schedule_is_valid, if: :schedule?
   validate :steps_are_valid
 
@@ -109,29 +109,29 @@ class Flow < ApplicationRecord
   end
 
   def schedule_is_valid
-    errors.add(:base, "Informe o cron ou a data do envio único, não os dois") if cron_expression.present? == run_at.present?
-    errors.add(:cron_expression, "não é uma expressão cron válida") if cron_expression.present? && Fugit.parse_cron(cron_expression).nil?
+    errors.add(:base, :cron_xor_run_at) if cron_expression.present? == run_at.present?
+    errors.add(:cron_expression, :invalid_cron) if cron_expression.present? && Fugit.parse_cron(cron_expression).nil?
   end
 
   def steps_are_valid
-    errors.add(:steps, "adicione pelo menos um passo") if steps.empty?
+    errors.add(:steps, :empty_steps) if steps.empty?
 
     set_names = steps.filter_map { |step| step["name"] if step["type"] == "set_variable" }
     steps.each_with_index do |step, index|
       config = STEPS[step["type"]]
-      next errors.add(:steps, "#{index + 1}: tipo desconhecido") unless config
+      next errors.add(:steps, :unknown_step, step: index + 1) unless config
 
-      prefix = "#{index + 1} (#{config[:label]})"
-      errors.add(:steps, "#{prefix}: só funciona com gatilho de comando") if config[:sender] && !command?
-      errors.add(:steps, "#{prefix}: escolha a lista") if config[:fields].include?("list_key") && whatsapp_group&.member_lists&.none? { |list| list.key == step["list_key"] }
-      errors.add(:steps, "#{prefix}: informe o nome da variável") if step["type"] == "set_variable" && step["name"].blank?
+      prefix = { step: "#{index + 1} (#{I18n.t("flow_steps.#{step["type"]}")})" }
+      errors.add(:steps, :sender_only, **prefix) if config[:sender] && !command?
+      errors.add(:steps, :choose_list, **prefix) if config[:fields].include?("list_key") && whatsapp_group&.member_lists&.none? { |list| list.key == step["list_key"] }
+      errors.add(:steps, :variable_name, **prefix) if step["type"] == "set_variable" && step["name"].blank?
       next unless step["type"] == "send_message"
 
       template = whatsapp_group&.templates&.find_by(id: step["template_id"])
-      next errors.add(:steps, "#{prefix}: escolha o template") unless template
+      next errors.add(:steps, :choose_template, **prefix) unless template
 
       missing = template.variable_names - provided_variables(template) - set_names
-      errors.add(:steps, "#{prefix}: \"#{template.name}\" usa variáveis sem valor: #{missing.join(', ')}") if missing.any?
+      errors.add(:steps, :missing_variables, **prefix, template: template.name, variables: missing.join(", ")) if missing.any?
     end
   end
 

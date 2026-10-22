@@ -54,6 +54,9 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 - **Logs** de cada envio, com status, erro e reenvio.
 - **Login** por sessão, **página inicial** de apresentação para quem não está logado e interface
   **responsiva** (no celular, tabelas viram cartões), no tema escuro do WhatsApp.
+- **Português, inglês e espanhol**: o painel segue o idioma do navegador e pode ser trocado no
+  cabeçalho (PT · EN · ES) ou no modal da conta. Cada grupo tem também o idioma das mensagens que a
+  Cynth.ia gera sozinha (nomes de mês e assinatura padrão).
 
 **Por grupo** (tudo fica na página do grupo, e cada grupo configura do seu jeito)
 
@@ -306,7 +309,10 @@ texto de lista vazia valem para todas as listas do grupo.
 | `{{lista:mensal}}` | `1. Adriana`<br>`2. Bruno` |
 | `{{mencoes:mensal}}` | `1. @Adriana`<br>`2. @Bruno` (notifica) |
 
-Em **Variáveis**, guarde pares nome → valor (ex.: `pix`), usados como `{{pix}}`.
+Em **Variáveis**, guarde pares nome → valor (ex.: `pix`), usados como `{{pix}}`. Ali também ficam a
+assinatura da Cynth.ia e o **idioma das mensagens no grupo**, que vale para `{{mes}}`/`{{mes_anterior}}`
+e para a assinatura padrão. Os nomes das variáveis (`{{presenca}}`, `{{remetente}}` etc.) são os mesmos
+em qualquer idioma.
 
 ### 2. Templates
 
@@ -460,6 +466,9 @@ docker compose exec wa npx tsc --noEmit -p .
 
 # Recompilar o CSS depois de usar classes novas do Tailwind (o container não roda o watch)
 docker compose exec rails bin/rails tailwindcss:build
+
+# Traduções: config/locales/{pt-BR,en,es}.yml têm as mesmas chaves (spec/i18n_spec.rb confere) e,
+# em desenvolvimento e teste, uma chave faltando quebra a tela em vez de passar despercebida.
 
 # Migrations
 docker compose exec rails bin/rails db:migrate

@@ -3,21 +3,26 @@
         class="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-lg shadow-xl p-0 bg-wa-surface text-wa-text border border-wa-line backdrop:bg-black/60">
   <div class="flex items-center justify-between px-5 py-4 border-b border-wa-line">
     <div>
-      <p class="font-semibold">Conta</p>
-      <p class="text-xs text-wa-muted">Logado como <strong><%= ENV.fetch("ADMIN_USERNAME", "admin") %></strong></p>
+      <p class="font-semibold"><%= t(".title") %></p>
+      <p class="text-xs text-wa-muted"><%= t(".signed_in_as_html", user: ENV.fetch("ADMIN_USERNAME", "admin")) %></p>
     </div>
-    <button type="button" data-action="dialog#close" aria-label="Fechar" class="text-2xl leading-none text-wa-muted hover:text-wa-text cursor-pointer">×</button>
+    <button type="button" data-action="dialog#close" aria-label="<%= t(".close") %>" class="text-2xl leading-none text-wa-muted hover:text-wa-text cursor-pointer">×</button>
   </div>
 
   <section class="px-5 py-4 border-b border-wa-line">
     <h2 class="text-xs font-semibold uppercase tracking-wide text-wa-muted mb-3">WhatsApp</h2>
     <%= turbo_frame_tag "account_connection", src: connection_path, loading: :lazy do %>
-      <p class="text-sm text-wa-muted">Verificando conexão…</p>
+      <p class="text-sm text-wa-muted"><%= t(".checking") %></p>
     <% end %>
   </section>
 
+  <section class="px-5 py-4 border-b border-wa-line">
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-wa-muted mb-3"><%= t(".language") %></h2>
+    <%= render "layouts/locales" %>
+  </section>
+
   <div class="px-5 py-4 flex justify-end">
-    <%= button_to "Sair do painel", logout_path, method: :delete, data: { turbo_frame: "_top" },
+    <%= button_to t(".sign_out"), logout_path, method: :delete, data: { turbo_frame: "_top" },
           class: "text-sm font-medium text-red-400 hover:underline cursor-pointer" %>
   </div>
 </dialog>

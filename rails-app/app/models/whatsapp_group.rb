@@ -1,5 +1,6 @@
 class WhatsappGroup < ApplicationRecord
-  LIST_STYLES = { "numbered" => "Numerada (1. 2. 3.)", "bullet" => "Marcador •", "dash" => "Traço -", "plain" => "Sem marcador" }.freeze
+  LIST_STYLES = %w[numbered bullet dash plain].freeze
+  LOCALES = %w[pt-BR en es].freeze
   LIST_VARIABLES = %w[lista mencoes].freeze
 
   has_many :group_participants, dependent: :destroy
@@ -9,7 +10,12 @@ class WhatsappGroup < ApplicationRecord
   has_many :group_rules, dependent: :destroy
 
   validates :jid, presence: true, uniqueness: true
-  validates :list_style, inclusion: { in: LIST_STYLES.keys }
+  validates :list_style, inclusion: { in: LIST_STYLES }
+  validates :locale, inclusion: { in: LOCALES }
+
+  # Idioma das mensagens geradas pela Cynth.ia neste grupo (meses, assinatura padrão). Ao trocar,
+  # quem ainda usa a assinatura padrão do idioma antigo recebe a do novo.
+  before_save :translate_default_signature, if: :will_save_change_to_locale?
 
   # Linhas do formulário {nome, valor} → { "nome" => "valor" }. Nome vira chave de variável
   # válida ({{nome}}); linhas sem nome são descartadas.
@@ -40,6 +46,10 @@ class WhatsappGroup < ApplicationRecord
   # mensagem (vazia desliga). Variar também evita o bloqueio de mensagem idêntica do SendGuard.
   def signature_sample
     signature.to_s.split("|").map(&:strip).compact_blank.sample
+  end
+
+  def self.default_signature(locale)
+    I18n.t("cynthia.signature", locale: locale)
   end
 
   def rule(kind)
@@ -109,6 +119,11 @@ class WhatsappGroup < ApplicationRecord
   end
 
   private
+
+  def translate_default_signature
+    old_locale = locale_was || "pt-BR"
+    self.signature = self.class.default_signature(locale) if signature == self.class.default_signature(old_locale)
+  end
 
   def list_variable?(key)
     name, list_key = key.split(":", 2)

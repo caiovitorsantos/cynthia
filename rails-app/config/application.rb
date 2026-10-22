@@ -34,6 +34,8 @@ module RailsApp
     # in config/environments, which are processed later.
     #
     config.time_zone = "America/Sao_Paulo"
+    config.i18n.available_locales = [ :"pt-BR", :en, :es ]
+    config.i18n.default_locale = :"pt-BR"
     # config.eager_load_paths << Rails.root.join("extras")
 
     # Don't generate system test files.

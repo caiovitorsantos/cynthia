@@ -1,10 +1,10 @@
-<% content_for :title, "Logs" %>
+<% content_for :title, t(".title") %>
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-  <h1 class="text-2xl font-semibold text-wa-text">Logs de envio</h1>
+  <h1 class="text-2xl font-semibold text-wa-text"><%= t(".heading") %></h1>
   <%= form_with url: logs_path, method: :get, class: "flex gap-2" do %>
     <%= select_tag :status, options_for_select(
-          [["Todos", ""], ["Pendente", "pending"], ["Enviado", "sent"], ["Falhou", "failed"]], @status),
+          [[t(".all"), ""]] + MessageLog::STATUSES.map { |status| [t(".statuses.#{status}"), status] }, @status),
           onchange: "this.form.requestSubmit()",
           class: "rounded border-wa-line text-sm" %>
   <% end %>
@@ -13,40 +13,40 @@
 <table class="table-cards w-full text-sm bg-wa-surface rounded-lg shadow-sm overflow-hidden">
   <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
     <tr class="text-left">
-      <th class="py-2 px-3">Grupo</th>
-      <th class="py-2 px-3">Mensagem</th>
-      <th class="py-2 px-3">Status</th>
-      <th class="py-2 px-3">Erro</th>
-      <th class="py-2 px-3">Criado em</th>
+      <th class="py-2 px-3"><%= t(".group") %></th>
+      <th class="py-2 px-3"><%= t(".message") %></th>
+      <th class="py-2 px-3"><%= t(".status") %></th>
+      <th class="py-2 px-3"><%= t(".error") %></th>
+      <th class="py-2 px-3"><%= t(".created_at") %></th>
       <th class="py-2 px-3"></th>
     </tr>
   </thead>
   <tbody>
     <% @logs.each do |log| %>
       <tr class="border-t border-wa-line hover:bg-wa-panel/60">
-        <td data-label="Grupo" class="py-2 px-3"><%= @group_names[log.group_jid] || content_tag(:span, log.group_jid, class: "font-mono text-xs") %></td>
-        <td data-label="Mensagem" class="py-2 px-3"><span class="block max-w-full sm:max-w-xs truncate bg-wa-bubble rounded-lg px-2 py-1 shadow-sm" title="<%= log.rendered_body %>"><%= log.rendered_body %></span></td>
-        <td data-label="Status" class="py-2 px-3">
+        <td data-label="<%= t(".group") %>" class="py-2 px-3"><%= @group_names[log.group_jid] || content_tag(:span, log.group_jid, class: "font-mono text-xs") %></td>
+        <td data-label="<%= t(".message") %>" class="py-2 px-3"><span class="block max-w-full sm:max-w-xs truncate bg-wa-bubble rounded-lg px-2 py-1 shadow-sm" title="<%= log.rendered_body %>"><%= log.rendered_body %></span></td>
+        <td data-label="<%= t(".status") %>" class="py-2 px-3">
           <span class="px-2 py-1 rounded text-xs <%=
             case log.status
             when "sent" then "bg-wa-bubble text-wa-text"
             when "failed" then "bg-red-950/50 text-red-300"
             else "bg-wa-raised text-wa-text"
             end
-          %>"><%= log.status %></span>
+          %>"><%= t(".statuses.#{log.status}") %></span>
         </td>
-        <td data-label="Erro" class="py-2 px-3 text-xs text-red-400"><%= log.error_message %></td>
-        <td data-label="Criado em" class="py-2 px-3"><%= log.created_at.strftime("%d/%m/%Y %H:%M") %></td>
+        <td data-label="<%= t(".error") %>" class="py-2 px-3 text-xs text-red-400"><%= log.error_message %></td>
+        <td data-label="<%= t(".created_at") %>" class="py-2 px-3"><%= l(log.created_at, format: :long_date) %></td>
         <td class="py-2 px-3 sm:text-right">
           <% if log.status == "failed" %>
-            <%= button_to "Reenviar", resend_log_path(log), method: :post,
+            <%= button_to t(".resend"), resend_log_path(log), method: :post,
                   class: "text-wa-teal hover:underline bg-transparent p-0" %>
           <% end %>
         </td>
       </tr>
     <% end %>
     <% if @logs.empty? %>
-      <tr><td colspan="6" class="py-4 px-3 text-center text-wa-muted">Nada enviado ainda. Paz.</td></tr>
+      <tr><td colspan="6" class="py-4 px-3 text-center text-wa-muted"><%= t(".empty") %></td></tr>
     <% end %>
   </tbody>
 </table>

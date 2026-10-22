@@ -10,34 +10,27 @@
   <% end %>
 
   <div>
-    <%= f.label :name, "Nome", class: "block text-sm font-medium" %>
+    <%= f.label :name, t(".name"), class: "block text-sm font-medium" %>
     <%= f.text_field :name, class: "mt-1 block w-full rounded border-wa-line" %>
   </div>
 
-  <div data-controller="template-preview">
-    <%= f.label :body, "Corpo (use {{variavel}} para placeholders)", class: "block text-sm font-medium" %>
+  <div data-controller="template-preview" data-template-preview-none-value="<%= t(".none_detected") %>">
+    <%= f.label :body, t(".body"), class: "block text-sm font-medium" %>
     <%= f.text_area :body, rows: 6,
           data: { template_preview_target: "body", action: "input->template-preview#update" },
           class: "mt-1 block w-full rounded border-wa-line font-mono text-sm" %>
     <p class="mt-1 text-xs text-wa-muted">
-      Variáveis detectadas: <span data-template-preview-target="output" class="font-mono"></span>
+      <%= t(".detected") %> <span data-template-preview-target="output" class="font-mono"></span>
     </p>
     <p class="mt-1 text-xs text-wa-muted">
-      Automáticas (preenchidas no envio): <code class="font-mono">{{data}}</code> (dd/mm),
-      <code class="font-mono">{{mes}}</code>, <code class="font-mono">{{mes_num}}</code>,
-      <code class="font-mono">{{mes_anterior}}</code>.
+      <%= t(".builtin_html") %>
     </p>
     <p class="mt-1 text-xs text-wa-muted">
-      Menções: <code class="font-mono">@{{Nome}}</code> ou <code class="font-mono">@{{5511999999999}}</code> marca uma pessoa;
-      <code class="font-mono">@{{todos}}</code> notifica todos os participantes do grupo.
-      Listas, variáveis e regras de <%= link_to @group.name, group_path(@group), class: "text-wa-teal hover:underline" %>
-      (ex.: <code class="font-mono">{{lista:mensal}}</code>, <code class="font-mono">{{pix}}</code>, <code class="font-mono">{{presenca}}</code>)
-      estão listados na página do grupo. Em fluxos de comando: <code class="font-mono">{{remetente}}</code> e
-      <code class="font-mono">{{argumento}}</code> (o texto depois do comando).
+      <%= t(".mentions_html", group: link_to(@group.name, group_path(@group), class: "text-wa-teal hover:underline")) %>
     </p>
 
     <div class="mt-4 bg-wa-chat rounded-lg p-4">
-      <p class="text-xs text-wa-muted mb-2">Prévia</p>
+      <p class="text-xs text-wa-muted mb-2"><%= t(".preview") %></p>
       <div data-template-preview-target="bubble"
            class="w-fit max-w-full bg-wa-bubble rounded-lg rounded-tr-none px-3 py-2 shadow-sm text-sm whitespace-pre-wrap break-words"></div>
     </div>
@@ -45,8 +38,8 @@
 
   <div class="flex items-center gap-2">
     <%= f.check_box :active %>
-    <%= f.label :active, "Ativo", class: "text-sm" %>
+    <%= f.label :active, t(".active"), class: "text-sm" %>
   </div>
 
-  <%= f.submit "Salvar template", class: "btn-wa" %>
+  <%= f.submit t(".save"), class: "btn-wa" %>
 <% end %>

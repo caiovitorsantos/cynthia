@@ -4,6 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // A ordem no formulário é a ordem dos passos salvos.
 export default class extends Controller {
   static targets = ["list", "template"]
+  static values = { label: String }
 
   connect() {
     this.renumber()
@@ -34,6 +35,6 @@ export default class extends Controller {
   }
 
   renumber() {
-    this.listTarget.querySelectorAll("[data-step-number]").forEach((number, index) => { number.textContent = `Passo ${index + 1}` })
+    this.listTarget.querySelectorAll("[data-step-number]").forEach((number, index) => { number.textContent = this.labelValue.replace("%{n}", index + 1) })
   }
 }

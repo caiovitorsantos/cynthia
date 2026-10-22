@@ -1,0 +1,8 @@
+<%# Troca o idioma do painel (fica salvo num cookie). %>
+<div class="flex items-center gap-1 text-xs" role="group" aria-label="<%= t("locales.label") %>">
+  <% { "pt-BR" => "PT", "en" => "EN", "es" => "ES" }.each do |locale, label| %>
+    <%= button_to label, locale_path, params: { locale: locale }, method: :patch, form: { data: { turbo_frame: "_top" } },
+          title: t("locales.#{locale}"), aria: { pressed: I18n.locale.to_s == locale },
+          class: "rounded-full border border-wa-line px-2.5 py-1 cursor-pointer hover:bg-wa-raised aria-pressed:bg-wa-green aria-pressed:text-wa-panel aria-pressed:border-wa-green" %>
+  <% end %>
+</div>

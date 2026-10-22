@@ -9,7 +9,6 @@ class TemplateRenderer
   # (a notificação vai pelas mentions), como o "@todos" do WhatsApp.
   MENTION_ALL_KEYS = %w[todos all].freeze
 
-  MONTHS = %w[Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro].freeze
 
   class << self
     # Prioridade dos valores: variables (ex.: {{remetente}} de um comando) > variáveis do grupo >
@@ -53,11 +52,16 @@ class TemplateRenderer
     def builtin(key, now, whatsapp_group, mentioned_jids)
       case key
       when "data" then now.strftime("%d/%m")
-      when "mes" then MONTHS[now.month - 1]
+      when "mes" then month_name(now.month, whatsapp_group)
       when "mes_num" then now.strftime("%m")
-      when "mes_anterior" then MONTHS[now.prev_month.month - 1]
+      when "mes_anterior" then month_name(now.prev_month.month, whatsapp_group)
       else whatsapp_group&.render_variable(key, mentioned_jids)
       end
+    end
+
+    # No idioma das mensagens do grupo ("Setembro", "September", "Septiembre").
+    def month_name(month, whatsapp_group)
+      I18n.t("date.month_names", locale: whatsapp_group&.locale || :"pt-BR")[month]
     end
 
     def resolve_mention(key, whatsapp_group)
