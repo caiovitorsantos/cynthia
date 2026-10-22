@@ -10,7 +10,7 @@ class FlowsController < ApplicationController
     @flow = @group.flows.new(flow_params)
 
     if @flow.save
-      redirect_to group_path(@group, anchor: "fluxos"), notice: "Fluxo criado."
+      redirect_to group_path(@group, anchor: "fluxos"), notice: "Fluxo criado. Mais trabalho pra mim. Ótimo."
     else
       render :new, status: :unprocessable_entity
     end
@@ -21,7 +21,7 @@ class FlowsController < ApplicationController
 
   def update
     if @flow.update(flow_params)
-      redirect_to group_path(@group, anchor: "fluxos"), notice: "Fluxo atualizado."
+      redirect_to group_path(@group, anchor: "fluxos"), notice: "Fluxo atualizado. Tá, anotei."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -29,14 +29,14 @@ class FlowsController < ApplicationController
 
   def destroy
     @flow.destroy
-    redirect_to group_path(@group, anchor: "fluxos"), notice: "Fluxo removido."
+    redirect_to group_path(@group, anchor: "fluxos"), notice: "Fluxo apagado. Um a menos. Não vou sentir falta."
   end
 
   # Executa agora, sem mexer na próxima execução da rotina. Passos que dependem de quem mandou
   # o comando são pulados.
   def run
     RunFlowJob.perform_async(@flow.id)
-    redirect_to group_path(@group, anchor: "fluxos"), notice: "Fluxo \"#{@flow.name}\" enfileirado."
+    redirect_to group_path(@group, anchor: "fluxos"), notice: "Tá bom, rodando \"#{@flow.name}\" agora. Satisfeito?"
   end
 
   def cron_preview

@@ -52,11 +52,15 @@
     </header>
 
     <main class="container mx-auto mt-6 sm:mt-8 px-4 sm:px-5 pb-16">
-      <% if notice.present? %>
-        <p class="mb-4 rounded-lg bg-wa-bubble shadow-sm px-4 py-2"><%= notice %></p>
-      <% end %>
-      <% if alert.present? %>
-        <p class="mb-4 rounded-lg bg-red-950/50 text-red-300 shadow-sm px-4 py-2"><%= alert %></p>
+      <%# Avisos como mensagem da Cynth.ia, no balão do WhatsApp. %>
+      <% { notice => "bg-wa-raised", alert => "bg-red-950/60 text-red-200" }.each do |message, bubble| %>
+        <% next if message.blank? %>
+        <div class="mb-4 flex items-start gap-2" role="status">
+          <%= image_tag "cynthia-face.png", alt: "", class: "w-8 h-8 rounded-full bg-wa-raised shrink-0" %>
+          <p class="<%= bubble %> rounded-lg rounded-tl-none shadow-sm px-3 py-2 text-sm max-w-xl">
+            <span class="block text-xs font-medium text-wa-green">Cynth.ia</span><%= message %>
+          </p>
+        </div>
       <% end %>
 
       <%= yield %>

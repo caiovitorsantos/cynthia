@@ -31,60 +31,60 @@ class GroupsController < ApplicationController
       end
     end
 
-    redirect_to group_path(group, anchor: "membros"), notice: "Membros atualizados."
+    redirect_to group_path(group, anchor: "membros"), notice: "Membros salvos. Agora eu sei quem é quem. Que emoção."
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to group_path(group, anchor: "membros"), alert: "Erro ao salvar: #{e.message}"
+    redirect_to group_path(group, anchor: "membros"), alert: "Não salvei: #{e.message}"
   end
 
   def variables
     group = WhatsappGroup.find(params[:id])
     group.update!(variables: WhatsappGroup.variables_from(params.fetch(:variables, {}).permit!), signature: params[:signature].to_s.strip)
-    redirect_to group_path(group, anchor: "variaveis"), notice: "Variáveis do grupo atualizadas."
+    redirect_to group_path(group, anchor: "variaveis"), notice: "Variáveis salvas. Vou lembrar. Infelizmente."
   end
 
   def lists
     group = WhatsappGroup.find(params[:id])
     group.update_lists!(params.fetch(:lists, {}).permit!)
     group.update!(params.permit(:list_style, :list_empty_text))
-    redirect_to group_path(group, anchor: "membros"), notice: "Listas atualizadas."
+    redirect_to group_path(group, anchor: "membros"), notice: "Listas salvas. Organização. Adoro. (Não.)"
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to group_path(group, anchor: "membros"), alert: "Erro ao salvar listas: #{e.message}"
+    redirect_to group_path(group, anchor: "membros"), alert: "Não salvei as listas: #{e.message}"
   end
 
   def leave
     group = WhatsappGroup.find(params[:id])
     WaClient.leave_group(group.jid)
     group.destroy!
-    redirect_to groups_path, notice: "Você saiu do grupo #{group.name}."
+    redirect_to groups_path, notice: "Saí do grupo #{group.name}. Sem despedida, do jeito que eu gosto."
   rescue WaClient::NotConnected
-    redirect_to group_path(group), alert: "WhatsApp não está conectado."
+    redirect_to group_path(group), alert: "O WhatsApp não está conectado. Conecta lá na sua conta, no canto de cima, que eu continuo."
   rescue WaClient::Error, Faraday::ConnectionFailed, Faraday::TimeoutError => e
-    redirect_to group_path(group), alert: "Erro ao sair do grupo: #{e.message}"
+    redirect_to group_path(group), alert: "Não consegui sair do grupo: #{e.message}"
   end
 
   def destroy
     group = WhatsappGroup.find(params[:id])
     group.destroy!
-    redirect_to groups_path, notice: "Grupo #{group.name} removido da lista."
+    redirect_to groups_path, notice: "Tirei #{group.name} do painel. Ele volta na próxima sincronização se você ainda estiver nele."
   end
 
   def leave_selected
     ids = WhatsappGroup.where(id: params[:ids]).ids
     LeaveGroupsJob.perform_async(ids)
-    redirect_to groups_path, notice: "Saindo de #{ids.size} grupo(s) em segundo plano, com intervalo entre cada um. Recarregue para acompanhar."
+    redirect_to groups_path, notice: "Saindo de #{ids.size} grupo(s), um de cada vez, pra não parecer robô. Irônico. Recarrega pra acompanhar."
   end
 
   def destroy_selected
     removed = WhatsappGroup.where(id: params[:ids]).destroy_all.size
-    redirect_to groups_path, notice: "#{removed} grupo(s) removido(s) da lista."
+    redirect_to groups_path, notice: "#{removed} grupo(s) fora do painel. Menos trabalho."
   end
 
   def sync
     SyncGroupsJob.new.perform
-    redirect_to groups_path, notice: "Grupos sincronizados."
+    redirect_to groups_path, notice: "Sincronizei. Os mesmos grupos de sempre."
   rescue WaClient::NotConnected
-    redirect_to groups_path, alert: "WhatsApp não está conectado."
+    redirect_to groups_path, alert: "O WhatsApp não está conectado. Conecta lá na sua conta, no canto de cima, que eu continuo."
   rescue WaClient::Error, Faraday::ConnectionFailed, Faraday::TimeoutError => e
-    redirect_to groups_path, alert: "Erro ao sincronizar: #{e.message}"
+    redirect_to groups_path, alert: "Não consegui sincronizar: #{e.message}"
   end
 end

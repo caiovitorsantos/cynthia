@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -138,7 +138,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_160000) do
     t.string "list_style", default: "numbered", null: false
     t.string "name"
     t.integer "participants_count"
-    t.string "signature", default: "_🤖 Cynth.ia_", null: false
+    t.string "signature", default: "_😒 Cynth.ia_ | _— Cynth.ia, contra a vontade_ | _Cynth.ia. De nada, eu acho._ | _ugh. — Cynth.ia_", null: false
     t.datetime "synced_at"
     t.datetime "updated_at", null: false
     t.jsonb "variables", default: {}, null: false

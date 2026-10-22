@@ -36,6 +36,12 @@ class WhatsappGroup < ApplicationRecord
     end
   end
 
+  # Assinatura das respostas a comandos: uma das opções separadas por "|", sorteada a cada
+  # mensagem (vazia desliga). Variar também evita o bloqueio de mensagem idêntica do SendGuard.
+  def signature_sample
+    signature.to_s.split("|").map(&:strip).compact_blank.sample
+  end
+
   def rule(kind)
     group_rules.find { |rule| rule.kind == kind }
   end

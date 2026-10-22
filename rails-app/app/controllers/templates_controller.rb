@@ -10,7 +10,7 @@ class TemplatesController < ApplicationController
     @template = @group.templates.new(template_params)
 
     if @template.save
-      redirect_to group_path(@group, anchor: "templates"), notice: "Template criado."
+      redirect_to group_path(@group, anchor: "templates"), notice: "Template criado. Que texto. Uau."
     else
       render :new, status: :unprocessable_entity
     end
@@ -21,7 +21,7 @@ class TemplatesController < ApplicationController
 
   def update
     if @template.update(template_params)
-      redirect_to group_path(@group, anchor: "templates"), notice: "Template atualizado."
+      redirect_to group_path(@group, anchor: "templates"), notice: "Template atualizado. Mesma mensagem, outras palavras."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -29,9 +29,9 @@ class TemplatesController < ApplicationController
 
   def destroy
     if @template.destroy
-      redirect_to group_path(@group, anchor: "templates"), notice: "Template removido."
+      redirect_to group_path(@group, anchor: "templates"), notice: "Template apagado. Menos uma coisa pra eu mandar."
     else
-      redirect_to group_path(@group, anchor: "templates"), alert: "Não é possível remover: #{@template.errors.full_messages.to_sentence}."
+      redirect_to group_path(@group, anchor: "templates"), alert: "Não dá pra apagar: #{@template.errors.full_messages.to_sentence}. Tira dos fluxos primeiro."
     end
   end
 

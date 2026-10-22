@@ -7,6 +7,11 @@
 **A Cynth.ia é a administradora de grupos de WhatsApp que faz o trabalho chato. De má vontade, mas
 faz.** Ela é a "síndica" que todo grupo tem, só que automática, entediada e de óculos.
 
+**A voz dela.** Seca, irônica e entediada, mas sempre resolve: frases curtas, suspiros, um "uau" sem
+emoção nenhuma, e nada de pontos de exclamação animados. No painel, as confirmações aparecem como
+mensagem dela ("Fluxo criado. Mais trabalho pra mim. Ótimo."). Em ações destrutivas e erros, a
+informação vem primeiro e a ironia depois. Quem escrever textos novos no painel deve manter esse tom.
+
 Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
 **listas de membros**, **variáveis**, **templates** e **fluxos**: um gatilho (um horário, a "rotina", ou
 um comando como `!entrar` mandado no grupo) seguido de passos, como enviar um template, pôr ou tirar
@@ -336,9 +341,10 @@ Passos disponíveis:
 | Esvaziar lista | Tira todo mundo da lista |
 | Definir variável do grupo | O valor aceita variáveis, ex.: `{{argumento}}` |
 
-Mensagens de fluxos de comando saem com a assinatura do grupo no fim (padrão `_🤖 Cynth.ia_`), para o
-grupo saber que quem respondeu foi a assistente. Cada grupo muda o texto na seção Variáveis; vazio não
-assina. Rotinas saem sem assinatura.
+Mensagens de fluxos de comando saem com a assinatura do grupo no fim, para o grupo saber que quem
+respondeu foi a assistente. Várias opções separadas por `|` são sorteadas a cada mensagem; o padrão é
+`_😒 Cynth.ia_ | _— Cynth.ia, contra a vontade_ | _Cynth.ia. De nada, eu acho._ | _ugh. — Cynth.ia_`.
+Cada grupo muda o texto na aba Variáveis; vazio não assina. Rotinas saem sem assinatura.
 
 Os passos rodam em ordem, então um template enviado depois de "Pôr na lista" já sai com a lista
 atualizada. Mensagens seguidas saem com ~21 s de intervalo (limite do `SendGuard`). Um fluxo que usa

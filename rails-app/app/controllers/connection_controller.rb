@@ -10,9 +10,9 @@ class ConnectionController < ApplicationController
 
   def logout
     WaClient.logout
-    redirect_to connection_path, notice: "Sessão encerrada. Escaneie um novo QR Code."
+    redirect_to connection_path, notice: "Desconectei. Escaneia o QR de novo quando der vontade."
   rescue WaClient::Error, Faraday::ConnectionFailed, Faraday::TimeoutError => e
-    redirect_to connection_path, alert: "Erro ao encerrar sessão: #{e.message}"
+    redirect_to connection_path, alert: "Não consegui desconectar: #{e.message}. Clássico."
   end
 
   private

@@ -72,7 +72,8 @@ RSpec.describe Flow do
 
       ellie = group.group_participants.find_by!(jid: "9@lid")
       expect(espera.group_participants).to eq([ ellie ])
-      expect(MessageLog.last).to have_attributes(flow: flow, rendered_body: "Espera:\n1. Ellie\n\n_🤖 Cynth.ia_", opens_round: false)
+      expect(MessageLog.last).to have_attributes(flow: flow, opens_round: false)
+      expect(MessageLog.last.rendered_body).to start_with("Espera:\n1. Ellie\n\n").and include("Cynth.ia")
     end
 
     it "espaça mensagens seguidas pela janela do SendGuard e marca a que abre rodada" do
@@ -122,6 +123,10 @@ RSpec.describe Flow do
     group.update!(signature: "— Sindi do vôlei 🏐")
     flow.run!
     expect(MessageLog.last.rendered_body).to eq("Espera:\n(ninguém)\n\n— Sindi do vôlei 🏐")
+
+    group.update!(signature: " _a_ | | _b_ ")
+    bodies = 10.times.map { flow.run! && MessageLog.last.rendered_body }
+    expect(bodies.uniq).to contain_exactly("Espera:\n(ninguém)\n\n_a_", "Espera:\n(ninguém)\n\n_b_")
 
     group.update!(signature: "")
     flow.run!

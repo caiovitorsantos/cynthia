@@ -92,7 +92,7 @@
             </tr>
           <% end %>
           <% if @participants.empty? %>
-            <tr><td colspan="5" class="py-4 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
+            <tr><td colspan="5" class="py-4 text-center text-wa-muted">Ninguém por aqui ainda. Sincroniza os grupos.</td></tr>
           <% end %>
         </tbody>
       </table>
@@ -193,7 +193,7 @@
         </tr>
       <% end %>
       <% if @flows.empty? %>
-        <tr><td colspan="4" class="py-4 text-center text-wa-muted">Nenhum fluxo ainda. Comece criando um template e uma rotina que o envia.</td></tr>
+        <tr><td colspan="4" class="py-4 text-center text-wa-muted">Nenhum fluxo. Tô de folga e prefiro assim. Se insistir: crie um template e uma rotina que o envia.</td></tr>
       <% end %>
     </tbody>
   </table>
@@ -222,7 +222,7 @@
         </tr>
       <% end %>
       <% if @templates.empty? %>
-        <tr><td class="py-4 text-center text-wa-muted">Nenhum template neste grupo.</td></tr>
+        <tr><td class="py-4 text-center text-wa-muted">Nenhum template. Silêncio absoluto. Adoro.</td></tr>
       <% end %>
     </tbody>
   </table>
@@ -256,8 +256,8 @@
     </table>
     <div>
       <%= label_tag :signature, "Assinatura da Cynth.ia nas respostas a comandos", class: "block text-sm font-medium" %>
-      <%= text_field_tag :signature, @group.signature, placeholder: "(sem assinatura)", class: "w-full sm:w-80" %>
-      <p class="text-xs text-wa-muted mt-1">Vai no fim das mensagens de fluxos de comando. Deixe vazio para não assinar; rotinas nunca levam assinatura.</p>
+      <%= text_field_tag :signature, @group.signature, placeholder: "(sem assinatura)", class: "w-full" %>
+      <p class="text-xs text-wa-muted mt-1">Vai no fim das mensagens de fluxos de comando. Separe várias com <code class="font-mono">|</code> e ela sorteia uma por mensagem. Vazio não assina; rotinas nunca levam assinatura.</p>
     </div>
     <%= submit_tag "Salvar variáveis e assinatura", class: "btn-wa" %>
   <% end %>

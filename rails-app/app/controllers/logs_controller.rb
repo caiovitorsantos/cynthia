@@ -19,10 +19,10 @@ class LogsController < ApplicationController
     SendGuard.check!(group_jid: log.group_jid, message: log.rendered_body)
     response = WaClient.send_message(group_jid: log.group_jid, message: log.rendered_body)
     new_log.mark_sent!(response.try(:[], "message_id"))
-    redirect_to logs_path, notice: "Reenviado com sucesso."
+    redirect_to logs_path, notice: "Reenviei. De nada."
   rescue WaClient::NotConnected, SendGuard::DailyCapReachedError,
          SendGuard::DuplicateMessageError, SendGuard::ThrottledError, WaClient::Error => e
     new_log.update!(status: "failed", error_message: e.message)
-    redirect_to logs_path, alert: "Falha ao reenviar: #{e.message}"
+    redirect_to logs_path, alert: "Não consegui reenviar: #{e.message}"
   end
 end
