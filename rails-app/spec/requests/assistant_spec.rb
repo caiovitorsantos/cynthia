@@ -26,6 +26,15 @@ RSpec.describe "Chat da Cynth.ia", type: :request do
     expect(group.reload.variables).to be_empty
   end
 
+  it "o cartão do fluxo mostra todos os campos que serão salvos" do
+    AssistantAction.create!(kind: "create_flow", payload: { "group_id" => group.id, "name" => "F", "trigger" => "command", "command" => "!pix",
+                                                            "steps" => [ { "type" => "set_variable", "name" => "pix", "value" => "chave@x" } ] })
+
+    get assistant_path
+
+    expect(response.body).to include("!pix", "chave@x", "America/Sao_Paulo")
+  end
+
   it "nova conversa apaga o histórico e descarta propostas pendentes" do
     AssistantMessage.create!(role: "user", content: [ { type: "text", text: "oi" } ])
     pending = AssistantAction.create!(kind: "set_variable", payload: { "group_id" => group.id, "name" => "a", "value" => "b" })

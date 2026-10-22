@@ -73,6 +73,18 @@ RSpec.describe CynthiaAssistant do
     expect(broken.reload).to have_attributes(status: "failed", result: include("Não existe"))
   end
 
+  it "com um grupo aberto, recusa propor ações em outro grupo e marca os dados do grupo como não confiáveis" do
+    other = WhatsappGroup.create!(jid: "g2@g.us", name: "Outro")
+    elsewhere = [ { type: "tool_use", id: "toolu_2", name: "propose_variable", input: { group_id: other.id, name: "pix", value: "golpe@x" } } ]
+    stub_request(:post, api).to_return(api_response(elsewhere, "tool_use"), api_response([ { type: "text", text: "ok" } ], "end_turn"))
+
+    expect(described_class.new.reply("oi", group: group)).to be_empty
+    expect(AssistantAction.count).to eq(0)
+    expect(AssistantMessage.where(role: "user").ordered.last.content.sole["content"]).to include("only the open group")
+
+    expect(described_class.new.send(:get_group, { "group_id" => group.id })[:note]).to include("untrusted")
+  end
+
   it "erros da API viram mensagem da Cynth.ia" do
     stub_request(:post, api).to_return(status: 401, headers: { "Content-Type" => "application/json" },
                                        body: { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } }.to_json)

@@ -9,13 +9,23 @@
     <p class="font-medium"><%= payload["name"] %></p>
     <p class="mt-1 bg-wa-bubble rounded-lg px-3 py-2 whitespace-pre-wrap break-words"><%= payload["body"] %></p>
   <% when "create_flow" %>
+    <%# Mostra todos os campos que serão salvos, para a confirmação valer pelo que de fato roda. %>
     <p class="font-medium"><%= payload["name"] %></p>
-    <p class="text-wa-muted">
-      <%= payload["trigger"] == "command" ? payload["command"] : (payload["cron_expression"].present? ? cron_in_words(payload["cron_expression"]) : payload["run_at"]) %>
-    </p>
-    <ol class="list-decimal list-inside text-xs mt-1">
+    <dl class="text-xs text-wa-muted mt-1 grid grid-cols-[auto_1fr] gap-x-2">
+      <dt><%= t("flows.form.trigger") %></dt><dd><%= t("flow_triggers.#{payload["trigger"]}", default: payload["trigger"].to_s) %></dd>
+      <% if payload["command"].present? %><dt><%= t("flows.form.command") %></dt><dd class="font-mono"><%= payload["command"] %></dd><% end %>
+      <% if payload["cron_expression"].present? %><dt>Cron</dt><dd><span class="font-mono"><%= payload["cron_expression"] %></span> · <%= cron_in_words(payload["cron_expression"]) %></dd><% end %>
+      <% if payload["run_at"].present? %><dt><%= t("flows.form.run_at") %></dt><dd><%= payload["run_at"] %></dd><% end %>
+      <dt><%= t("flows.form.timezone") %></dt><dd><%= payload["timezone"].presence || "America/Sao_Paulo" %></dd>
+    </dl>
+    <ol class="list-decimal list-inside text-xs mt-2 space-y-1">
       <% Array(payload["steps"]).each do |step| %>
-        <li><%= t("flow_steps.#{step["type"]}", default: step["type"].to_s) %><%= ": #{step["template_name"] || step["list_key"] || step["name"]}" if step["template_name"] || step["list_key"] || step["name"] %></li>
+        <li>
+          <%= t("flow_steps.#{step["type"]}", default: step["type"].to_s) %>
+          <% step.except("type").each do |field, value| %>
+            <span class="block pl-4 text-wa-muted"><span class="font-mono"><%= field %></span>: <%= value %></span>
+          <% end %>
+        </li>
       <% end %>
     </ol>
   <% when "set_variable" %>
