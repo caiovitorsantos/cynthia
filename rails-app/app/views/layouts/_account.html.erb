@@ -1,0 +1,23 @@
+<%# Modal da conta logada: status do WhatsApp (carregado ao abrir), sair e ações futuras da conta. %>
+<dialog data-dialog-target="dialog" data-action="click->dialog#closeOnBackdrop"
+        class="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-lg shadow-xl p-0 text-wa-text backdrop:bg-black/40">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+    <div>
+      <p class="font-semibold">Conta</p>
+      <p class="text-xs text-wa-muted">Logado como <strong><%= ENV.fetch("ADMIN_USERNAME", "admin") %></strong></p>
+    </div>
+    <button type="button" data-action="dialog#close" aria-label="Fechar" class="text-2xl leading-none text-wa-muted hover:text-wa-text cursor-pointer">×</button>
+  </div>
+
+  <section class="px-5 py-4 border-b border-gray-100">
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-wa-muted mb-3">WhatsApp</h2>
+    <%= turbo_frame_tag "account_connection", src: connection_path, loading: :lazy do %>
+      <p class="text-sm text-wa-muted">Verificando conexão…</p>
+    <% end %>
+  </section>
+
+  <div class="px-5 py-4 flex justify-end">
+    <%= button_to "Sair do painel", logout_path, method: :delete, data: { turbo_frame: "_top" },
+          class: "text-sm font-medium text-red-600 hover:underline cursor-pointer" %>
+  </div>
+</dialog>

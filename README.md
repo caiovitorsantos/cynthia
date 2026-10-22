@@ -35,7 +35,8 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 
 **Geral**
 
-- **Conexão** com o WhatsApp por QR Code. Se a sessão for revogada, um QR novo é gerado sozinho.
+- **Conta**: o botão com o usuário, no canto do cabeçalho, abre o status da conexão com o WhatsApp
+  (QR Code para conectar; se a sessão for revogada, um QR novo é gerado sozinho) e o botão de sair.
 - **Grupos** sincronizados a cada 30 minutos, com participantes. Dá para sair de um grupo ou removê-lo
   do painel, um por vez ou vários de uma vez (a saída em lote roda em segundo plano, com intervalo
   entre cada grupo).
@@ -58,9 +59,9 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 
 ## Telas
 
-| Login | Conexão |
+| Login | Conta (status do WhatsApp e sair) |
 |---|---|
-| ![Tela de login](docs/screenshots/login.png) | ![Status da conexão](docs/screenshots/conexao.png) |
+| ![Tela de login](docs/screenshots/login.png) | ![Modal da conta](docs/screenshots/conta.png) |
 
 | Grupos (com seleção em lote) | Logs |
 |---|---|
@@ -265,7 +266,7 @@ docker compose up -d --build
 docker compose exec rails bin/rails db:prepare
 ```
 
-Abra **http://localhost:3000**, entre com o usuário e a senha do `.env` e, na aba **Conexão**,
+Abra **http://localhost:3000**, entre com o usuário e a senha do `.env`, clique no seu usuário no canto do cabeçalho e
 escaneie o QR Code pelo celular (WhatsApp → Dispositivos conectados → Conectar dispositivo).
 
 O `wa` e o `sidekiq` sobem com `restart: unless-stopped`: voltam sozinhos se caírem ou se o Docker

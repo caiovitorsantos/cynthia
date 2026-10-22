@@ -1,5 +1,6 @@
 <% content_for :title, "Conexão" %>
 
-<h1 class="text-2xl font-semibold text-wa-text mb-6">Status da conexão</h1>
-
-<%= render "wrapper" %>
+<%# Carregado dentro do modal da conta (turbo frame); aberto direto, vira uma página simples. %>
+<%= turbo_frame_tag "account_connection" do %>
+  <%= render "wrapper" %>
+<% end %>

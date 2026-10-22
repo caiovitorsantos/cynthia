@@ -28,15 +28,21 @@
           </svg>
           <span class="text-lg sm:text-xl font-medium truncate">CindyZap</span>
           <% if logged_in? %>
-            <%= button_to "Sair", logout_path, method: :delete,
-                  class: "text-sm font-medium border border-white/60 rounded-full px-4 py-1 hover:bg-white/10 cursor-pointer",
-                  form: { class: "ml-auto" } %>
+            <div class="ml-auto" data-controller="dialog">
+              <button type="button" data-action="dialog#open" aria-haspopup="dialog"
+                      class="flex items-center gap-2 text-sm font-medium border border-white/60 rounded-full pl-1.5 pr-3 py-1 hover:bg-white/10 cursor-pointer">
+                <span class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4 0-8 2-8 5v2h16v-2c0-3-4-5-8-5Z"/></svg>
+                </span>
+                <%= ENV.fetch("ADMIN_USERNAME", "admin") %>
+              </button>
+              <%= render "layouts/account" %>
+            </div>
           <% end %>
         </div>
         <% if logged_in? %>
           <nav class="flex text-sm font-medium uppercase tracking-wide overflow-x-auto no-scrollbar -mx-4 px-2 sm:mx-0 sm:px-0">
-            <% [["Conexão", connection_path, %w[connection]], ["Grupos", groups_path, %w[groups templates flows]],
-                ["Logs", logs_path, %w[logs]]].each do |label, path, controllers| %>
+            <% [["Grupos", groups_path, %w[groups templates flows]], ["Logs", logs_path, %w[logs]]].each do |label, path, controllers| %>
               <%= link_to label, path, class: "px-4 py-3 border-b-[3px] whitespace-nowrap #{controllers.include?(controller_name) ? 'border-white text-white' : 'border-transparent text-white/70 hover:text-white'}" %>
             <% end %>
           </nav>

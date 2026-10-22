@@ -1,14 +1,13 @@
-<div class="space-y-4">
+<div class="space-y-3 text-sm">
   <p>
-    Status:
-    <span class="font-mono px-2 py-1 rounded <%=
+    <span class="px-2 py-1 rounded <%=
       case @status
       when "connected" then "bg-wa-bubble text-wa-teal"
       when "qr_pending" then "bg-yellow-100 text-yellow-800"
       else "bg-red-100 text-red-800"
       end
     %>">
-      <%= @status %>
+      <%= { "connected" => "conectado", "qr_pending" => "aguardando QR Code", "disconnected" => "desconectado" }.fetch(@status, "wa-service fora do ar") %>
     </span>
   </p>
 
@@ -26,9 +25,9 @@
   <% end %>
 
   <% if @status == "connected" %>
-    <%= button_to "Encerrar sessão (logout)", logout_connection_path,
+    <%= button_to "Desconectar este número", logout_connection_path,
           method: :post,
-          class: "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700",
+          class: "text-sm text-red-600 hover:underline cursor-pointer",
           data: { turbo_confirm: "Tem certeza? Isso vai desconectar o WhatsApp e exigir um novo QR Code." } %>
   <% end %>
 
