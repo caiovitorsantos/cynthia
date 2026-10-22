@@ -1,6 +1,7 @@
-# Sindizap
+# CindyZap
 
-**O síndico do seu grupo.** Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
+**A Cindy é a assistente virtual que cuida das rotinas do seu grupo**: a "síndica" que todo grupo de
+WhatsApp tem, só que automática. Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
 **listas de membros**, **variáveis**, **templates** e **fluxos**: um gatilho (um horário, a "rotina", ou
 um comando como `!entrar` mandado no grupo) seguido de passos, como enviar um template, pôr ou tirar
 alguém de uma lista ou mudar uma variável. Recursos opcionais, como a **lista de presença**, registram
@@ -238,8 +239,8 @@ O `SendGuard` bloqueia o envio antes de chegar ao WhatsApp:
 ### Passo a passo
 
 ```bash
-git clone git@github.com:caiovitorsantos/sindizap.git
-cd sindizap
+git clone git@github.com:caiovitorsantos/cindyzap.git
+cd cindyzap
 cp .env.example .env
 ```
 
