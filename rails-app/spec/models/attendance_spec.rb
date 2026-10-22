@@ -1,16 +1,21 @@
 require "rails_helper"
 
 RSpec.describe Attendance do
-  let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei") }
-  let(:lista) { Template.create!(name: "Presença", body: "PRESENÇA {{data}}") }
-  let(:lembrete) { Template.create!(name: "Lembrete", body: "Faltam: {{pendentes}}") }
-  let!(:rule) { group.group_rules.create!(kind: "attendance", template_id: lista.id) }
-  let!(:round) { send_log(lista, "MSG1") }
-  let!(:caio) { GroupParticipant.create!(whatsapp_group: group, jid: "1@lid", phone_number: "1", name: "Caio", role: "mensal") }
+  let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei", list_empty_text: "1.") }
+  let!(:mensal) { group.member_lists.create!(name: "Mensal") }
+  let!(:espera) { group.member_lists.create!(name: "Espera") }
+  let!(:rule) { group.group_rules.create!(kind: "attendance", settings: { "tracked_lists" => [ "mensal" ] }) }
+  let!(:round) { send_log("MSG1", opens_round: true) }
+  let!(:caio) { member("1", "Caio", mensal) }
 
-  def send_log(template, wa_message_id)
-    schedule = Schedule.create!(template: template, whatsapp_group: group, cron_expression: "0 14 * * 2")
-    MessageLog.create!(schedule: schedule, group_jid: group.jid, status: "pending").tap { |log| log.mark_sent!(wa_message_id) }
+  def member(number, name, *lists, **attributes)
+    GroupParticipant.create!(whatsapp_group: group, jid: "#{number}@lid", phone_number: number, name: name, member_lists: lists, **attributes)
+  end
+
+  def send_log(wa_message_id, opens_round: false, template: Template.new(body: "oi"))
+    log = MessageLog.new(group_jid: group.jid, status: "pending", opens_round: opens_round)
+    described_class.prepare_message(rule, log, template)
+    log.tap(&:save!).tap { |saved| saved.mark_sent!(wa_message_id) }
   end
 
   def record(text, kind: "reaction", message_id: "MSG1", jid: "1@lid", push_name: nil)
@@ -41,24 +46,25 @@ RSpec.describe Attendance do
     expect(responses).to be_empty
   end
 
-  it "aceita resposta citando a lista e ignora texto sem emoji" do
+  it "aceita resposta citando a lista e ignora texto sem emoji e comandos" do
     record("✅ vou sim", kind: "reply")
     record("que horas?", kind: "reply")
+    record("❌", kind: "command")
 
     expect(responses.sole.status).to eq("confirmed")
   end
 
-  it "cria o participante que ainda não foi sincronizado, como avulso" do
+  it "cria o participante que ainda não foi sincronizado, fora das listas" do
     record("✅", jid: "99@lid", push_name: "Ellie")
 
     ellie = group.group_participants.find_by!(jid: "99@lid")
-    expect(ellie).to have_attributes(name: "Ellie", phone_number: "99", role: nil)
+    expect(ellie).to have_attributes(name: "Ellie", phone_number: "99", member_lists: [])
     expect(responses.find_by!(group_participant: ellie).status).to eq("confirmed")
   end
 
-  it "liga o lembrete à rodada e conta reações nele para ela" do
-    follow_up = send_log(lembrete, "MSG2")
-    expect(follow_up.reload.round_id).to eq(round.id)
+  it "liga à rodada as mensagens que mostram a presença e conta reações nelas" do
+    follow_up = send_log("MSG2", template: Template.new(body: "Faltam: {{pendentes}}"))
+    expect(follow_up.round_id).to eq(round.id)
 
     record("✅", message_id: "MSG2")
 
@@ -66,7 +72,7 @@ RSpec.describe Attendance do
   end
 
   it "ignora reações em mensagens que não são da rodada" do
-    send_log(Template.create!(name: "Aviso", body: "oi"), "MSG3")
+    send_log("MSG3")
 
     record("✅", message_id: "MSG3")
     record("✅", message_id: "DESCONHECIDA")
@@ -74,12 +80,12 @@ RSpec.describe Attendance do
     expect(Attendance::Response.count).to eq(0)
   end
 
-  it "só o template configurado na regra abre rodada" do
+  it "a rodada atual é a última mensagem enviada que abre rodada" do
+    send_log("MSG4")
     expect(described_class.current_round(rule)).to eq(round)
 
-    rule.update!(template_id: lembrete.id)
-
-    expect(described_class.current_round(rule)).to be_nil
+    newer = send_log("MSG5", opens_round: true)
+    expect(described_class.current_round(rule)).to eq(newer)
   end
 
   it "sincronização que apaga o participante leva as respostas junto" do
@@ -103,56 +109,19 @@ RSpec.describe Attendance do
     expect(responses.sole.status).to eq("confirmed")
   end
 
-  describe "comando !lista" do
-    def command(text) = described_class.handle_event(rule, { kind: "command", message_id: "X", participant_jid: "", text: text })
-
-    it "responde com a lista atual, ligada à rodada" do
-      record("✅")
-      expect(DeliverMessageJob).to receive(:perform_async) do |log_id, mentions|
-        log = MessageLog.find(log_id)
-        expect(log).to have_attributes(group_jid: group.jid, status: "pending", round_id: round.id)
-        expect(log.rendered_body).to eq("*Lista de presença*\n\n1. Caio ✅\n\n*Avulsos*\n1.")
-        expect(mentions).to eq([])
-      end
-
-      command("  !LISTA ")
-    end
-
-    it "usa o comando e o template configurados" do
-      resposta = Template.create!(name: "Resposta", body: "Agora: {{presenca}}")
-      rule.update!(settings: rule.settings.merge("list_command" => "!quem", "list_reply_template_id" => resposta.id.to_s))
-      expect(DeliverMessageJob).to receive(:perform_async).once
-
-      command("!lista")
-      command("!quem")
-
-      expect(MessageLog.last.rendered_body).to eq("Agora: 1. Caio")
-    end
-
-    it "não responde com o comando desativado ou sem rodada aberta" do
-      expect(DeliverMessageJob).not_to receive(:perform_async)
-
-      rule.update!(settings: rule.settings.merge("list_command" => ""))
-      command("!lista")
-
-      rule.update!(settings: rule.settings.merge("list_command" => "!lista", "template_id" => Template.create!(name: "Outro", body: "x").id))
-      command("!lista")
-    end
-  end
-
   describe "variáveis" do
-    let!(:adriana) { GroupParticipant.create!(whatsapp_group: group, jid: "2@lid", phone_number: "2", name: "Adriana", role: "mensal") }
-    let!(:berto) { GroupParticipant.create!(whatsapp_group: group, jid: "3@lid", phone_number: "3", name: "Berto Silva", display_name: "Berto", role: "mensal") }
-    let!(:ellie) { GroupParticipant.create!(whatsapp_group: group, jid: "4@lid", phone_number: "4", name: "Ellie") }
-    let!(:luana) { GroupParticipant.create!(whatsapp_group: group, jid: "5@lid", phone_number: "5", name: "Luana", role: "espera") }
+    let!(:adriana) { member("2", "Adriana", mensal) }
+    let!(:berto) { member("3", "Berto Silva", mensal, display_name: "Berto") }
+    let!(:ellie) { member("4", "Ellie") }
+    let!(:luana) { member("5", "Luana", espera) }
 
     def render(body) = TemplateRenderer.call(Template.new(body: body), {}, whatsapp_group: group)
 
-    it "sem categoria usa as fixas; com categoria, só ela" do
+    it "{{lista}} e {{mencoes}} sem chave usam as listas cobradas; com chave, a própria lista" do
       expect(render("{{lista}}").body).to eq("1. Adriana\n2. Berto\n3. Caio")
       expect(render("{{lista:espera}}").body).to eq("1. Luana")
 
-      result = render("{{mencoes:mensal}}")
+      result = render("{{mencoes}}")
       expect(result.body).to eq("1. @2\n2. @3\n3. @1")
       expect(result.mentioned_jids).to eq([ "2@lid", "3@lid", "1@lid" ])
     end
@@ -169,52 +138,36 @@ RSpec.describe Attendance do
       expect(result.mentioned_jids).to eq([ "1@lid" ])
     end
 
-    it "usa o formato configurado" do
+    it "usa o formato do grupo e as marcas do recurso" do
       record("✅", jid: "2@lid")
-      rule.update!(settings: rule.settings.merge("list_style" => "bullet", "confirmed_mark" => "👍", "pending_mark" => "⏳", "empty_text" => "(ninguém)"))
+      group.update!(list_style: "bullet", list_empty_text: "(ninguém)")
+      rule.update!(settings: rule.settings.merge("confirmed_mark" => "👍", "pending_mark" => "⏳"))
 
       expect(render("{{presenca}}").body).to eq("• Adriana 👍\n• Berto ⏳\n• Caio ⏳")
       expect(render("{{confirmados}}").body).to eq("(ninguém)")
     end
 
-    it "categorias configuradas pelo grupo" do
-      rule.update!(settings: rule.settings.merge("categories" => [ { "key" => "titular", "name" => "Titular", "fixed" => true } ]))
-      adriana.update!(role: "titular")
-
-      expect(render("{{lista}}").body).to eq("1. Adriana")
-      expect(render("{{lista:titular}}").body).to eq("1. Adriana")
-      expect { render("{{lista:mensal}}") }.to raise_error(TemplateRenderer::MissingVariableError)
+    it "não oferece variáveis de listas que não existem" do
+      expect { render("{{presenca:titular}}") }.to raise_error(TemplateRenderer::MissingVariableError)
     end
 
-    it "não existem em grupos sem a regra" do
-      other = WhatsappGroup.create!(jid: "g2@g.us", name: "Outro")
+    it "sem o recurso, só as variáveis de lista com chave existem" do
+      rule.destroy!
+      group.reload
 
-      expect {
-        TemplateRenderer.call(Template.new(body: "{{lista}}"), {}, whatsapp_group: other)
-      }.to raise_error(TemplateRenderer::MissingVariableError)
+      expect(render("{{lista:mensal}}").body).to eq("1. Adriana\n2. Berto\n3. Caio")
+      expect { render("{{lista}}") }.to raise_error(TemplateRenderer::MissingVariableError)
+      expect { render("{{presenca}}") }.to raise_error(TemplateRenderer::MissingVariableError)
     end
   end
 
   describe ".settings_from" do
     def params(hash) = ActionController::Parameters.new(hash)
 
-    it "monta categorias, gera chave pelo nome, ignora linhas sem nome e mantém campos ausentes de fora" do
-      settings = described_class.settings_from(params(
-        categories: {
-          "0" => { key: "mensal", name: "Mensalista", fixed: "1" },
-          "1" => { key: "", name: "Convidado VIP", fixed: "0" },
-          "2" => { key: "", name: "", fixed: "0" }
-        },
-        accept_replies: "0"
-      ))
+    it "monta as listas cobradas sem o valor vazio e mantém campos ausentes de fora" do
+      settings = described_class.settings_from(params(tracked_lists: [ "", "mensal", "espera" ], accept_replies: "0"))
 
-      expect(settings).to eq(
-        "categories" => [
-          { "key" => "mensal", "name" => "Mensalista", "fixed" => true },
-          { "key" => "convidado_vip", "name" => "Convidado VIP", "fixed" => false }
-        ],
-        "accept_replies" => false
-      )
+      expect(settings).to eq("tracked_lists" => [ "mensal", "espera" ], "accept_replies" => false)
     end
   end
 end

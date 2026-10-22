@@ -1,6 +1,6 @@
-dispatch_due_schedules:
+run_due_flows:
   cron: "* * * * *"
-  class: "DispatchDueSchedulesJob"
+  class: "RunDueFlowsJob"
 
 sync_groups:
   cron: "*/30 * * * *"

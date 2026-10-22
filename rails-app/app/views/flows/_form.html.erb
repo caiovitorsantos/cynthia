@@ -1,0 +1,116 @@
+<% steps_for = ->(type) { Flow::STEPS.select { |_, config| config[:fields].include?(type) }.keys.join(" ") } %>
+<% lists = @group.member_lists.sort_by(&:name).map { |list| [ list.name, list.key ] } %>
+<% templates = @group.templates.order(:name).map { |template| [ template.name, template.id.to_s ] } %>
+
+<%= form_with model: @flow, url: @flow.persisted? ? group_flow_path(@group, @flow) : group_flows_path(@group), class: "space-y-5 max-w-3xl", data: { controller: "flow-trigger" } do |f| %>
+  <% if @flow.errors.any? %>
+    <div class="bg-red-100 text-red-800 rounded px-4 py-2 text-sm">
+      <ul class="list-disc list-inside">
+        <% @flow.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid sm:grid-cols-2 gap-3">
+    <div>
+      <%= f.label :name, "Nome", class: "block text-sm font-medium" %>
+      <%= f.text_field :name, placeholder: "Abrir lista de presença", class: "mt-1 block w-full rounded border-gray-300" %>
+    </div>
+    <div>
+      <%= f.label :trigger, "Gatilho", class: "block text-sm font-medium" %>
+      <%= f.select :trigger, Flow::TRIGGERS.invert, {}, class: "mt-1 block w-full rounded border-gray-300",
+            data: { flow_trigger_target: "select", action: "flow-trigger#toggle" } %>
+    </div>
+  </div>
+
+  <fieldset class="border rounded-lg p-4 space-y-3 min-w-0" data-flow-trigger-target="panel" data-trigger="schedule">
+    <legend class="text-sm font-medium px-1">Quando roda: recorrente (cron) OU envio único (data), não os dois</legend>
+
+    <div class="flex flex-wrap gap-2 items-end">
+      <div class="flex-1 min-w-40">
+        <%= f.label :cron_expression, "Cron", class: "block text-xs text-gray-600" %>
+        <%= f.text_field :cron_expression, placeholder: "0 9 * * 1-5", class: "mt-1 block w-full rounded border-gray-300 font-mono text-sm" %>
+      </div>
+      <div class="w-full sm:w-56">
+        <%= f.label :timezone, "Timezone", class: "block text-xs text-gray-600" %>
+        <%= f.text_field :timezone, class: "mt-1 block w-full rounded border-gray-300 text-sm" %>
+      </div>
+      <button type="submit" formaction="<%= cron_preview_group_flows_path(@group) %>" formmethod="get" formnovalidate
+              data-turbo-frame="cron_preview_frame"
+              class="bg-gray-200 px-3 py-2 rounded text-sm hover:bg-gray-300 whitespace-nowrap">
+        Pré-visualizar
+      </button>
+    </div>
+
+    <%= turbo_frame_tag "cron_preview_frame" do %>
+      <%= render "cron_preview_content", cron: nil, timezone: @flow.timezone %>
+    <% end %>
+
+    <div>
+      <%= f.label :run_at, "Data/hora (envio único)", class: "block text-xs text-gray-600" %>
+      <%= f.datetime_field :run_at, class: "mt-1 block w-full rounded border-gray-300 text-sm" %>
+    </div>
+  </fieldset>
+
+  <fieldset class="border rounded-lg p-4 space-y-2 min-w-0" data-flow-trigger-target="panel" data-trigger="command">
+    <legend class="text-sm font-medium px-1">Comando</legend>
+    <%= f.text_field :command, placeholder: "!lista", class: "block w-full sm:w-64 rounded border-gray-300 font-mono text-sm" %>
+    <p class="text-xs text-wa-muted">
+      Qualquer participante manda o comando no grupo e o fluxo roda. Nos templates e valores dos passos:
+      <code class="font-mono">{{remetente}}</code> (quem mandou) e <code class="font-mono">{{argumento}}</code>
+      (o texto depois do comando, ex.: "!pix chave@x" → "chave@x").
+    </p>
+  </fieldset>
+
+  <fieldset class="min-w-0">
+    <legend class="text-sm font-medium mb-1">Passos (executados em ordem)</legend>
+    <p class="text-xs text-wa-muted mb-3">
+      Para adicionar mais de um passo, salve e edite de novo: sempre sobra uma linha vazia no fim.
+      Para remover um passo, escolha "—" no tipo. Mensagens seguidas saem com ~<%= SendGuard::THROTTLE_WINDOW %>s de intervalo.
+    </p>
+
+    <ol class="space-y-3">
+      <% (@flow.steps + [ {} ]).each_with_index do |step, index| %>
+        <% name = ->(field) { "flow[steps][#{index}][#{field}]" } %>
+        <li class="bg-white rounded-lg shadow-sm p-3 flex flex-wrap gap-3 items-end" data-controller="flow-step">
+          <span class="text-sm font-semibold text-wa-muted w-6"><%= index + 1 %>.</span>
+          <div class="flex-1 min-w-52">
+            <label class="block text-xs text-wa-muted">Tipo</label>
+            <%= select_tag name.("type"), options_for_select(Flow::STEPS.map { |type, config| [ config[:label], type ] }, step["type"]),
+                  include_blank: "—", class: "w-full", data: { flow_step_target: "type", action: "flow-step#toggle" } %>
+          </div>
+          <div data-flow-step-target="field" data-types="<%= steps_for.("template_id") %>" class="min-w-48">
+            <label class="block text-xs text-wa-muted">Template</label>
+            <%= select_tag name.("template_id"), options_for_select(templates, step["template_id"]), include_blank: "— escolha —", class: "w-full" %>
+          </div>
+          <div data-flow-step-target="field" data-types="<%= steps_for.("opens_round") %>" class="flex items-center gap-2 pb-2">
+            <%= hidden_field_tag name.("opens_round"), "0", id: nil %>
+            <%= check_box_tag name.("opens_round"), "1", step["opens_round"] == "1", id: "step_#{index}_opens_round" %>
+            <label for="step_<%= index %>_opens_round" class="text-xs">abre rodada de presença</label>
+          </div>
+          <div data-flow-step-target="field" data-types="<%= steps_for.("list_key") %>" class="min-w-48">
+            <label class="block text-xs text-wa-muted">Lista</label>
+            <%= select_tag name.("list_key"), options_for_select(lists, step["list_key"]), include_blank: "— escolha —", class: "w-full" %>
+          </div>
+          <div data-flow-step-target="field" data-types="<%= steps_for.("name") %>" class="min-w-36">
+            <label class="block text-xs text-wa-muted">Variável</label>
+            <%= text_field_tag name.("name"), step["name"], placeholder: "pix", class: "w-full font-mono" %>
+          </div>
+          <div data-flow-step-target="field" data-types="<%= steps_for.("value") %>" class="flex-1 min-w-48">
+            <label class="block text-xs text-wa-muted">Valor</label>
+            <%= text_field_tag name.("value"), step["value"], placeholder: "{{argumento}}", class: "w-full" %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  </fieldset>
+
+  <div class="flex items-center gap-2">
+    <%= f.check_box :active %>
+    <%= f.label :active, "Ativo", class: "text-sm" %>
+  </div>
+
+  <%= f.submit "Salvar fluxo", class: "btn-wa" %>
+<% end %>

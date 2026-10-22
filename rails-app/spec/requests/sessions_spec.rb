@@ -5,7 +5,7 @@ RSpec.describe "Sessions", type: :request do
   let(:password) { ENV.fetch("ADMIN_PASSWORD") }
 
   it "redireciona para o login quando não autenticado" do
-    get templates_path
+    get groups_path
 
     expect(response).to redirect_to(login_path)
   end
@@ -14,7 +14,7 @@ RSpec.describe "Sessions", type: :request do
     post login_path, params: { username: username, password: "errada" }
 
     expect(response).to have_http_status(:unprocessable_entity)
-    get templates_path
+    get groups_path
     expect(response).to redirect_to(login_path)
   end
 
@@ -22,11 +22,11 @@ RSpec.describe "Sessions", type: :request do
     post login_path, params: { username: username, password: password }
     expect(response).to redirect_to(root_path)
 
-    get templates_path
+    get groups_path
     expect(response).to have_http_status(:ok)
 
     delete logout_path
-    get templates_path
+    get groups_path
     expect(response).to redirect_to(login_path)
   end
 end

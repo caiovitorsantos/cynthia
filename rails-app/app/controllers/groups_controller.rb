@@ -4,8 +4,10 @@ class GroupsController < ApplicationController
   end
 
   def show
-    @group = WhatsappGroup.find(params[:id])
-    @participants = @group.group_participants.order(:name)
+    @group = WhatsappGroup.includes(:member_lists, :group_rules).find(params[:id])
+    @participants = @group.group_participants.includes(:member_lists).order(:name)
+    @templates = @group.templates.order(:name)
+    @flows = @group.flows.order(:trigger, :name)
     @attendance_rule = @group.rule("attendance")
     if @attendance_rule
       @attendance_settings = Attendance.settings(@attendance_rule)
@@ -14,25 +16,36 @@ class GroupsController < ApplicationController
     end
   end
 
+  # Membros: nome na lista e listas de cada um.
   def update
     group = WhatsappGroup.find(params[:id])
     participants_params = params.fetch(:participants, {}).permit!.to_h
 
     GroupParticipant.transaction do
       group.group_participants.where(id: participants_params.keys).find_each do |participant|
-        participant.update!(participants_params[participant.id.to_s].slice("role", "display_name"))
+        attributes = participants_params[participant.id.to_s]
+        participant.update!(display_name: attributes["display_name"], member_list_ids: group.member_lists.where(id: attributes["member_list_ids"]).ids)
       end
     end
 
-    redirect_to group_path(group), notice: "Membros atualizados."
+    redirect_to group_path(group, anchor: "membros"), notice: "Membros atualizados."
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to group_path(group), alert: "Erro ao salvar: #{e.message}"
+    redirect_to group_path(group, anchor: "membros"), alert: "Erro ao salvar: #{e.message}"
   end
 
   def variables
     group = WhatsappGroup.find(params[:id])
     group.update!(variables: WhatsappGroup.variables_from(params.fetch(:variables, {}).permit!))
-    redirect_to group_path(group), notice: "Variáveis do grupo atualizadas."
+    redirect_to group_path(group, anchor: "variaveis"), notice: "Variáveis do grupo atualizadas."
+  end
+
+  def lists
+    group = WhatsappGroup.find(params[:id])
+    group.update_lists!(params.fetch(:lists, {}).permit!)
+    group.update!(params.permit(:list_style, :list_empty_text))
+    redirect_to group_path(group, anchor: "membros"), notice: "Listas atualizadas."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to group_path(group, anchor: "membros"), alert: "Erro ao salvar listas: #{e.message}"
   end
 
   def leave

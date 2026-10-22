@@ -1,5 +1,5 @@
-# Eventos do wa-service (reações e respostas em grupos), repassados às regras do grupo.
-# Autenticado pelo INTERNAL_API_TOKEN.
+# Eventos do wa-service: comandos disparam os fluxos de comando do grupo; reações e respostas
+# vão para os recursos do grupo. Autenticado pelo INTERNAL_API_TOKEN.
 class WebhooksController < ActionController::API
   before_action :authenticate
 
@@ -13,6 +13,10 @@ class WebhooksController < ActionController::API
       text: params[:text].to_s
     }
 
+    if group && event[:kind] == "command"
+      context = { "sender_jid" => event[:participant_jid], "push_name" => event[:push_name], "text" => event[:text] }
+      group.flows.for_command(event[:text]).each { |flow| RunFlowJob.perform_async(flow.id, context) }
+    end
     group&.group_rules&.each { |rule| rule.handler.handle_event(rule, event) }
     head :no_content
   end

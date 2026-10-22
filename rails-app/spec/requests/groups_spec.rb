@@ -3,23 +3,45 @@ require "rails_helper"
 RSpec.describe "Groups", type: :request do
   before { post login_path, params: { username: ENV.fetch("ADMIN_USERNAME", "admin"), password: ENV.fetch("ADMIN_PASSWORD") } }
 
-  it "salva tipo e nome na lista dos participantes" do
+  it "salva o nome nas listas e as listas de cada participante" do
     group = WhatsappGroup.create!(jid: "g1@g.us", name: "Grupo 1")
+    mensal = group.member_lists.create!(name: "Mensal")
+    pagou = group.member_lists.create!(name: "Pagou")
+    of_other_group = WhatsappGroup.create!(jid: "g2@g.us", name: "Grupo 2").member_lists.create!(name: "Mensal")
     participant = GroupParticipant.create!(whatsapp_group: group, jid: "1@s.whatsapp.net", phone_number: "1", name: "Caio Feliphe")
 
-    patch group_path(group), params: { participants: { participant.id => { role: "mensal", display_name: "Caio F." } } }
+    patch group_path(group), params: { participants: { participant.id => { display_name: "Caio F.", member_list_ids: [ "", mensal.id, pagou.id, of_other_group.id ] } } }
 
-    expect(response).to redirect_to(group_path(group))
-    expect(participant.reload).to have_attributes(role: "mensal", display_name: "Caio F.")
+    expect(response).to redirect_to(group_path(group, anchor: "membros"))
+    expect(participant.reload.display_name).to eq("Caio F.")
+    expect(participant.member_lists).to contain_exactly(mensal, pagou)
+
+    patch group_path(group), params: { participants: { participant.id => { display_name: "", member_list_ids: [ "" ] } } }
+    expect(participant.reload).to have_attributes(display_name: nil, member_lists: [])
+  end
+
+  it "cria, renomeia e apaga listas e salva o formato" do
+    group = WhatsappGroup.create!(jid: "g1@g.us", name: "Grupo 1")
+    mensal = group.member_lists.create!(name: "Mensal")
+    espera = group.member_lists.create!(name: "Espera")
+
+    patch lists_group_path(group), params: {
+      lists: { "0" => { id: mensal.id, name: "Mensalistas" }, "1" => { id: espera.id, name: "" }, "2" => { id: "", name: "Pagou em dia" } },
+      list_style: "dash", list_empty_text: "-"
+    }
+
+    expect(group.member_lists.reload.map { |list| [ list.key, list.name ] }).to contain_exactly([ "mensal", "Mensalistas" ], [ "pagou_em_dia", "Pagou em dia" ])
+    expect(group.reload).to have_attributes(list_style: "dash", list_empty_text: "-")
   end
 
   describe "sair e remover" do
     let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Grupo 1") }
-    let(:template) { Template.create!(name: "Oi", body: "oi") }
+    before do
+      template = group.templates.create!(name: "Oi", body: "oi")
+      group.flows.create!(name: "Oi", trigger: "schedule", cron_expression: "0 14 * * 2", steps: [ { "type" => "send_message", "template_id" => template.id.to_s } ])
+    end
 
-    before { Schedule.create!(template: template, whatsapp_group: group, cron_expression: "0 14 * * 2") }
-
-    it "sai do grupo no WhatsApp e apaga o grupo e seus agendamentos" do
+    it "sai do grupo no WhatsApp e apaga o grupo, templates e fluxos" do
       stub = stub_request(:post, "#{ENV.fetch('WA_SERVICE_URL')}/groups/leave")
         .with(body: { group_jid: "g1@g.us" }.to_json)
         .to_return(status: 200, body: { status: "left" }.to_json, headers: { "Content-Type" => "application/json" })
@@ -29,7 +51,7 @@ RSpec.describe "Groups", type: :request do
       expect(stub).to have_been_requested
       expect(response).to redirect_to(groups_path)
       expect(WhatsappGroup.exists?(group.id)).to be(false)
-      expect(Schedule.count).to eq(0)
+      expect([ Flow.count, Template.count ]).to eq([ 0, 0 ])
     end
 
     it "mantém o grupo se o wa-service falhar" do
@@ -71,33 +93,30 @@ RSpec.describe "Groups", type: :request do
     end
   end
 
-  describe "regras do grupo" do
+  describe "recurso de presença" do
     let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei") }
-    let(:template) { Template.create!(name: "Presença", body: "oi") }
 
-    before { GroupParticipant.create!(whatsapp_group: group, jid: "1@lid", phone_number: "1", name: "Caio") }
-
-    it "sem regra, a página não mostra as colunas da lista de presença" do
-      get group_path(group)
-
-      expect(response.body).not_to include("Nome na lista")
-      expect(response.body).to include("Ativar")
+    before do
+      GroupParticipant.create!(whatsapp_group: group, jid: "1@lid", phone_number: "1", name: "Caio")
+      group.member_lists.create!(name: "Titular")
     end
 
-    it "ativa, configura o template e desativa a lista de presença" do
+    it "sem o recurso, a página não mostra a coluna de presença" do
+      get group_path(group)
+
+      expect(response.body).not_to include("Presença</th>")
+      expect(response.body).to include("Ativar", "Titular")
+    end
+
+    it "ativa, configura as listas cobradas e desativa" do
       post group_rules_path(group), params: { kind: "attendance" }
       rule = group.group_rules.sole
-      expect(rule.kind).to eq("attendance")
 
-      patch group_rule_path(group, rule), params: { rule: { template_id: template.id } }
-      expect(rule.reload.template_id.to_i).to eq(template.id)
-
-      patch group_rule_path(group, rule), params: { rule: { categories: { "0" => { key: "", name: "Titular", fixed: "1" } }, list_style: "dash" } }
-      expect(Attendance.settings(rule.reload)).to include("list_style" => "dash", "categories" => [ { "key" => "titular", "name" => "Titular", "fixed" => true } ])
-      expect(rule.template_id.to_i).to eq(template.id)
+      patch group_rule_path(group, rule), params: { rule: { tracked_lists: [ "", "titular" ], confirmed_mark: "👍" } }
+      expect(Attendance.settings(rule.reload)).to include("tracked_lists" => [ "titular" ], "confirmed_mark" => "👍", "decline_emojis" => "❌ ✖ ❎ 👎")
 
       get group_path(group)
-      expect(response.body).to include("Nome na lista", "Titular", "Configurar regra")
+      expect(response.body).to include("Presença</th>", "Listas cobradas:</strong> Titular")
 
       delete group_rule_path(group, rule)
       expect(group.group_rules.reload).to be_empty
@@ -113,7 +132,7 @@ RSpec.describe "Groups", type: :request do
       "2" => { name: "", value: "ignorado" }
     } }
 
-    expect(response).to redirect_to(group_path(group))
+    expect(response).to redirect_to(group_path(group, anchor: "variaveis"))
     expect(group.reload.variables).to eq("pix" => "pix@exemplo.com", "valor_mensal" => "R$45")
   end
 end

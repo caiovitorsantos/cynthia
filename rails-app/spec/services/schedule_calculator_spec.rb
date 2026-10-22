@@ -4,13 +4,13 @@ RSpec.describe ScheduleCalculator do
   describe ".next_run" do
     context "quando one-off" do
       it "retorna run_at se ainda não foi executado" do
-        schedule = Schedule.new(run_at: Time.zone.parse("2026-09-01 10:00"), last_run_at: nil)
+        schedule = Flow.new(run_at: Time.zone.parse("2026-09-01 10:00"), last_run_at: nil)
 
         expect(described_class.next_run(schedule)).to eq(schedule.run_at)
       end
 
       it "retorna nil se já foi executado (não reagenda)" do
-        schedule = Schedule.new(run_at: Time.zone.parse("2026-09-01 10:00"), last_run_at: Time.current)
+        schedule = Flow.new(run_at: Time.zone.parse("2026-09-01 10:00"), last_run_at: Time.current)
 
         expect(described_class.next_run(schedule)).to be_nil
       end
@@ -18,7 +18,7 @@ RSpec.describe ScheduleCalculator do
 
     context "quando recorrente" do
       it "calcula a próxima execução respeitando America/Sao_Paulo" do
-        schedule = Schedule.new(cron_expression: "0 9 * * 1-5", timezone: "America/Sao_Paulo")
+        schedule = Flow.new(cron_expression: "0 9 * * 1-5", timezone: "America/Sao_Paulo")
         from = Time.utc(2026, 8, 20, 21, 0, 0) # quinta, 18h em SP
 
         next_run = described_class.next_run(schedule, from: from)
@@ -29,7 +29,7 @@ RSpec.describe ScheduleCalculator do
       end
 
       it "atravessa a troca de horário de verão (America/New_York)" do
-        schedule = Schedule.new(cron_expression: "0 9 * * *", timezone: "America/New_York")
+        schedule = Flow.new(cron_expression: "0 9 * * *", timezone: "America/New_York")
 
         # sábado 7/mar/2026, 15h em NY (ainda EST, UTC-5), após o 9h de sábado
         from = Time.utc(2026, 3, 7, 20, 0, 0)
@@ -43,7 +43,7 @@ RSpec.describe ScheduleCalculator do
     end
 
     it "retorna nil se a expressão cron for inválida" do
-      schedule = Schedule.new(cron_expression: "not a cron", timezone: "America/Sao_Paulo")
+      schedule = Flow.new(cron_expression: "not a cron", timezone: "America/Sao_Paulo")
 
       expect(described_class.next_run(schedule)).to be_nil
     end

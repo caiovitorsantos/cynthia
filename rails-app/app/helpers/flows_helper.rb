@@ -1,4 +1,4 @@
-module SchedulesHelper
+module FlowsHelper
   # Fugit::Cron#rough_frequency devolve segundos brutos (ex: 86400), não texto.
   def rough_frequency_in_words(seconds)
     case seconds

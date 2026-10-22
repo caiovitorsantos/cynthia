@@ -1,19 +1,16 @@
 class TemplatesController < ApplicationController
+  before_action :set_group
   before_action :set_template, only: %i[edit update destroy]
 
-  def index
-    @templates = Template.order(:name)
-  end
-
   def new
-    @template = Template.new
+    @template = @group.templates.new
   end
 
   def create
-    @template = Template.new(template_params)
+    @template = @group.templates.new(template_params)
 
     if @template.save
-      redirect_to templates_path, notice: "Template criado."
+      redirect_to group_path(@group, anchor: "templates"), notice: "Template criado."
     else
       render :new, status: :unprocessable_entity
     end
@@ -24,7 +21,7 @@ class TemplatesController < ApplicationController
 
   def update
     if @template.update(template_params)
-      redirect_to templates_path, notice: "Template atualizado."
+      redirect_to group_path(@group, anchor: "templates"), notice: "Template atualizado."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -32,16 +29,20 @@ class TemplatesController < ApplicationController
 
   def destroy
     if @template.destroy
-      redirect_to templates_path, notice: "Template removido."
+      redirect_to group_path(@group, anchor: "templates"), notice: "Template removido."
     else
-      redirect_to templates_path, alert: "Não é possível remover: existem agendamentos usando este template."
+      redirect_to group_path(@group, anchor: "templates"), alert: "Não é possível remover: #{@template.errors.full_messages.to_sentence}."
     end
   end
 
   private
 
+  def set_group
+    @group = WhatsappGroup.find(params[:group_id])
+  end
+
   def set_template
-    @template = Template.find(params[:id])
+    @template = @group.templates.find(params[:id])
   end
 
   def template_params

@@ -15,27 +15,26 @@ Rails.application.routes.draw do
     post :logout
   end
 
-  resources :templates
-
   resources :groups, only: [ :index, :show, :update, :destroy ] do
     resources :rules, only: [ :create, :update, :destroy ], controller: "group_rules"
+    resources :templates, only: [ :new, :create, :edit, :update, :destroy ]
+    resources :flows, only: [ :new, :create, :edit, :update, :destroy ] do
+      member do
+        post :run
+      end
+      collection do
+        get :cron_preview
+      end
+    end
     member do
       post :leave
       patch :variables
+      patch :lists
     end
     collection do
       post :sync
       post :leave_selected
       post :destroy_selected
-    end
-  end
-
-  resources :schedules do
-    member do
-      post :send_test
-    end
-    collection do
-      get :cron_preview
     end
   end
 

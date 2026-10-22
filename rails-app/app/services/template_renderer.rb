@@ -12,8 +12,8 @@ class TemplateRenderer
   MONTHS = %w[Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro].freeze
 
   class << self
-    # Prioridade dos valores: variables (ex.: JSON do agendamento) > variáveis do grupo >
-    # padrões do template > automáticas e de regras de grupo.
+    # Prioridade dos valores: variables (ex.: {{remetente}} de um comando) > variáveis do grupo >
+    # padrões do template > automáticas, de listas e de recursos do grupo.
     def call(template, variables, whatsapp_group: nil, now: Time.current)
       variables = template.default_variables.to_h
         .merge(whatsapp_group&.variables || {})
@@ -56,7 +56,7 @@ class TemplateRenderer
       when "mes" then MONTHS[now.month - 1]
       when "mes_num" then now.strftime("%m")
       when "mes_anterior" then MONTHS[now.prev_month.month - 1]
-      else whatsapp_group&.render_rule_variable(key, mentioned_jids)
+      else whatsapp_group&.render_variable(key, mentioned_jids)
       end
     end
 

@@ -1,41 +1,213 @@
 <%# rails-app/app/views/groups/show.html.erb %>
 <% content_for :title, @group.name %>
+<% lists = @group.member_lists.sort_by(&:name) %>
+<% section = "bg-white rounded-lg shadow-sm p-4 mb-6 scroll-mt-4" %>
+<% heading = "text-sm font-semibold uppercase tracking-wide text-wa-muted" %>
 
-<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-2">
   <h1 class="text-2xl font-semibold text-wa-text"><%= @group.name %></h1>
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
     <%= link_to "Voltar", groups_path, class: "text-sm text-gray-600 hover:underline" %>
-    <% schedules_warning = @group.schedules.any? ? " Os #{@group.schedules.count} agendamentos deste grupo também serão apagados." : "" %>
+    <% warning = " Listas, templates e fluxos deste grupo também serão apagados." %>
     <%= button_to "Remover da lista", group_path(@group), method: :delete,
-          form: { data: { turbo_confirm: "Remover #{@group.name} do painel? Ele volta na próxima sincronização se você ainda for membro.#{schedules_warning}" } },
+          form: { data: { turbo_confirm: "Remover #{@group.name} do painel? Ele volta na próxima sincronização se você ainda for membro.#{warning}" } },
           class: "text-sm text-red-600 hover:underline cursor-pointer" %>
     <%= button_to "Sair do grupo", leave_group_path(@group), method: :post,
-          form: { data: { turbo_confirm: "Sair de #{@group.name} no WhatsApp? Não dá para desfazer pelo painel.#{schedules_warning}" } },
+          form: { data: { turbo_confirm: "Sair de #{@group.name} no WhatsApp? Não dá para desfazer pelo painel.#{warning}" } },
           class: "text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-full px-4 py-2 cursor-pointer" %>
   </div>
 </div>
 
-<section class="bg-white rounded-lg shadow-sm p-4 mb-6">
-  <h2 class="text-sm font-semibold uppercase tracking-wide text-wa-muted mb-3">Regras do grupo</h2>
+<nav class="flex flex-wrap gap-x-4 gap-y-1 text-sm mb-6">
+  <% [ [ "Fluxos", "fluxos" ], [ "Templates", "templates" ], [ "Membros e listas", "membros" ], [ "Variáveis", "variaveis" ], [ "Recursos", "recursos" ] ].each do |label, anchor| %>
+    <a href="#<%= anchor %>" class="text-wa-teal hover:underline"><%= label %></a>
+  <% end %>
+</nav>
 
-  <% if @attendance_rule %>
-    <%= render "group_rules/attendance", rule: @attendance_rule, group: @group %>
-  <% else %>
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <p class="font-medium">Lista de presença</p>
-        <p class="text-xs text-wa-muted">Membros mensais/avulsos/espera, confirmação por reação ✅/❌ e listas automáticas.</p>
-      </div>
-      <%= button_to "Ativar", group_rules_path(@group), params: { kind: "attendance" }, method: :post, class: "btn-wa text-sm" %>
+<section id="fluxos" class="<%= section %>">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+    <h2 class="<%= heading %>">Fluxos e rotinas</h2>
+    <div class="flex gap-3 text-sm">
+      <%= link_to "Nova rotina", new_group_flow_path(@group, trigger: "schedule"), class: "btn-wa" %>
+      <%= link_to "Novo comando", new_group_flow_path(@group, trigger: "command"), class: "btn-wa" %>
     </div>
+  </div>
+  <p class="text-xs text-wa-muted mb-3">Um gatilho (horário ou comando no grupo) e passos em ordem: enviar template, mexer em listas, definir variáveis.</p>
+
+  <table class="table-cards w-full text-sm">
+    <thead class="text-wa-muted text-xs uppercase tracking-wide">
+      <tr class="text-left">
+        <th class="py-2 pr-3">Nome</th>
+        <th class="py-2 pr-3">Gatilho</th>
+        <th class="py-2 pr-3">Passos</th>
+        <th class="py-2 pr-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @flows.each do |flow| %>
+        <tr class="border-t border-gray-100">
+          <td data-label="Nome" class="py-2 pr-3">
+            <%= flow.name %>
+            <% unless flow.active? %><span class="text-xs text-wa-muted bg-wa-panel rounded-full px-2 py-0.5 ml-1">inativo</span><% end %>
+          </td>
+          <td data-label="Gatilho" class="py-2 pr-3">
+            <% if flow.command? %>
+              <code class="font-mono"><%= flow.command %></code>
+            <% else %>
+              <%= flow.cron_expression.present? ? rough_frequency_in_words(Fugit.parse_cron(flow.cron_expression).rough_frequency) : "envio único" %>
+              <span class="block text-xs text-wa-muted">
+                <%= flow.next_run_at ? "próximo: #{flow.next_run_at.in_time_zone(flow.timezone).strftime('%d/%m %H:%M')}" : "sem próximo envio" %>
+              </span>
+            <% end %>
+          </td>
+          <td data-label="Passos" class="py-2 pr-3 text-xs text-wa-muted">
+            <%= safe_join(flow.steps.map { |step| Flow::STEPS.dig(step["type"], :label) }, tag.br) %>
+          </td>
+          <td class="py-2 sm:text-right space-x-3 whitespace-nowrap">
+            <%= button_to "Executar agora", run_group_flow_path(@group, flow), method: :post,
+                  form: { class: "inline", data: { turbo_confirm: "Executar \"#{flow.name}\" agora? As mensagens vão para o grupo de verdade." } },
+                  class: "text-wa-green hover:underline bg-transparent p-0 inline" %>
+            <%= link_to "Editar", edit_group_flow_path(@group, flow), class: "text-wa-teal hover:underline" %>
+            <%= button_to "Remover", group_flow_path(@group, flow), method: :delete,
+                  form: { data: { turbo_confirm: "Remover o fluxo \"#{flow.name}\"?" }, class: "inline" },
+                  class: "text-red-600 hover:underline bg-transparent p-0" %>
+          </td>
+        </tr>
+      <% end %>
+      <% if @flows.empty? %>
+        <tr><td colspan="4" class="py-4 text-center text-wa-muted">Nenhum fluxo ainda. Comece criando um template e uma rotina que o envia.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+
+<section id="templates" class="<%= section %>">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+    <h2 class="<%= heading %>">Templates</h2>
+    <%= link_to "Novo template", new_group_template_path(@group), class: "btn-wa text-sm" %>
+  </div>
+
+  <table class="table-cards w-full text-sm">
+    <tbody>
+      <% @templates.each do |template| %>
+        <tr class="border-t border-gray-100 first:border-t-0">
+          <td data-label="Nome" class="py-2 pr-3"><%= template.name %></td>
+          <td data-label="Variáveis" class="py-2 pr-3 font-mono text-xs text-wa-muted"><%= template.variable_names.join(", ").presence || "—" %></td>
+          <td class="py-2 sm:text-right space-x-3 whitespace-nowrap">
+            <%= link_to "Editar", edit_group_template_path(@group, template), class: "text-wa-teal hover:underline" %>
+            <%= button_to "Remover", group_template_path(@group, template), method: :delete,
+                  form: { data: { turbo_confirm: "Remover o template \"#{template.name}\"?" }, class: "inline" },
+                  class: "text-red-600 hover:underline bg-transparent p-0" %>
+          </td>
+        </tr>
+      <% end %>
+      <% if @templates.empty? %>
+        <tr><td class="py-4 text-center text-wa-muted">Nenhum template neste grupo.</td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+
+<section id="membros" class="<%= section %>">
+  <h2 class="<%= heading %> mb-1">Listas de membros</h2>
+  <p class="text-xs text-wa-muted mb-3">
+    Uma pessoa pode estar em várias listas. Nos templates: <code class="font-mono">{{lista:chave}}</code> (nomes) e
+    <code class="font-mono">{{mencoes:chave}}</code> (marca as pessoas). Para apagar uma lista, apague o nome; renomear não muda a chave.
+  </p>
+
+  <%= form_with url: lists_group_path(@group), method: :patch, class: "space-y-3 mb-6" do %>
+    <table class="text-sm">
+      <thead class="text-xs text-wa-muted text-left"><tr><th class="pr-3 font-normal">Nome</th><th class="pr-3 font-normal">Chave</th><th class="font-normal">Membros</th></tr></thead>
+      <tbody>
+        <% (lists + [ MemberList.new ]).each_with_index do |list, index| %>
+          <tr>
+            <td class="pr-3 py-1">
+              <%= hidden_field_tag "lists[#{index}][id]", list.id %>
+              <%= text_field_tag "lists[#{index}][name]", list.name, placeholder: (list.new_record? ? "nova lista" : nil) %>
+            </td>
+            <td class="pr-3 py-1 font-mono text-xs text-wa-muted"><%= list.key %></td>
+            <td class="py-1 text-xs text-wa-muted"><%= list.group_participants.size unless list.new_record? %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <div class="flex flex-wrap gap-3 text-sm">
+      <div>
+        <%= label_tag :list_style, "Formato", class: "block text-xs text-wa-muted" %>
+        <%= select_tag :list_style, options_for_select(WhatsappGroup::LIST_STYLES.invert, @group.list_style) %>
+      </div>
+      <div>
+        <%= label_tag :list_empty_text, "Texto quando a lista está vazia", class: "block text-xs text-wa-muted" %>
+        <%= text_field_tag :list_empty_text, @group.list_empty_text, placeholder: "(nada)" %>
+      </div>
+    </div>
+    <%= submit_tag "Salvar listas", class: "btn-wa" %>
+  <% end %>
+
+  <h2 class="<%= heading %> mb-1">Membros</h2>
+  <p class="text-xs text-wa-muted mb-3">
+    Menções avulsas: <code class="font-mono">@{{nome}}</code> ou <code class="font-mono">@{{numero}}</code>;
+    <code class="font-mono">@{{todos}}</code> notifica todos.
+    <% if @round %>
+      <br><strong>Rodada de presença de <%= @round.sent_at.in_time_zone(@round.flow&.timezone || "America/Sao_Paulo").strftime("%d/%m %H:%M") %>:</strong>
+      <%= @statuses.values.count("confirmed") %> confirmado(s), <%= @statuses.values.count("declined") %> cancelado(s).
+    <% end %>
+  </p>
+
+  <%= form_with url: group_path(@group), method: :patch do %>
+    <table class="table-cards w-full text-sm">
+      <thead class="text-wa-muted text-xs uppercase tracking-wide">
+        <tr class="text-left">
+          <th class="py-2 pr-3">Nome</th>
+          <th class="py-2 pr-3">Número</th>
+          <th class="py-2 pr-3">Nome nas listas</th>
+          <th class="py-2 pr-3">Listas</th>
+          <% if @attendance_rule %><th class="py-2 pr-3">Presença</th><% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @participants.each do |participant| %>
+          <tr class="border-t border-gray-100">
+            <td data-label="Nome" class="py-2 pr-3"><%= participant.name.presence || "—" %></td>
+            <td data-label="Número" class="py-2 pr-3 font-mono text-xs"><%= participant.phone_number %></td>
+            <td data-label="Nome nas listas" class="py-2 pr-3">
+              <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
+                    placeholder: participant.name, class: "rounded border-gray-300 text-sm w-full" %>
+            </td>
+            <td data-label="Listas" class="py-2 pr-3">
+              <%= hidden_field_tag "participants[#{participant.id}][member_list_ids][]", "", id: nil %>
+              <div class="flex flex-wrap gap-x-3 gap-y-1">
+                <% lists.each do |list| %>
+                  <label class="flex items-center gap-1 whitespace-nowrap">
+                    <%= check_box_tag "participants[#{participant.id}][member_list_ids][]", list.id, participant.member_lists.include?(list), id: nil %>
+                    <%= list.name %>
+                  </label>
+                <% end %>
+              </div>
+            </td>
+            <% if @attendance_rule %>
+              <td data-label="Presença" class="py-2 pr-3 text-center"><%= Attendance.mark(@attendance_settings, @statuses[participant.id]) if @statuses.key?(participant.id) %></td>
+            <% end %>
+          </tr>
+        <% end %>
+        <% if @participants.empty? %>
+          <tr><td colspan="5" class="py-4 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <% if @participants.any? %>
+      <%= submit_tag "Salvar membros", class: "btn-wa mt-4" %>
+    <% end %>
   <% end %>
 </section>
 
-<section class="bg-white rounded-lg shadow-sm p-4 mb-6">
-  <h2 class="text-sm font-semibold uppercase tracking-wide text-wa-muted mb-1">Variáveis do grupo</h2>
+<section id="variaveis" class="<%= section %>">
+  <h2 class="<%= heading %> mb-1">Variáveis do grupo</h2>
   <p class="text-xs text-wa-muted mb-3">
-    Valores usados por qualquer template enviado a este grupo, como <code class="font-mono">{{pix}}</code>.
-    O JSON do agendamento tem prioridade sobre eles. Para remover, apague o nome.
+    Valores usados pelos templates deste grupo, como <code class="font-mono">{{pix}}</code>.
+    Fluxos podem alterá-las com o passo "Definir variável". Para remover, apague o nome.
   </p>
 
   <%= form_with url: variables_group_path(@group), method: :patch, class: "space-y-3" do %>
@@ -61,60 +233,18 @@
   <% end %>
 </section>
 
-<p class="text-xs text-wa-muted mb-4">
-  Use estes nomes ou números com <code class="font-mono">@{{nome}}</code> ou
-  <code class="font-mono">@{{numero}}</code> no corpo de um template para mencionar
-  o participante ao enviar para este grupo, ou <code class="font-mono">@{{todos}}</code> para notificar todos.
-</p>
-<% if @round %>
-  <p class="mb-4 text-sm">
-    <strong>Lista de presença de <%= @round.sent_at.in_time_zone(@round.schedule.timezone).strftime("%d/%m %H:%M") %>:</strong>
-    <% fixed_keys = Attendance.fixed_keys(@attendance_rule) %>
-    <%= @statuses.values.count("confirmed") %> confirmado(s),
-    <%= @statuses.values.count("declined") %> cancelado(s),
-    <%= @participants.count { |participant| fixed_keys.include?(participant.role) && !@statuses.key?(participant.id) } %> fixo(s) sem resposta.
-  </p>
-<% end %>
+<section id="recursos" class="<%= section %>">
+  <h2 class="<%= heading %> mb-3">Recursos</h2>
 
-<%= form_with url: group_path(@group), method: :patch do %>
-  <table class="table-cards w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
-    <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
-      <tr class="text-left">
-        <th class="py-2 px-3">Nome</th>
-        <th class="py-2 px-3">Número</th>
-        <% if @attendance_rule %>
-          <th class="py-2 px-3">Categoria</th>
-          <th class="py-2 px-3">Nome na lista</th>
-          <th class="py-2 px-3">Presença</th>
-        <% end %>
-      </tr>
-    </thead>
-    <tbody>
-      <% @participants.each do |participant| %>
-        <tr class="border-t border-gray-100 hover:bg-wa-panel/60">
-          <td data-label="Nome" class="py-2 px-3"><%= participant.name.presence || "—" %></td>
-          <td data-label="Número" class="py-2 px-3 font-mono text-xs"><%= participant.phone_number %></td>
-          <% if @attendance_rule %>
-            <td data-label="Categoria" class="py-2 px-3">
-              <%= select_tag "participants[#{participant.id}][role]",
-                    options_for_select(@attendance_settings["categories"].map { |category| [ category["name"], category["key"] ] }, participant.role),
-                    include_blank: "—", class: "rounded border-gray-300 text-sm" %>
-            </td>
-            <td data-label="Nome na lista" class="py-2 px-3">
-              <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
-                    placeholder: participant.name, class: "rounded border-gray-300 text-sm w-full" %>
-            </td>
-            <td data-label="Presença" class="py-2 px-3 text-center"><%= Attendance.mark(@attendance_settings, @statuses[participant.id]) if @statuses.key?(participant.id) %></td>
-          <% end %>
-        </tr>
-      <% end %>
-      <% if @participants.empty? %>
-        <tr><td colspan="<%= @attendance_rule ? 5 : 2 %>" class="py-4 px-3 text-center text-wa-muted">Nenhum participante sincronizado ainda.</td></tr>
-      <% end %>
-    </tbody>
-  </table>
-
-  <% if @attendance_rule && @participants.any? %>
-    <%= submit_tag "Salvar membros", class: "btn-wa mt-4" %>
+  <% if @attendance_rule %>
+    <%= render "group_rules/attendance", rule: @attendance_rule, group: @group, lists: lists %>
+  <% else %>
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p class="font-medium">Lista de presença</p>
+        <p class="text-xs text-wa-muted">Confirmação por reação ✅/❌ na mensagem que abre a rodada, cobrança de listas e variáveis de presença.</p>
+      </div>
+      <%= button_to "Ativar", group_rules_path(@group), params: { kind: "attendance" }, method: :post, class: "btn-wa text-sm" %>
+    </div>
   <% end %>
-<% end %>
+</section>

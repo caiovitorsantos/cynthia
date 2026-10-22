@@ -14,10 +14,7 @@ class LogsController < ApplicationController
 
   def resend
     log = MessageLog.find(params[:id])
-    new_log = MessageLog.create!(
-      schedule: log.schedule, group_jid: log.group_jid,
-      rendered_body: log.rendered_body, status: "pending"
-    )
+    new_log = MessageLog.create!(log.slice(:flow_id, :group_jid, :rendered_body, :opens_round, :round_id).merge(status: "pending"))
 
     SendGuard.check!(group_jid: log.group_jid, message: log.rendered_body)
     response = WaClient.send_message(group_jid: log.group_jid, message: log.rendered_body)

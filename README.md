@@ -1,14 +1,16 @@
-# WhatsApp Scheduler
+# Automação de Grupos de WhatsApp
 
-Painel self-hosted para **agendar mensagens em grupos de WhatsApp**, com templates, variáveis
-automáticas, menções e **regras por grupo**, como uma lista de presença que registra quem confirma
-com ✅ ou cancela com ❌ reagindo à mensagem.
+Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
+**listas de membros**, **variáveis**, **templates** e **fluxos**: um gatilho (um horário, a "rotina", ou
+um comando como `!entrar` mandado no grupo) seguido de passos, como enviar um template, pôr ou tirar
+alguém de uma lista ou mudar uma variável. Recursos opcionais, como a **lista de presença**, registram
+quem confirma com ✅ ou cancela com ❌ reagindo à mensagem.
 
-Nasceu para automatizar um grupo de vôlei: toda terça sai a lista de presença com os mensalistas
-marcados, as reações viram confirmações, um lembrete marca quem ainda não respondeu e, no início do
-mês, sai a cobrança.
+Nasceu para automatizar um grupo de vôlei: toda terça uma rotina manda a lista de presença com os
+mensalistas marcados, as reações viram confirmações, um lembrete marca quem ainda não respondeu,
+`!lista` mostra a lista atual e, no início do mês, sai a cobrança.
 
-![Página de um grupo com a regra Lista de presença ativa](docs/screenshots/grupo-regra.png)
+![Página de um grupo com a Lista de presença ativa (print da versão anterior)](docs/screenshots/grupo-regra.png)
 
 > [!WARNING]
 > O envio usa o [Baileys](https://github.com/WhiskeySockets/Baileys), uma biblioteca **não oficial**
@@ -23,36 +25,38 @@ mês, sai a cobrança.
 - [Arquitetura](#arquitetura)
 - [Como rodar](#como-rodar)
 - [Guia de uso](#guia-de-uso)
-- [Criando uma nova regra de grupo](#criando-uma-nova-regra-de-grupo)
+- [Criando um novo recurso de grupo](#criando-um-novo-recurso-de-grupo)
 - [API interna do wa-service](#api-interna-do-wa-service)
 - [Desenvolvimento](#desenvolvimento)
 - [Limitações conhecidas](#limitações-conhecidas)
 
 ## Funcionalidades
 
-**Núcleo (vale para qualquer grupo)**
+**Geral**
 
 - **Conexão** com o WhatsApp por QR Code. Se a sessão for revogada, um QR novo é gerado sozinho.
 - **Grupos** sincronizados a cada 30 minutos, com participantes. Dá para sair de um grupo ou removê-lo
   do painel, um por vez ou vários de uma vez (a saída em lote roda em segundo plano, com intervalo
   entre cada grupo).
-- **Templates** com variáveis (`{{nome}}`), variáveis automáticas de data, menções (`@{{Caio}}`) e
-  menção a todos (`@{{todos}}`), e
-  prévia ao vivo em balão de conversa com a formatação do WhatsApp (`*negrito*`, `_itálico_`, `~riscado~`).
-- **Variáveis do grupo**: valores como `{{pix}}` ou `{{local}}` definidos uma vez na página do grupo e
-  usados por qualquer template enviado a ele.
-- **Agendamentos** recorrentes (cron, com fuso horário) ou de envio único, com botão de envio de teste.
 - **Logs** de cada envio, com status, erro e reenvio.
 - **Login** por sessão e interface **responsiva** (no celular, tabelas viram cartões).
 
-**Regras por grupo (opcionais)**
+**Por grupo** (tudo fica na página do grupo, e cada grupo configura do seu jeito)
 
-- **Lista de presença**: o template escolhido abre uma rodada a cada envio. Reações e respostas citando
-  a mensagem viram confirmação ou cancelamento, e qualquer participante pede a lista atual mandando
-  `!lista` no grupo. Tudo é configurável por grupo: categorias de membros, emojis, se respostas por
-  texto contam, o formato das listas, o comando e o template da resposta.
+- **Listas de membros** (ex.: mensal, espera, pagou). Uma pessoa pode estar em várias. Nos templates
+  elas aparecem como `{{lista:chave}}` (nomes) e `{{mencoes:chave}}` (marca as pessoas).
+- **Variáveis**: valores como `{{pix}}` ou `{{local}}`, que os fluxos também podem alterar.
+- **Templates** com variáveis, variáveis automáticas de data, menções (`@{{Caio}}`), menção a todos
+  (`@{{todos}}`) e prévia ao vivo com a formatação do WhatsApp (`*negrito*`, `_itálico_`, `~riscado~`).
+- **Fluxos**: gatilho + passos em ordem. Fluxo de horário (rotina) é recorrente (cron, com fuso) ou de
+  envio único; fluxo de comando roda quando alguém manda `!algo` no grupo. Botão "Executar agora".
+- **Recursos** opcionais: **Lista de presença**. Cada mensagem de um passo marcado "abre rodada" abre
+  uma rodada; reações e respostas citando a mensagem viram confirmação ou cancelamento das listas
+  cobradas.
 
 ## Telas
+
+> Prints da versão anterior, antes de templates e fluxos irem para dentro de cada grupo.
 
 | Login | Conexão |
 |---|---|
@@ -110,7 +114,7 @@ flowchart LR
 | Serviço | Stack | Responsabilidade |
 |---|---|---|
 | `rails` | Rails 8.1, Hotwire (Turbo + Stimulus), Tailwind 4, importmap | Painel, regras de negócio, webhook |
-| `sidekiq` | Sidekiq 8 + sidekiq-cron (mesma imagem do Rails) | Disparo dos agendamentos, envio, sincronização, saída de grupos em lote |
+| `sidekiq` | Sidekiq 8 + sidekiq-cron (mesma imagem do Rails) | Rotinas, execução de fluxos, envio, sincronização, saída de grupos em lote |
 | `wa` | Node 20, TypeScript, Express 5, Baileys 6.7 | Mantém a sessão do WhatsApp; envia, lista grupos, sai de grupos e repassa eventos |
 | `db` | PostgreSQL 16 | Dados |
 | `redis` | Redis 7 | Filas do Sidekiq e throttle de envio |
@@ -125,20 +129,22 @@ ao Rails por um webhook protegido pelo mesmo token.
 ```mermaid
 sequenceDiagram
     participant Cron as sidekiq-cron (a cada minuto)
-    participant D as DispatchDueSchedulesJob
-    participant S as SendScheduledMessageJob
+    participant Due as RunDueFlowsJob
+    participant WH as WebhooksController
+    participant F as RunFlowJob / Flow#run!
+    participant D as DeliverMessageJob
     participant G as SendGuard
     participant W as wa-service
-    participant Rules as Regras do grupo
 
-    Cron->>D: perform
-    D->>S: enfileira agendamentos vencidos
-    S->>S: TemplateRenderer (variáveis, menções, variáveis das regras)
-    S->>G: check! (limite diário, duplicata, throttle)
-    S->>W: POST /send (delay humano + "digitando")
-    W-->>S: message_id
-    S->>Rules: after_send (ex.: abre/encadeia rodada de presença)
-    S->>S: calcula next_run_at
+    Cron->>Due: perform
+    Due->>Due: calcula next_run_at das rotinas vencidas
+    Due->>F: enfileira cada rotina
+    W->>WH: comando "!algo" no grupo
+    WH->>F: enfileira os fluxos do comando (remetente + texto)
+    F->>F: passos em ordem: listas, variáveis, TemplateRenderer
+    F->>D: uma mensagem por passo "Enviar template", espaçadas em 21 s
+    D->>G: check! (limite diário, duplicata, throttle)
+    D->>W: POST /send (delay humano + "digitando")
 ```
 
 ### Fluxo da lista de presença
@@ -148,50 +154,55 @@ sequenceDiagram
     participant P as Participante
     participant W as wa-service
     participant WH as WebhooksController
-    participant A as Attendance (regra)
+    participant A as Attendance (recurso)
 
     P->>W: reage ✅ na lista (ou responde citando)
     W->>WH: POST /webhooks/whatsapp {group_jid, message_id, participant_jid, text}
-    WH->>A: handle_event (para cada regra do grupo)
+    WH->>A: handle_event (para cada recurso do grupo)
     A->>A: acha a rodada pela mensagem e grava Attendance::Response
     Note over A: {{presenca}}, {{confirmados}} e {{pendentes}}<br/>leem a rodada atual nos próximos envios
 ```
 
-### Núcleo × regras por grupo
+### Núcleo × recursos do grupo
 
-O núcleo (grupos, templates, agendamentos, envio, webhook) **não sabe nada de presença**. Regras são
-linhas em `group_rules` (`kind` + `settings` em JSON) e cada `kind` é implementado por um módulo. O
+O núcleo (grupos, listas, templates, fluxos, envio, webhook) **não sabe nada de presença**. Recursos
+são linhas em `group_rules` (`kind` + `settings` em JSON) e cada `kind` é implementado por um módulo. O
 núcleo só chama esses ganchos:
 
 | Gancho | Quando é chamado |
 |---|---|
-| `provides_variable?(rule, key)` | ao validar um agendamento: a variável é desta regra? |
+| `provides_variable?(rule, key)` | ao validar um fluxo: a variável é deste recurso? |
 | `render_variable(rule, key, mentions)` | ao renderizar um template para o grupo |
-| `after_send(rule, message_log)` | depois de cada envio com sucesso ao grupo |
+| `prepare_message(rule, message_log, template)` | antes de salvar cada mensagem enviada ao grupo |
 | `handle_event(rule, event)` | quando chega uma reação ou resposta no grupo |
-| `settings_from(params)` | ao salvar o formulário da regra |
+| `settings_from(params)` | ao salvar o formulário do recurso |
 
-Hoje existe uma regra, a **Lista de presença** (`app/models/attendance.rb`). Veja
-[Criando uma nova regra de grupo](#criando-uma-nova-regra-de-grupo).
+Hoje existe um recurso, a **Lista de presença** (`app/models/attendance.rb`). Veja
+[Criando um novo recurso de grupo](#criando-um-novo-recurso-de-grupo). Os passos de fluxo ficam em
+`Flow::STEPS` (`app/models/flow.rb`): um passo novo é uma entrada ali e um `when` em `Flow#run!`.
 
 ### Modelo de dados
 
 ```mermaid
 erDiagram
     WHATSAPP_GROUPS ||--o{ GROUP_PARTICIPANTS : tem
+    WHATSAPP_GROUPS ||--o{ MEMBER_LISTS : tem
+    MEMBER_LISTS }o--o{ GROUP_PARTICIPANTS : "membros"
+    WHATSAPP_GROUPS ||--o{ TEMPLATES : tem
+    WHATSAPP_GROUPS ||--o{ FLOWS : tem
     WHATSAPP_GROUPS ||--o{ GROUP_RULES : tem
-    WHATSAPP_GROUPS ||--o{ SCHEDULES : recebe
-    TEMPLATES ||--o{ SCHEDULES : usa
-    SCHEDULES ||--o{ MESSAGE_LOGS : gera
+    FLOWS ||--o{ MESSAGE_LOGS : gera
     MESSAGE_LOGS ||--o{ ATTENDANCES : "rodada"
     MESSAGE_LOGS |o--o{ MESSAGE_LOGS : "round_id (acompanhamento)"
     GROUP_PARTICIPANTS ||--o{ ATTENDANCES : responde
 
-    WHATSAPP_GROUPS { string jid string name jsonb variables }
-    GROUP_PARTICIPANTS { string jid string name string role "categoria da regra" string display_name }
+    WHATSAPP_GROUPS { string jid string name jsonb variables string list_style string list_empty_text }
+    GROUP_PARTICIPANTS { string jid string name string display_name }
+    MEMBER_LISTS { string key string name }
+    TEMPLATES { string name text body }
+    FLOWS { string trigger "schedule / command" string command string cron_expression datetime run_at jsonb steps datetime next_run_at }
     GROUP_RULES { string kind jsonb settings }
-    SCHEDULES { string cron_expression datetime run_at string timezone jsonb variables datetime next_run_at }
-    MESSAGE_LOGS { string status text rendered_body string wa_message_id bigint round_id }
+    MESSAGE_LOGS { string status text rendered_body string wa_message_id boolean opens_round bigint round_id }
     ATTENDANCES { string status "confirmed / declined" }
 ```
 
@@ -211,10 +222,10 @@ O `SendGuard` bloqueia o envio antes de chegar ao WhatsApp:
 
 | Job | Frequência | O que faz |
 |---|---|---|
-| `DispatchDueSchedulesJob` | a cada minuto | Enfileira os agendamentos com `next_run_at` vencido |
+| `RunDueFlowsJob` | a cada minuto | Enfileira as rotinas com `next_run_at` vencido e calcula a próxima |
 | `SyncGroupsJob` | a cada 30 min | Atualiza grupos e participantes |
-| `SendScheduledMessageJob` | sob demanda | Renderiza o agendamento, entrega e reagenda |
-| `DeliverMessageJob` | sob demanda | Passa pelo `SendGuard`, envia e registra o log (agendamentos e respostas a comandos) |
+| `RunFlowJob` | sob demanda | Executa os passos de um fluxo (rotina, comando ou "Executar agora") |
+| `DeliverMessageJob` | sob demanda | Passa pelo `SendGuard`, envia e registra o log |
 | `LeaveGroupsJob` | sob demanda | Sai de vários grupos, um por vez |
 
 ## Como rodar
@@ -256,33 +267,41 @@ reiniciar.
 
 ## Guia de uso
 
-### 1. Templates
+Tudo acontece na página do grupo (**Grupos** → nome do grupo), dividida em Fluxos, Templates, Membros e
+listas, Variáveis e Recursos.
 
-Escreva o texto com a formatação do WhatsApp e use variáveis:
+### 1. Listas de membros e variáveis
+
+Em **Membros e listas**, crie as listas (ex.: Mensal, Espera) e marque, na tabela de membros, em quais
+listas cada pessoa está. "Nome nas listas" troca o nome exibido. A chave da lista (`mensal`) é o que os
+templates usam; renomear a lista não quebra nada. O formato (numerada, `•`, `-` ou sem marcador) e o
+texto de lista vazia valem para todas as listas do grupo.
+
+| Variável | Saída |
+|---|---|
+| `{{lista:mensal}}` | `1. Adriana`<br>`2. Bruno` |
+| `{{mencoes:mensal}}` | `1. @Adriana`<br>`2. @Bruno` (notifica) |
+
+Em **Variáveis**, guarde pares nome → valor (ex.: `pix`), usados como `{{pix}}`.
+
+### 2. Templates
 
 | Variável | Valor |
 |---|---|
-| `{{qualquer_nome}}` | Preenchida pelas **variáveis do grupo** ou pelo JSON do agendamento (ex.: `{"dia": "25/10"}`) |
+| `{{qualquer_nome}}` | Variável do grupo |
 | `{{data}}` | Data do envio (`dd/mm`) |
 | `{{mes}}`, `{{mes_num}}`, `{{mes_anterior}}` | `Outubro`, `10`, `Setembro` |
+| `{{remetente}}`, `{{argumento}}` | Em fluxos de comando: quem mandou e o texto depois do comando |
 | `@{{Caio}}` ou `@{{5511999999999}}` | Menciona o participante (pelo nome exato ou pelo número) |
-| `@{{todos}}` (ou `@{{all}}`) | Mostra "@todos" e notifica **todos** os participantes sincronizados, sem listar os números |
+| `@{{todos}}` (ou `@{{all}}`) | Mostra "@todos" e notifica **todos** os participantes sincronizados |
 
-As datas usam o fuso do agendamento. Grupos com regras oferecem variáveis extras (abaixo).
+As datas usam o fuso do fluxo. Recursos ativos oferecem variáveis extras (abaixo).
 
-**Variáveis do grupo.** Na página do grupo, o bloco "Variáveis do grupo" guarda pares nome → valor
-(o valor pode ter várias linhas). Assim o mesmo template serve para grupos diferentes:
-`PIX: {{pix}}` sai com o PIX de cada grupo. Se o mesmo nome existir em mais de um lugar, vale esta
-ordem:
+### 3. Fluxos
 
-1. JSON do agendamento
-2. Variáveis do grupo
-3. Variáveis automáticas e das regras do grupo
-
-### 2. Agendamentos
-
-Escolha template e grupo e informe **ou** um cron **ou** uma data de envio único. O botão
-"Pré-visualizar" mostra os próximos disparos.
+**Nova rotina** cria um fluxo de horário: informe **ou** um cron **ou** uma data de envio único
+("Pré-visualizar" mostra os próximos disparos). **Novo comando** cria um fluxo disparado por uma
+palavra começando com `!`, mandada por qualquer participante (inclusive o dono do número conectado).
 
 | Cron | Quando |
 |---|---|
@@ -290,74 +309,63 @@ Escolha template e grupo e informe **ou** um cron **ou** uma data de envio únic
 | `0 9 1 * *` | Dia 1 de cada mês às 9h |
 | `0 9 * * 1-5` | Dias úteis às 9h |
 
-Um agendamento que usa uma variável que o grupo não oferece é recusado ao salvar.
+Passos disponíveis:
 
-### 3. Regra "Lista de presença"
-
-Na página do grupo, em **Regras do grupo**, clique em **Ativar**. O checklist da regra mostra o que
-falta:
-
-1. **Template da lista**: o template cujo envio abre uma nova rodada.
-2. **Membros fixos**: marque a **Categoria** de cada participante na tabela do grupo.
-3. **Agendamento**: o atalho cria o agendamento já com o template e o grupo preenchidos.
-
-Em **Configurar regra**:
-
-| Configuração | Padrão |
+| Passo | O que faz |
 |---|---|
-| Categorias (nome + se é **fixa**) | Mensal (fixa), Avulso, Espera |
-| Emojis que confirmam / cancelam | `✅ ✔ ☑ 👍` / `❌ ✖ ❎ 👎` |
-| Aceitar respostas citando a lista | sim |
-| Estilo da lista | numerada (`1.`), `•`, `-` ou sem marcador |
-| Marcas de confirmado / cancelado / sem resposta | `✅` / `❌` / nada |
-| Texto de lista vazia | `1.` |
-| Comando para pedir a lista | `!lista` (vazio desativa) |
-| Template da resposta ao comando | padrão: presença + avulsos |
+| Enviar template | Renderiza e envia. Marcado "abre rodada de presença", abre uma rodada |
+| Pôr quem mandou o comando numa lista | Só em fluxos de comando |
+| Tirar quem mandou o comando de uma lista | Só em fluxos de comando |
+| Esvaziar lista | Tira todo mundo da lista |
+| Definir variável do grupo | O valor aceita variáveis, ex.: `{{argumento}}` |
 
-Categoria **fixa** quer dizer que a pessoa aparece em `{{presenca}}` e é cobrada em `{{pendentes}}`.
-Quem confirma sem estar numa categoria fixa (um avulso, ou alguém que entrou depois da última
-sincronização) aparece em `{{confirmados}}`.
+Os passos rodam em ordem, então um template enviado depois de "Pôr na lista" já sai com a lista
+atualizada. Mensagens seguidas saem com ~21 s de intervalo (limite do `SendGuard`). Um fluxo que usa
+uma variável que ninguém oferece é recusado ao salvar.
 
-**Variáveis da regra.** Todas aceitam uma categoria opcional, como em `{{lista:espera}}`:
+### 4. Recurso "Lista de presença"
 
-| Variável | Sem categoria | Exemplo de saída |
+Em **Recursos**, clique em **Ativar**. O checklist mostra o que falta:
+
+1. **Listas cobradas**: as listas que aparecem em `{{presenca}}` e são cobradas em `{{pendentes}}`.
+2. **Fluxo que abre a rodada**: uma rotina com um passo "Enviar template" marcado "abre rodada".
+
+Em **Configurar**: listas cobradas, emojis que confirmam/cancelam (`✅ ✔ ☑ 👍` / `❌ ✖ ❎ 👎`), se
+respostas citando a mensagem contam, e as marcas de confirmado/cancelado/sem resposta.
+
+| Variável | Sem chave de lista | Exemplo de saída |
 |---|---|---|
-| `{{lista}}` | nomes das categorias fixas | `1. Adriana`<br>`2. Bruno` |
-| `{{mencoes}}` | fixos marcados (notifica) | `1. @Adriana`<br>`2. @Bruno` |
-| `{{presenca}}` | fixos com a marca da resposta | `1. Adriana ✅`<br>`2. Bruno ❌`<br>`3. Carla` |
-| `{{confirmados}}` | quem confirmou fora das fixas | `1. Ellie` |
-| `{{pendentes}}` | marca os fixos que não responderam | `@Carla @Igor` |
+| `{{lista}}` | nomes das listas cobradas | `1. Adriana`<br>`2. Bruno` |
+| `{{mencoes}}` | marca as listas cobradas | `1. @Adriana`<br>`2. @Bruno` |
+| `{{presenca}}` | listas cobradas com a marca da resposta | `1. Adriana ✅`<br>`2. Bruno ❌`<br>`3. Carla` |
+| `{{confirmados}}` | quem confirmou fora das listas cobradas | `1. Ellie` |
+| `{{pendentes}}` | marca quem das listas cobradas não respondeu | `@Carla @Igor` |
 
-Nas menções, a mensagem leva `@<número>` e o WhatsApp exibe o nome da pessoa marcada, como nos exemplos.
-
-Reações em mensagens que mostram a rodada (por exemplo, um lembrete com `{{pendentes}}`, uma lista
-atualizada com `{{presenca}}` ou a resposta ao `!lista`) também contam para a mesma rodada.
-
-**Comando `!lista`.** Qualquer participante, inclusive o dono do número conectado, manda `!lista` no
-grupo e o bot responde com a lista da rodada atual. A resposta passa pelos mesmos limites de envio:
-se a lista não mudou, ela não é reenviada em 6 horas. Renomear uma categoria não quebra os
-templates, porque a variável usa a chave mostrada ao lado do nome (`:mensal`).
+Todas aceitam uma lista específica, como em `{{presenca:espera}}`. Reações em mensagens que mostram a
+rodada (um lembrete com `{{pendentes}}`, a resposta ao `!lista`) também contam para a mesma rodada.
 
 ### Exemplo completo: grupo de vôlei
 
-| Template | Corpo | Cron |
+Listas `mensal` (cobrada pela presença) e `espera`; variáveis `pix` e `valor_mensal`.
+
+| Fluxo | Gatilho | Passos |
 |---|---|---|
-| Presença (abre a rodada) | `*PRESENÇA {{data}}*`<br>`_Reaja com ✅ ou ❌_`<br><br>`{{mencoes}}`<br><br>`*Avulsos*`<br>`1.` | `0 14 * * 2` |
-| Lembrete | `⏰ Falta confirmar: {{pendentes}}` | `0 16 * * 2` |
-| Lista atualizada | `*PRESENÇA {{data}}*`<br>`{{presenca}}`<br><br>`*Avulsos*`<br>`{{confirmados}}` | `0 17 * * 2` |
-| Cobrança | `*PAGAMENTO {{mes_anterior}}*`<br>`🚨 até 10/{{mes_num}}`<br><br>`PIX: {{pix}}`<br>`MENSAL: {{valor_mensal}}`<br><br>`{{mencoes}}` | `0 9 1 * *` |
+| Presença | `0 14 * * 2` | Enviar "Presença" (`*PRESENÇA {{data}}*`<br>`{{mencoes}}`), **abre rodada** |
+| Lembrete | `0 16 * * 2` | Enviar "Lembrete" (`⏰ Falta confirmar: {{pendentes}}`) |
+| Lista | `!lista` | Enviar "Lista atual" (`{{presenca}}`<br>`*Avulsos*`<br>`{{confirmados}}`) |
+| Entrar na espera | `!espera` | Pôr quem mandou na lista `espera`; enviar "Espera" (`{{lista:espera}}`) |
+| Nova semana | `0 23 * * 2` | Esvaziar lista `espera` |
+| Cobrança | `0 9 1 * *` | Enviar "Cobrança" (`PIX: {{pix}}`<br>`MENSAL: {{valor_mensal}}`<br>`{{mencoes}}`) |
 
-Com as variáveis do grupo `pix` e `valor_mensal`.
+## Criando um novo recurso de grupo
 
-## Criando uma nova regra de grupo
-
-1. Crie um módulo em `app/models/<regra>.rb` que responda aos ganchos da tabela
-   [Núcleo × regras por grupo](#núcleo--regras-por-grupo). Use `app/models/attendance.rb` como modelo.
-2. Registre a regra em `GroupRule::HANDLERS` e `GroupRule::NAMES` (`app/models/group_rule.rb`).
-3. Crie o bloco da regra em `app/views/group_rules/_<kind>.html.erb` e renderize-o na página do grupo
-   (`app/views/groups/show.html.erb`).
-4. Guarde as configurações em `rule.settings` (JSON). Tabelas próprias só se a regra precisar guardar
-   dados, como `attendances` na Lista de presença.
+1. Crie um módulo em `app/models/<recurso>.rb` que responda aos ganchos da tabela
+   [Núcleo × recursos do grupo](#núcleo--recursos-do-grupo). Use `app/models/attendance.rb` como modelo.
+2. Registre-o em `GroupRule::HANDLERS` e `GroupRule::NAMES` (`app/models/group_rule.rb`).
+3. Crie o bloco em `app/views/group_rules/_<kind>.html.erb` e renderize-o na seção Recursos da página
+   do grupo (`app/views/groups/show.html.erb`).
+4. Guarde as configurações em `rule.settings` (JSON). Tabelas próprias só se precisar guardar dados,
+   como `attendances` na Lista de presença.
 
 ## API interna do wa-service
 
@@ -402,11 +410,13 @@ O `wa-service` roda com `tsx watch`: mudanças em `wa-service/src` recarregam so
 ├── docker-compose.yml
 ├── rails-app/
 │   ├── app/
-│   │   ├── controllers/      # painel, login, webhook, regras de grupo
-│   │   ├── jobs/             # despacho, envio, sincronização, saída em lote
+│   │   ├── controllers/      # painel, login, webhook, grupos, fluxos, templates, recursos
+│   │   ├── jobs/             # rotinas, execução de fluxo, envio, sincronização, saída em lote
 │   │   ├── models/
-│   │   │   ├── group_rule.rb       # registro de regras por grupo
-│   │   │   └── attendance.rb       # regra "Lista de presença"
+│   │   │   ├── flow.rb             # fluxos: gatilhos e passos (componentes)
+│   │   │   ├── member_list.rb      # listas de membros
+│   │   │   ├── group_rule.rb       # registro de recursos por grupo
+│   │   │   └── attendance.rb       # recurso "Lista de presença"
 │   │   ├── services/         # TemplateRenderer, SendGuard, WaClient, ScheduleCalculator
 │   │   └── views/
 │   ├── config/schedule.yml   # cron do sidekiq-cron
@@ -421,6 +431,8 @@ O `wa-service` roda com `tsx watch`: mudanças em `wa-service/src` recarregam so
 
 - **Risco de bloqueio** do número, inerente ao uso do Baileys.
 - **Lista copiada e colada não é lida.** Só reações e respostas citando a mensagem viram confirmação.
-- **Uma rodada aberta por grupo:** a mais recente do template da lista.
+- **Uma rodada aberta por grupo:** a última mensagem enviada que abre rodada.
 - **Lembrete sem pendentes sai mesmo assim**, com `{{pendentes}}` vazio.
+- **Fluxo que falha no meio não é repetido** (para não duplicar envios); o erro fica no Sidekiq.
+- **Gatilhos são só horário e comando.** Entrada/saída de membros no grupo ainda não dispara fluxos.
 - **Admin único**, com credenciais no `.env`.

@@ -1,0 +1,6 @@
+<% content_for :title, "Novo fluxo" %>
+
+<p class="text-sm text-wa-muted mb-1"><%= link_to @group.name, group_path(@group, anchor: "fluxos"), class: "hover:underline" %></p>
+<h1 class="text-2xl font-semibold text-wa-text mb-6">Novo fluxo</h1>
+
+<%= render "form" %>
