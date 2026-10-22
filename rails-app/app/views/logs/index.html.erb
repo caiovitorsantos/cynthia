@@ -6,11 +6,11 @@
     <%= select_tag :status, options_for_select(
           [["Todos", ""], ["Pendente", "pending"], ["Enviado", "sent"], ["Falhou", "failed"]], @status),
           onchange: "this.form.requestSubmit()",
-          class: "rounded border-gray-300 text-sm" %>
+          class: "rounded border-wa-line text-sm" %>
   <% end %>
 </div>
 
-<table class="table-cards w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
+<table class="table-cards w-full text-sm bg-wa-surface rounded-lg shadow-sm overflow-hidden">
   <thead class="bg-wa-panel text-wa-muted text-xs uppercase tracking-wide">
     <tr class="text-left">
       <th class="py-2 px-3">Grupo</th>
@@ -23,19 +23,19 @@
   </thead>
   <tbody>
     <% @logs.each do |log| %>
-      <tr class="border-t border-gray-100 hover:bg-wa-panel/60">
+      <tr class="border-t border-wa-line hover:bg-wa-panel/60">
         <td data-label="Grupo" class="py-2 px-3"><%= @group_names[log.group_jid] || content_tag(:span, log.group_jid, class: "font-mono text-xs") %></td>
         <td data-label="Mensagem" class="py-2 px-3"><span class="block max-w-full sm:max-w-xs truncate bg-wa-bubble rounded-lg px-2 py-1 shadow-sm" title="<%= log.rendered_body %>"><%= log.rendered_body %></span></td>
         <td data-label="Status" class="py-2 px-3">
           <span class="px-2 py-1 rounded text-xs <%=
             case log.status
-            when "sent" then "bg-wa-bubble text-wa-teal"
-            when "failed" then "bg-red-100 text-red-800"
-            else "bg-gray-100 text-gray-800"
+            when "sent" then "bg-wa-bubble text-wa-text"
+            when "failed" then "bg-red-950/50 text-red-300"
+            else "bg-wa-raised text-wa-text"
             end
           %>"><%= log.status %></span>
         </td>
-        <td data-label="Erro" class="py-2 px-3 text-xs text-red-600"><%= log.error_message %></td>
+        <td data-label="Erro" class="py-2 px-3 text-xs text-red-400"><%= log.error_message %></td>
         <td data-label="Criado em" class="py-2 px-3"><%= log.created_at.strftime("%d/%m/%Y %H:%M") %></td>
         <td class="py-2 px-3 sm:text-right">
           <% if log.status == "failed" %>
@@ -55,7 +55,7 @@
   <div class="mt-4 flex gap-2 text-sm">
     <% (1..@total_pages).each do |page| %>
       <%= link_to page, logs_path(status: @status, page: page),
-            class: "px-3 py-1 rounded #{page == @page ? 'bg-wa-green text-white' : 'bg-white border'}" %>
+            class: "px-3 py-1 rounded #{page == @page ? 'bg-wa-green text-wa-panel' : 'bg-wa-surface border border-wa-line'}" %>
     <% end %>
   </div>
 <% end %>

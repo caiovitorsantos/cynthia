@@ -1,17 +1,25 @@
 <% content_for :title, "Entrar" %>
 
-<div class="max-w-sm mx-auto mt-16 bg-white rounded-lg shadow-sm p-8">
-  <h1 class="text-2xl font-semibold text-wa-text mb-6 text-center">Entrar</h1>
+<div class="max-w-sm mx-auto mt-6 sm:mt-10">
+  <div class="flex flex-col items-center text-center mb-6">
+    <%= image_tag "cynthia-badge.svg", alt: "Cynth.ia", class: "w-64 [image-rendering:pixelated]" %>
+    <div class="mt-4 bg-wa-raised rounded-lg rounded-tl-none px-4 py-2 text-sm shadow-sm text-left">
+      <span class="block text-xs font-medium text-wa-green">Cynth.ia</span>
+      Ugh… de novo você? Entra logo, vai.
+    </div>
+  </div>
 
-  <%= form_with url: login_path, class: "space-y-4" do %>
-    <div>
-      <%= label_tag :username, "Usuário", class: "block text-sm font-medium" %>
-      <%= text_field_tag :username, params[:username], autofocus: true, autocomplete: "username", class: "mt-1 block w-full" %>
-    </div>
-    <div>
-      <%= label_tag :password, "Senha", class: "block text-sm font-medium" %>
-      <%= password_field_tag :password, nil, autocomplete: "current-password", class: "mt-1 block w-full" %>
-    </div>
-    <%= submit_tag "Entrar", class: "btn-wa w-full" %>
-  <% end %>
+  <div class="bg-wa-surface border border-wa-line rounded-xl p-6">
+    <%= form_with url: login_path, class: "space-y-4" do %>
+      <div>
+        <%= label_tag :username, "Usuário", class: "block text-sm font-medium" %>
+        <%= text_field_tag :username, params[:username], autofocus: true, autocomplete: "username", class: "mt-1 block w-full" %>
+      </div>
+      <div>
+        <%= label_tag :password, "Senha", class: "block text-sm font-medium" %>
+        <%= password_field_tag :password, nil, autocomplete: "current-password", class: "mt-1 block w-full" %>
+      </div>
+      <%= submit_tag "Entrar", class: "btn-wa w-full" %>
+    <% end %>
+  </div>
 </div>

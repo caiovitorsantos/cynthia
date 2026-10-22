@@ -1,11 +1,17 @@
-# CindyZap
+<p align="center">
+  <img src="rails-app/app/assets/images/cynthia-badge.svg" alt="Cynth.ia, administradora de grupos em pixel art, entediada na frente de um CRT que diz UGH" width="360">
+</p>
 
-**A Cindy é a assistente virtual que cuida das rotinas do seu grupo**: a "síndica" que todo grupo de
-WhatsApp tem, só que automática. Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
+# Cynth.ia
+
+**A Cynth.ia é a administradora de grupos de WhatsApp que faz o trabalho chato. De má vontade, mas
+faz.** Ela é a "síndica" que todo grupo tem, só que automática, entediada e de óculos.
+
+Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
 **listas de membros**, **variáveis**, **templates** e **fluxos**: um gatilho (um horário, a "rotina", ou
 um comando como `!entrar` mandado no grupo) seguido de passos, como enviar um template, pôr ou tirar
-alguém de uma lista ou mudar uma variável. Regras opcionais, como a **lista de presença**, registram
-quem confirma com ✅ ou cancela com ❌ reagindo à mensagem.
+alguém de uma lista ou mudar uma variável. Regras opcionais cuidam da **lista de presença** (✅/❌ na
+mensagem ou a lista copiada e colada) e da **cobrança mensal** (💰).
 
 Nasceu para automatizar um grupo de vôlei: toda terça uma rotina manda a lista de presença com os
 mensalistas marcados, as reações viram confirmações, um lembrete marca quem ainda não respondeu,
@@ -41,7 +47,8 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
   do painel, um por vez ou vários de uma vez (a saída em lote roda em segundo plano, com intervalo
   entre cada grupo).
 - **Logs** de cada envio, com status, erro e reenvio.
-- **Login** por sessão e interface **responsiva** (no celular, tabelas viram cartões).
+- **Login** por sessão, **página inicial** de apresentação para quem não está logado e interface
+  **responsiva** (no celular, tabelas viram cartões), no tema escuro do WhatsApp.
 
 **Por grupo** (tudo fica na página do grupo, e cada grupo configura do seu jeito)
 
@@ -58,6 +65,10 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
   cobradas.
 
 ## Telas
+
+**Página inicial** (para quem não está logado)
+
+<img src="docs/screenshots/home.png" alt="Página inicial da Cynth.ia" width="600">
 
 | Login | Conta (status do WhatsApp e sair) |
 |---|---|
@@ -245,8 +256,8 @@ O `SendGuard` bloqueia o envio antes de chegar ao WhatsApp:
 ### Passo a passo
 
 ```bash
-git clone git@github.com:caiovitorsantos/cindyzap.git
-cd cindyzap
+git clone git@github.com:caiovitorsantos/cynthia.git
+cd cynthia
 cp .env.example .env
 ```
 
@@ -325,7 +336,7 @@ Passos disponíveis:
 | Esvaziar lista | Tira todo mundo da lista |
 | Definir variável do grupo | O valor aceita variáveis, ex.: `{{argumento}}` |
 
-Mensagens de fluxos de comando saem com a assinatura do grupo no fim (padrão `_🤖 Cindy_`), para o
+Mensagens de fluxos de comando saem com a assinatura do grupo no fim (padrão `_🤖 Cynth.ia_`), para o
 grupo saber que quem respondeu foi a assistente. Cada grupo muda o texto na seção Variáveis; vazio não
 assina. Rotinas saem sem assinatura.
 
@@ -443,6 +454,9 @@ docker compose exec wa npx tsc --noEmit -p .
 
 # Recompilar o CSS depois de usar classes novas do Tailwind (o container não roda o watch)
 docker compose exec rails bin/rails tailwindcss:build
+
+# Regerar o logo pixel art (selo e rosto) depois de mexer nos desenhos
+python3 rails-app/script/logo.py rails-app/app/assets/images
 
 # Migrations
 docker compose exec rails bin/rails db:migrate

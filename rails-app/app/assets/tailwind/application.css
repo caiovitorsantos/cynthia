@@ -1,20 +1,28 @@
 @import "tailwindcss";
 
-/* Paleta do WhatsApp */
+/* Paleta do WhatsApp, tema escuro */
 @theme {
-  --color-wa-teal: #008069;
+  --color-wa-header: #202c33;
+  --color-wa-teal: #00a884;
   --color-wa-green: #00a884;
-  --color-wa-green-dark: #008f6f;
-  --color-wa-panel: #f0f2f5;
-  --color-wa-chat: #efeae2;
-  --color-wa-bubble: #d9fdd3;
-  --color-wa-text: #111b21;
-  --color-wa-muted: #667781;
+  --color-wa-green-dark: #06cf9c;
+  --color-wa-panel: #0b141a;
+  --color-wa-surface: #111b21;
+  --color-wa-raised: #202c33;
+  --color-wa-line: #2a3942;
+  --color-wa-chat: #182229;
+  --color-wa-bubble: #005c4b;
+  --color-wa-text: #e9edef;
+  --color-wa-muted: #8696a0;
 }
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   input[type="text"], input[type="password"], input[type="datetime-local"], input[type="time"], input[type="number"], select, textarea {
-    @apply border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-wa-green focus:ring-1 focus:ring-wa-green;
+    @apply border border-wa-line rounded-lg px-3 py-2 bg-wa-raised text-wa-text placeholder:text-wa-muted focus:outline-none focus:border-wa-green focus:ring-1 focus:ring-wa-green;
   }
 
   input[type="checkbox"] {
@@ -24,7 +32,7 @@
 
 @layer components {
   .btn-wa {
-    @apply inline-block bg-wa-green text-white font-medium px-5 py-2 rounded-full shadow-sm hover:bg-wa-green-dark cursor-pointer;
+    @apply inline-block bg-wa-green text-wa-panel font-medium px-5 py-2 rounded-full shadow-sm hover:bg-wa-green-dark cursor-pointer;
   }
 }
 

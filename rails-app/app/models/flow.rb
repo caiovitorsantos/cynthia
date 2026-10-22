@@ -98,7 +98,7 @@ class Flow < ApplicationRecord
     now = Time.current.in_time_zone(timezone)
     whatsapp_group.group_rules.each { |rule| rule.handler.before_message(rule, step, now) }
     result = TemplateRenderer.call(template, variables, whatsapp_group: whatsapp_group, now: now)
-    # Respostas a comandos levam a assinatura do grupo (padrão "_🤖 Cindy_"; vazia desliga).
+    # Respostas a comandos levam a assinatura do grupo (padrão "_🤖 Cynth.ia_"; vazia desliga).
     body = command? && whatsapp_group.signature.present? ? "#{result.body}\n\n#{whatsapp_group.signature}" : result.body
     message_log = message_logs.new(group_jid: whatsapp_group.jid, rendered_body: body, status: "pending",
                                        opens_round: step["opens_round"] == "1", opens_billing: step["opens_billing"] == "1")

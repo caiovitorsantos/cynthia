@@ -2,9 +2,9 @@
   <p>
     <span class="px-2 py-1 rounded <%=
       case @status
-      when "connected" then "bg-wa-bubble text-wa-teal"
-      when "qr_pending" then "bg-yellow-100 text-yellow-800"
-      else "bg-red-100 text-red-800"
+      when "connected" then "bg-wa-bubble text-wa-text"
+      when "qr_pending" then "bg-yellow-900/40 text-yellow-300"
+      else "bg-red-950/50 text-red-300"
       end
     %>">
       <%= { "connected" => "conectado", "qr_pending" => "aguardando QR Code", "disconnected" => "desconectado" }.fetch(@status, "wa-service fora do ar") %>
@@ -13,7 +13,7 @@
 
   <% if @status == "qr_pending" %>
     <div>
-      <p class="mb-2 text-sm text-gray-600">
+      <p class="mb-2 text-sm text-wa-muted">
         Escaneie com o WhatsApp — use sempre um número secundário/descartável.
       </p>
       <% if @qr.present? %>
@@ -27,7 +27,7 @@
   <% if @status == "connected" %>
     <%= button_to "Desconectar este número", logout_connection_path,
           method: :post,
-          class: "text-sm text-red-600 hover:underline cursor-pointer",
+          class: "text-sm text-red-400 hover:underline cursor-pointer",
           data: { turbo_confirm: "Tem certeza? Isso vai desconectar o WhatsApp e exigir um novo QR Code." } %>
   <% end %>
 
@@ -36,6 +36,6 @@
   <% end %>
 
   <% if @status == "unreachable" %>
-    <p class="text-sm text-gray-600">Não foi possível falar com o wa-service. Verifique se o container está no ar.</p>
+    <p class="text-sm text-wa-muted">Não foi possível falar com o wa-service. Verifique se o container está no ar.</p>
   <% end %>
 </div>

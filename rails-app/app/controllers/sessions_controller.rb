@@ -3,14 +3,14 @@ class SessionsController < ApplicationController
   rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to login_path, alert: "Muitas tentativas. Aguarde alguns minutos." }
 
   def new
-    redirect_to root_path if logged_in?
+    redirect_to groups_path if logged_in?
   end
 
   def create
     if valid_credentials?(params[:username].to_s, params[:password].to_s)
       reset_session
       session[:admin] = true
-      redirect_to root_path
+      redirect_to groups_path
     else
       flash.now[:alert] = "Usuário ou senha inválidos."
       render :new, status: :unprocessable_entity

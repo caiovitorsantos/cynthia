@@ -1,0 +1,98 @@
+<% content_for :title, "Cynth.ia · a administradora do seu grupo" %>
+<% bubble = "rounded-lg px-3 py-2 text-sm shadow-sm max-w-[85%] whitespace-pre-line" %>
+
+<section class="grid md:grid-cols-2 gap-10 items-center py-6 md:py-12">
+  <div class="order-2 md:order-1">
+    <p class="text-wa-green font-semibold tracking-wide uppercase text-xs mb-3">Automação de grupos de WhatsApp</p>
+    <h1 class="text-4xl md:text-5xl font-bold leading-tight">
+      Cynth<span class="text-wa-green">.ia</span> cuida do seu grupo.<br>
+      <span class="text-wa-muted text-3xl md:text-4xl">De má vontade, mas cuida.</span>
+    </h1>
+    <p class="mt-5 text-lg text-wa-muted max-w-xl">
+      Lista de presença, quem confirmou, quem sumiu, quem não pagou, lembrete na hora certa.
+      Tudo o que o admin do grupo faz na mão, a Cynth.ia faz sozinha. Ela só reclama um pouco.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center gap-4">
+      <%= link_to "Entrar no painel", login_path, class: "btn-wa text-base px-6 py-3" %>
+      <a href="#como-funciona" class="text-wa-green hover:underline">Como funciona ↓</a>
+    </div>
+  </div>
+  <div class="order-1 md:order-2 flex justify-center">
+    <%= image_tag "cynthia-badge.svg", alt: "Cynth.ia, administradora de grupos em pixel art, entediada na frente de um computador que diz UGH",
+          class: "w-full max-w-md [image-rendering:pixelated] drop-shadow-[0_0_40px_rgba(0,168,132,0.25)]" %>
+  </div>
+</section>
+
+<section class="py-10" aria-labelledby="no-grupo">
+  <h2 id="no-grupo" class="text-2xl font-semibold mb-6 text-center">Enquanto isso, no grupo do vôlei…</h2>
+  <div class="max-w-md mx-auto rounded-xl overflow-hidden border border-wa-line shadow-lg">
+    <div class="bg-wa-header px-4 py-3 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-wa-raised flex items-center justify-center">🏐</div>
+      <div>
+        <p class="font-medium text-sm">Vôlei de Terça</p>
+        <p class="text-xs text-wa-muted">Adriana, Bruno, Carla, você…</p>
+      </div>
+    </div>
+    <div class="bg-wa-chat p-4 space-y-2">
+      <div class="flex justify-start"><div class="<%= bubble %> bg-wa-raised"><span class="block text-xs font-medium text-pink-300">Bruno</span>!lista</div></div>
+      <div class="flex justify-start">
+        <div class="<%= bubble %> bg-wa-raised"><span class="block text-xs font-medium text-wa-green">Cynth.ia</span><strong>PRESENÇA 21/10</strong>
+
+1. Adriana ✅
+2. Bruno ❌
+3. Carla ✅
+4. Diego
+
+<strong>Avulsos</strong>
+1. Pedro
+
+<em>🤖 Cynth.ia</em></div>
+      </div>
+      <div class="flex justify-start"><div class="<%= bubble %> bg-wa-raised"><span class="block text-xs font-medium text-amber-300">Diego</span>!espera</div></div>
+      <div class="flex justify-start"><div class="<%= bubble %> bg-wa-raised"><span class="block text-xs font-medium text-wa-green">Cynth.ia</span>Diego entrou na espera 👍
+
+<em>🤖 Cynth.ia</em></div></div>
+      <div class="flex justify-end"><div class="<%= bubble %> bg-wa-bubble">Valeu, Cynth.ia!</div></div>
+      <p class="text-center text-xs text-wa-muted pt-1">Cynth.ia visualizou e não respondeu. 😒</p>
+    </div>
+  </div>
+</section>
+
+<section class="py-10" aria-labelledby="o-que-faz">
+  <h2 id="o-que-faz" class="text-2xl font-semibold mb-6 text-center">O que ela faz (suspirando)</h2>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <% [
+         [ "📋", "Listas de membros", "Mensal, avulso, espera, pagou: cada um em quantas listas quiser, e as listas viram texto nas mensagens." ],
+         [ "⏰", "Rotinas e comandos", "Toda terça às 14h, todo dia 1 do mês, ou quando alguém manda !lista no grupo. Você monta os passos." ],
+         [ "✅", "Lista de presença", "Reação ✅/❌ ou aquela lista copiada e colada de sempre: ela lê, confere e não deixa cópia velha bagunçar." ],
+         [ "💰", "Cobrança do mês", "Mensalidades e diárias dos avulsos, quem pagou com 💰 e quem está devendo há 3 meses. Ela lembra. Todo mês." ]
+       ].each do |icon, title, text| %>
+      <div class="bg-wa-surface border border-wa-line rounded-xl p-5">
+        <div class="text-2xl mb-3" aria-hidden="true"><%= icon %></div>
+        <h3 class="font-semibold mb-1"><%= title %></h3>
+        <p class="text-sm text-wa-muted"><%= text %></p>
+      </div>
+    <% end %>
+  </div>
+</section>
+
+<section id="como-funciona" class="py-10 scroll-mt-4" aria-labelledby="como">
+  <h2 id="como" class="text-2xl font-semibold mb-6 text-center">Como funciona</h2>
+  <ol class="grid md:grid-cols-3 gap-4">
+    <% [
+         [ "Conecte um número", "Escaneie o QR Code com um número secundário. A Cynth.ia entra nos grupos em que ele está." ],
+         [ "Organize o grupo", "Marque quem é mensal, avulso ou espera, cadastre o PIX e escreva os templates do jeito do grupo." ],
+         [ "Deixe com ela", "Crie rotinas e comandos. Ela manda, confere, cobra e responde. Revirando os olhos." ]
+       ].each_with_index do |(title, text), index| %>
+      <li class="bg-wa-surface border border-wa-line rounded-xl p-5">
+        <span class="inline-flex w-8 h-8 items-center justify-center rounded-full bg-wa-green text-wa-panel font-bold mb-3"><%= index + 1 %></span>
+        <h3 class="font-semibold mb-1"><%= title %></h3>
+        <p class="text-sm text-wa-muted"><%= text %></p>
+      </li>
+    <% end %>
+  </ol>
+  <div class="text-center mt-10">
+    <%= link_to "Entrar no painel", login_path, class: "btn-wa text-base px-6 py-3" %>
+    <p class="text-xs text-wa-muted mt-4">Self-hosted. Usa uma biblioteca não oficial do WhatsApp: prefira um número secundário.</p>
+  </div>
+</section>

@@ -20,7 +20,7 @@ RSpec.describe "Sessions", type: :request do
 
   it "entra com as credenciais do .env e sai com logout" do
     post login_path, params: { username: username, password: password }
-    expect(response).to redirect_to(root_path)
+    expect(response).to redirect_to(groups_path)
 
     get groups_path
     expect(response).to have_http_status(:ok)

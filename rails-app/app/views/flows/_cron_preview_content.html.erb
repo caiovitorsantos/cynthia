@@ -1,6 +1,6 @@
 <div class="mt-2 text-sm">
   <% if cron %>
-    <p class="text-gray-700"><%= rough_frequency_in_words(cron.rough_frequency) %></p>
+    <p class="text-wa-muted"><%= rough_frequency_in_words(cron.rough_frequency) %></p>
     <ul class="mt-1 list-disc list-inside text-wa-muted">
       <% t = Time.current %>
       <% 3.times do %>
@@ -9,8 +9,8 @@
       <% end %>
     </ul>
   <% elsif params.dig(:flow, :cron_expression).present? %>
-    <p class="text-red-600">Expressão cron inválida.</p>
+    <p class="text-red-400">Expressão cron inválida.</p>
   <% else %>
-    <p class="text-gray-400">Preencha o cron acima e clique em "Pré-visualizar".</p>
+    <p class="text-wa-muted">Preencha o cron acima e clique em "Pré-visualizar".</p>
   <% end %>
 </div>
