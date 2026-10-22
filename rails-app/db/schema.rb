@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -25,6 +25,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_140000) do
     t.index ["message_log_id", "group_participant_id"], name: "index_attendances_on_message_log_id_and_group_participant_id", unique: true
     t.index ["message_log_id", "guest_name"], name: "index_attendances_on_message_log_id_and_guest_name", unique: true, where: "(guest_name IS NOT NULL)"
     t.index ["message_log_id"], name: "index_attendances_on_message_log_id"
+  end
+
+  create_table "charges", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "date"
+    t.bigint "group_participant_id"
+    t.string "guest_name"
+    t.string "kind", null: false
+    t.datetime "paid_at"
+    t.string "period", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "whatsapp_group_id", null: false
+    t.index ["group_participant_id"], name: "index_charges_on_group_participant_id"
+    t.index ["whatsapp_group_id", "period", "kind", "date", "group_participant_id", "guest_name"], name: "index_charges_unique", unique: true, nulls_not_distinct: true
+    t.index ["whatsapp_group_id"], name: "index_charges_on_whatsapp_group_id"
   end
 
   create_table "flows", force: :cascade do |t|
@@ -90,6 +105,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_140000) do
     t.text "error_message"
     t.bigint "flow_id"
     t.string "group_jid"
+    t.boolean "opens_billing", default: false, null: false
     t.boolean "opens_round", default: false, null: false
     t.text "rendered_body"
     t.bigint "round_id"
@@ -131,6 +147,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_140000) do
 
   add_foreign_key "attendances", "group_participants", on_delete: :cascade
   add_foreign_key "attendances", "message_logs", on_delete: :cascade
+  add_foreign_key "charges", "group_participants", on_delete: :cascade
+  add_foreign_key "charges", "whatsapp_groups", on_delete: :cascade
   add_foreign_key "flows", "whatsapp_groups", on_delete: :cascade
   add_foreign_key "group_participants", "whatsapp_groups"
   add_foreign_key "group_participants_member_lists", "group_participants", on_delete: :cascade

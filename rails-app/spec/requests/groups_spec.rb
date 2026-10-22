@@ -123,6 +123,25 @@ RSpec.describe "Groups", type: :request do
     end
   end
 
+  it "mostra a cobrança e marca/desfaz pagamento pelo painel" do
+    group = WhatsappGroup.create!(jid: "g9@g.us", name: "Vôlei")
+    mensal = group.member_lists.create!(name: "Mensal")
+    caio = GroupParticipant.create!(whatsapp_group: group, jid: "1@lid", phone_number: "1", name: "Caio", member_lists: [ mensal ])
+    post group_rules_path(group), params: { kind: "billing" }
+    patch group_rule_path(group, group.group_rules.sole), params: { rule: { charged_lists: [ "", "mensal" ] } }
+    Billing.open!(group.group_rules.sole, "2026-09")
+    charge = Billing::Charge.sole
+
+    get group_path(group)
+    expect(response.body).to include("Cobrança mensal", "Listas que pagam mensalidade:</strong> Mensal", "Setembro/2026", "Marcar pago")
+
+    patch group_charge_path(group, charge)
+    expect(charge.reload).to be_paid
+    patch group_charge_path(group, charge)
+    expect(charge.reload).not_to be_paid
+    expect(caio.reload).to be_present
+  end
+
   it "salva as variáveis do grupo, normaliza o nome e descarta linhas sem nome" do
     group = WhatsappGroup.create!(jid: "g7@g.us", name: "Vôlei", variables: { "antiga" => "x" })
 

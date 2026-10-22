@@ -1,0 +1,106 @@
+<%# Bloco do recurso "Cobrança mensal" na página do grupo. %>
+<% settings = Billing.settings(rule) %>
+<% charged = lists.select { |list| settings["charged_lists"].include?(list.key) } %>
+<% billing_flows = group.flows.select { |flow| flow.active? && flow.steps.any? { |step| step["opens_billing"] == "1" } } %>
+<% period = Billing.current_period(rule) %>
+<% charges = Billing.current_charges(rule) %>
+<% due = Billing.months_due(rule) %>
+<% unmatched = Billing.unmatched_names(rule) %>
+<% mark = settings["paid_emojis"].split.first %>
+
+<div class="flex items-start justify-between gap-4">
+  <div>
+    <p class="font-medium">Cobrança mensal <span class="text-xs text-wa-teal bg-wa-bubble rounded-full px-2 py-0.5 ml-1">ativa</span></p>
+    <p class="text-xs text-wa-muted">Um passo "Enviar template" marcado "abre cobrança" cobra o mês anterior: mensalidades e diárias dos avulsos que confirmaram presença.</p>
+  </div>
+  <%= button_to "Desativar", group_rule_path(group, rule), method: :delete,
+        form: { data: { turbo_confirm: "Desativar a cobrança deste grupo? Cobranças e pagamentos ficam guardados." } },
+        class: "text-sm text-red-600 hover:underline cursor-pointer" %>
+</div>
+
+<ol class="mt-4 space-y-2 text-sm">
+  <li class="flex items-center gap-2">
+    <span><%= charged.any? ? "✅" : "⚠️" %></span>
+    <span><strong>1. Listas que pagam mensalidade:</strong> <%= charged.map(&:name).to_sentence.presence || "nenhuma" %></span>
+  </li>
+  <li class="flex items-center gap-2">
+    <span><%= billing_flows.any? ? "✅" : "⚠️" %></span>
+    <span><strong>2. Fluxo que abre a cobrança:</strong> <%= billing_flows.map(&:name).to_sentence.presence || "nenhum" %></span>
+    <% if billing_flows.none? %>
+      <%= link_to "→ criar rotina", new_group_flow_path(group, trigger: "schedule"), class: "text-wa-teal hover:underline" %>
+      <span class="text-wa-muted">com um passo "Enviar template" marcado "abre cobrança"</span>
+    <% end %>
+  </li>
+</ol>
+
+<% if unmatched.any? %>
+  <p class="mt-3 text-sm bg-yellow-50 border border-yellow-200 rounded px-3 py-2">
+    ⚠️ <strong>Nomes com <%= mark %> não reconhecidos:</strong> <%= unmatched.to_sentence %>.
+    Preencha o "Nome nas listas" do membro com esse nome, ou marque o pagamento abaixo.
+  </p>
+<% end %>
+
+<% if period %>
+  <p class="mt-4 text-sm font-medium">Cobrança de <% month = Date.strptime(period, "%Y-%m") %><%= ::TemplateRenderer::MONTHS[month.month - 1] %>/<%= month.year %>:
+    <span class="font-normal text-wa-muted"><%= charges.count(&:paid?) %> de <%= charges.size %> pagas</span></p>
+  <table class="table-cards w-full text-sm mt-2">
+    <tbody>
+      <% charges.each do |charge| %>
+        <tr class="border-t border-gray-100">
+          <td data-label="Quem" class="py-1.5 pr-3"><%= charge.label %></td>
+          <td data-label="Tipo" class="py-1.5 pr-3 text-wa-muted text-xs">
+            <%= charge.kind == "mensal" ? "mensalidade" : "avulso #{charge.date.strftime('%d/%m')}" %>
+            <% if charge.kind == "mensal" && due[charge.group_participant_id].to_i > 1 %><span class="text-red-600">· <%= due[charge.group_participant_id] %> meses em aberto</span><% end %>
+          </td>
+          <td data-label="Pago" class="py-1.5 pr-3"><%= charge.paid? ? "#{mark} #{charge.paid_at.strftime('%d/%m')}" : "pendente" %></td>
+          <td class="py-1.5 sm:text-right">
+            <%= button_to (charge.paid? ? "Desfazer" : "Marcar pago"), group_charge_path(group, charge), method: :patch,
+                  class: "#{charge.paid? ? 'text-wa-muted' : 'text-wa-teal'} hover:underline bg-transparent p-0" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<details class="mt-4 border-t border-gray-100 pt-3" <%= "open" if charged.none? %>>
+  <summary class="text-sm font-medium text-wa-teal cursor-pointer">Configurar</summary>
+
+  <%= form_with url: group_rule_path(group, rule), method: :patch, scope: :rule, class: "mt-4 space-y-5 text-sm" do |f| %>
+    <fieldset class="min-w-0">
+      <legend class="font-medium">Listas que pagam mensalidade</legend>
+      <%= hidden_field_tag "rule[charged_lists][]", "", id: nil %>
+      <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+        <% lists.each do |list| %>
+          <label class="flex items-center gap-1">
+            <%= check_box_tag "rule[charged_lists][]", list.key, settings["charged_lists"].include?(list.key), id: nil %>
+            <%= list.name %>
+          </label>
+        <% end %>
+      </div>
+      <p class="text-xs text-wa-muted mt-1">Quem confirmou presença numa rodada do mês sem estar nelas paga diária de avulso.</p>
+    </fieldset>
+    <div>
+      <%= f.label :paid_emojis, "Emojis que marcam pago na lista colada (o primeiro aparece na lista)", class: "block text-xs text-wa-muted" %>
+      <%= f.text_field :paid_emojis, value: settings["paid_emojis"], class: "w-full sm:w-64" %>
+    </div>
+    <%= f.submit "Salvar configuração", class: "btn-wa" %>
+  <% end %>
+</details>
+
+<details class="mt-3 border-t border-gray-100 pt-3">
+  <summary class="text-sm font-medium text-wa-teal cursor-pointer">Variáveis para usar nos templates</summary>
+  <table class="mt-3 text-xs">
+    <% [
+         [ "{{cobranca_mensais}}", "mensalistas: quem pagou com #{mark}, quem não pagou marcado (e \"3x\" se deve mais de um mês)" ],
+         [ "{{cobranca_avulsos}}", "avulsos por dia jogado, no mesmo formato" ],
+         [ "{{pendentes_pagamento}}", "marca todo mundo que ainda deve (para o lembrete)" ]
+       ].each do |variable, description| %>
+      <tr><td class="font-mono pr-4 py-0.5"><%= variable %></td><td class="text-wa-muted"><%= description %></td></tr>
+    <% end %>
+  </table>
+  <p class="mt-2 text-xs text-wa-muted">
+    Quando alguém copia a cobrança, põe <%= mark %> no nome e cola no grupo, o pagamento é registrado.
+    A cópia é reconhecida pela primeira linha, igual à da mensagem que abriu a cobrança.
+  </p>
+</details>

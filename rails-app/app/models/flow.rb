@@ -5,7 +5,7 @@ class Flow < ApplicationRecord
   TRIGGERS = { "schedule" => "Horário (rotina)", "command" => "Comando no grupo" }.freeze
 
   STEPS = {
-    "send_message" => { label: "Enviar template", fields: %w[template_id opens_round] },
+    "send_message" => { label: "Enviar template", fields: %w[template_id opens_round opens_billing] },
     "add_to_list" => { label: "Pôr quem mandou o comando numa lista", fields: %w[list_key], sender: true },
     "remove_from_list" => { label: "Tirar quem mandou o comando de uma lista", fields: %w[list_key], sender: true },
     "clear_list" => { label: "Esvaziar lista", fields: %w[list_key] },
@@ -37,7 +37,7 @@ class Flow < ApplicationRecord
       step = STEPS[row[:type]]
       next unless step
 
-      values = step[:fields].index_with { |field| row[field].to_s.strip }
+      values = step[:fields].index_with { |field| row[field].to_s.strip }.compact_blank
       values["name"] = values["name"].parameterize(separator: "_") if values.key?("name")
       { "type" => row[:type] }.merge(values)
     end
@@ -66,14 +66,14 @@ class Flow < ApplicationRecord
 
       case step["type"]
       when "send_message"
-        send_template(whatsapp_group.templates.find(step["template_id"]), variables, opens_round: step["opens_round"] == "1", delay: delay)
+        send_template(whatsapp_group.templates.find(step["template_id"]), variables, step, delay: delay)
         # ponytail: espaça os envios pela janela do SendGuard; fila por grupo se ficar lento.
         delay += SendGuard::THROTTLE_WINDOW + 1
       when "add_to_list" then list.group_participants << sender unless list.group_participants.include?(sender)
       when "remove_from_list" then list.group_participants.delete(sender)
       when "clear_list" then list.group_participants.clear
       when "set_variable"
-        value = TemplateRenderer.call(Template.new(body: step["value"]), variables, whatsapp_group: whatsapp_group).body
+        value = TemplateRenderer.call(Template.new(body: step["value"].to_s), variables, whatsapp_group: whatsapp_group).body
         whatsapp_group.update!(variables: whatsapp_group.variables.merge(step["name"] => value))
       end
     end
@@ -94,11 +94,14 @@ class Flow < ApplicationRecord
     self.next_run_at = schedule? ? ScheduleCalculator.next_run(self) : nil
   end
 
-  def send_template(template, variables, opens_round:, delay:)
-    result = TemplateRenderer.call(template, variables, whatsapp_group: whatsapp_group, now: Time.current.in_time_zone(timezone))
+  def send_template(template, variables, step, delay:)
+    now = Time.current.in_time_zone(timezone)
+    whatsapp_group.group_rules.each { |rule| rule.handler.before_message(rule, step, now) }
+    result = TemplateRenderer.call(template, variables, whatsapp_group: whatsapp_group, now: now)
     # Respostas a comandos levam a assinatura do grupo (padrão "_🤖 Cindy_"; vazia desliga).
     body = command? && whatsapp_group.signature.present? ? "#{result.body}\n\n#{whatsapp_group.signature}" : result.body
-    message_log = message_logs.new(group_jid: whatsapp_group.jid, rendered_body: body, status: "pending", opens_round: opens_round)
+    message_log = message_logs.new(group_jid: whatsapp_group.jid, rendered_body: body, status: "pending",
+                                       opens_round: step["opens_round"] == "1", opens_billing: step["opens_billing"] == "1")
     whatsapp_group.group_rules.each { |rule| rule.handler.prepare_message(rule, message_log, template) }
     message_log.save!
 

@@ -66,6 +66,8 @@ module Attendance
       message_log.opens_round ? message_log : MessageLog.find_by(id: message_log.round_id)
     end
 
+    def before_message(_rule, _step, _now) = nil
+
     # Mensagens que mostram a rodada (lista atualizada, lembrete) ficam ligadas a ela,
     # para que reações nelas também contem. Chamado antes de salvar cada mensagem do grupo.
     def prepare_message(rule, message_log, template)
@@ -130,7 +132,7 @@ module Attendance
       return [] unless round
 
       people = GroupParticipant.where(whatsapp_group_id: rule.whatsapp_group_id).to_a
-      round.unmatched_names.reject { |name| participant_named(people, name) }
+      round.unmatched_names.reject { |name| rule.whatsapp_group.participant_named(name, people: people) }
     end
 
     def mark(config, status)
@@ -170,13 +172,13 @@ module Attendance
 
       lines = event[:text].to_s.lines.map(&:strip)
       header_index = lines.index(&:present?)
-      return unless header_index && round_headers(round).include?(normalize(lines[header_index]))
+      return unless header_index && round_headers(round).include?(WhatsappGroup.normalize_name(lines[header_index]))
 
       group = rule.whatsapp_group
       people = GroupParticipant.where(whatsapp_group_id: group.id).to_a
       sender = people.find { |participant| participant.jid == event[:participant_jid] }
       responses = Response.where(message_log: round).index_by { |response| response.group_participant_id || response.guest_name }
-      extras = normalize(config["extras_section"])
+      extras = WhatsappGroup.normalize_name(config["extras_section"])
       in_extras = false
       unmatched = []
 
@@ -185,14 +187,14 @@ module Attendance
 
         content = line[LIST_LINE, 1]
         unless content # título de seção
-          in_extras = extras.present? && normalize(line) == extras
+          in_extras = extras.present? && WhatsappGroup.normalize_name(line) == extras
           next
         end
 
         name = content.gsub(/[^\p{L}\p{N}\s.'@-]/, "").squish
         next if name.empty?
 
-        participant = participant_named(people, name)
+        participant = group.participant_named(name, people: people)
         status = status_for(config, content, anywhere: true) || ("confirmed" if in_extras)
         if !participant && !in_extras
           unmatched << name
@@ -211,22 +213,7 @@ module Attendance
     # Primeira linha das mensagens da rodada (a que abriu e as ligadas a ela, como o !lista).
     def round_headers(round)
       MessageLog.where(id: round.id).or(MessageLog.where(round_id: round.id)).pluck(:rendered_body)
-        .filter_map { |body| normalize(body.to_s.lines.find(&:present?)).presence }.uniq
-    end
-
-    # Pelo número (@5511...) ou pelo nome na lista / nome no WhatsApp, sem acento nem caixa.
-    # Nome ambíguo (dois membros) não casa com ninguém.
-    def participant_named(people, name)
-      digits = name[/\A@?(\d{8,})\z/, 1]
-      return people.find { |participant| participant.phone_number == digits } if digits
-
-      key = normalize(name.delete_prefix("@"))
-      matches = people.select { |participant| [ participant.display_name, participant.name ].compact.any? { |label| normalize(label) == key } }
-      matches.first if matches.one?
-    end
-
-    def normalize(text)
-      I18n.transliterate(text.to_s).downcase.gsub(/[^a-z0-9 ]/, " ").squish
+        .filter_map { |body| WhatsappGroup.normalize_name(body.to_s.lines.find(&:present?)).presence }.uniq
     end
 
     def status_for(config, text, anywhere: false)

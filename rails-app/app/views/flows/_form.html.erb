@@ -90,6 +90,11 @@
             <%= check_box_tag name.("opens_round"), "1", step["opens_round"] == "1", id: "step_#{index}_opens_round" %>
             <label for="step_<%= index %>_opens_round" class="text-xs">abre rodada de presença</label>
           </div>
+          <div data-flow-step-target="field" data-types="<%= steps_for.("opens_billing") %>" class="flex items-center gap-2 pb-2">
+            <%= hidden_field_tag name.("opens_billing"), "0", id: nil %>
+            <%= check_box_tag name.("opens_billing"), "1", step["opens_billing"] == "1", id: "step_#{index}_opens_billing" %>
+            <label for="step_<%= index %>_opens_billing" class="text-xs">abre cobrança do mês anterior</label>
+          </div>
           <div data-flow-step-target="field" data-types="<%= steps_for.("list_key") %>" class="min-w-48">
             <label class="block text-xs text-wa-muted">Lista</label>
             <%= select_tag name.("list_key"), options_for_select(lists, step["list_key"]), include_blank: "— escolha —", class: "w-full" %>

@@ -241,15 +241,23 @@
 <section id="recursos" class="<%= section %>">
   <h2 class="<%= heading %> mb-3">Recursos</h2>
 
-  <% if @attendance_rule %>
-    <%= render "group_rules/attendance", rule: @attendance_rule, group: @group, lists: lists %>
-  <% else %>
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <p class="font-medium">Lista de presença</p>
-        <p class="text-xs text-wa-muted">Confirmação por reação ✅/❌ na mensagem que abre a rodada, cobrança de listas e variáveis de presença.</p>
-      </div>
-      <%= button_to "Ativar", group_rules_path(@group), params: { kind: "attendance" }, method: :post, class: "btn-wa text-sm" %>
+  <% descriptions = {
+       "attendance" => "Confirmação por reação ✅/❌ ou lista colada na mensagem que abre a rodada, e variáveis de presença.",
+       "billing" => "Mensalidades e diárias de avulsos do mês anterior, pagamento marcado com 💰 na lista colada ou no painel."
+     } %>
+  <% GroupRule::NAMES.each do |kind, name| %>
+    <div class="border-t border-gray-100 first-of-type:border-t-0 pt-4 mt-4 first-of-type:pt-0 first-of-type:mt-0">
+      <% if (rule = @group.rule(kind)) %>
+        <%= render "group_rules/#{kind}", rule: rule, group: @group, lists: lists %>
+      <% else %>
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="font-medium"><%= name %></p>
+            <p class="text-xs text-wa-muted"><%= descriptions[kind] %></p>
+          </div>
+          <%= button_to "Ativar", group_rules_path(@group), params: { kind: kind }, method: :post, class: "btn-wa text-sm" %>
+        </div>
+      <% end %>
     </div>
   <% end %>
 </section>

@@ -48,6 +48,22 @@ class WhatsappGroup < ApplicationRecord
     end
   end
 
+  # Comparação de nomes digitados no grupo: sem acento, caixa nem pontuação.
+  def self.normalize_name(text)
+    I18n.transliterate(text.to_s).downcase.gsub(/[^a-z0-9 ]/, " ").squish
+  end
+
+  # Membro pelo número (@5511...) ou pelo nome na lista / nome no WhatsApp ("@~Nome" também).
+  # Nome ambíguo (dois membros) não casa com ninguém. people evita reconsultar em laços.
+  def participant_named(name, people: GroupParticipant.where(whatsapp_group_id: id).to_a)
+    digits = name[/\A@?(\d{8,})\z/, 1]
+    return people.find { |participant| participant.phone_number == digits } if digits
+
+    key = self.class.normalize_name(name.delete_prefix("@").delete_prefix("~"))
+    matches = people.select { |participant| [ participant.display_name, participant.name ].compact.any? { |label| self.class.normalize_name(label) == key } }
+    matches.first if matches.one?
+  end
+
   def members_of(list_keys)
     group_participants.joins(:member_lists).where(member_lists: { key: list_keys }).distinct
       .sort_by { |participant| participant.label.to_s.downcase }

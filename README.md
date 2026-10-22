@@ -51,7 +51,8 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
   (`@{{todos}}`) e prévia ao vivo com a formatação do WhatsApp (`*negrito*`, `_itálico_`, `~riscado~`).
 - **Fluxos**: gatilho + passos em ordem. Fluxo de horário (rotina) é recorrente (cron, com fuso) ou de
   envio único; fluxo de comando roda quando alguém manda `!algo` no grupo. Botão "Executar agora".
-- **Recursos** opcionais: **Lista de presença**. Cada mensagem de um passo marcado "abre rodada" abre
+- **Recursos** opcionais: **Cobrança mensal** (mensalidades e diárias de avulsos, pagamento marcado
+  com 💰) e **Lista de presença**. Cada mensagem de um passo marcado "abre rodada" abre
   uma rodada; reações e respostas citando a mensagem viram confirmação ou cancelamento das listas
   cobradas.
 
@@ -176,11 +177,13 @@ núcleo só chama esses ganchos:
 |---|---|
 | `provides_variable?(rule, key)` | ao validar um fluxo: a variável é deste recurso? |
 | `render_variable(rule, key, mentions)` | ao renderizar um template para o grupo |
+| `before_message(rule, step, now)` | antes de renderizar um passo "Enviar template" (ex.: abre a cobrança) |
 | `prepare_message(rule, message_log, template)` | antes de salvar cada mensagem enviada ao grupo |
-| `handle_event(rule, event)` | quando chega uma reação ou resposta no grupo |
+| `handle_event(rule, event)` | quando chega uma reação, resposta ou lista colada no grupo |
 | `settings_from(params)` | ao salvar o formulário do recurso |
 
-Hoje existe um recurso, a **Lista de presença** (`app/models/attendance.rb`). Veja
+Hoje existem dois recursos: **Lista de presença** (`app/models/attendance.rb`) e **Cobrança mensal**
+(`app/models/billing.rb`). Veja
 [Criando um novo recurso de grupo](#criando-um-novo-recurso-de-grupo). Os passos de fluxo ficam em
 `Flow::STEPS` (`app/models/flow.rb`): um passo novo é uma entrada ali e um `when` em `Flow#run!`.
 
@@ -366,6 +369,27 @@ abre a rodada, em vez de `{{mencoes}}`.
 Todas as variáveis aceitam uma lista específica, como em `{{presenca:espera}}`. Reações em mensagens que mostram a
 rodada (um lembrete com `{{pendentes}}`, a resposta ao `!lista`) também contam para a mesma rodada.
 
+### 5. Recurso "Cobrança mensal"
+
+Em **Recursos**, ative **Cobrança mensal** e marque as **listas que pagam mensalidade** (ex.: Mensal).
+Numa rotina (ex.: dia 1 às 9h), marque o passo "Enviar template" como **"abre cobrança do mês
+anterior"**. Antes de renderizar, ele cria:
+
+- uma **mensalidade** para cada membro das listas que pagam;
+- uma **diária** para cada dia em que alguém de fora delas confirmou presença numa rodada do mês
+  (vem da Lista de presença, inclusive convidados).
+
+| Variável | Saída |
+|---|---|
+| `{{cobranca_mensais}}` | `1. Adriana 💰`<br>`2. @David 3x` (marcado, com meses em atraso se deve mais de um) |
+| `{{cobranca_avulsos}}` | `02/09`<br>`Ellie 💰`<br>`@Luana` (agrupado por dia jogado) |
+| `{{pendentes_pagamento}}` | marca todo mundo que ainda deve (para um lembrete) |
+
+O pagamento é marcado do jeito que o grupo já faz: alguém copia a cobrança, põe 💰 no nome e cola no
+grupo (a cópia é reconhecida pela primeira linha). Também dá para marcar ou desfazer no painel. Pago
+nunca volta sozinho, então cópias antigas não desfazem nada. Nomes com 💰 que não batem com ninguém
+aparecem como "não reconhecidos".
+
 ### Exemplo completo: grupo de vôlei
 
 Listas `mensal` (cobrada pela presença) e `espera`; variáveis `pix` e `valor_mensal`.
@@ -377,7 +401,8 @@ Listas `mensal` (cobrada pela presença) e `espera`; variáveis `pix` e `valor_m
 | Lista | `!lista` | Enviar "Lista atual" (`{{presenca}}`<br>`*Avulsos*`<br>`{{confirmados}}`) |
 | Entrar na espera | `!espera` | Pôr quem mandou na lista `espera`; enviar "Espera" (`{{lista:espera}}`) |
 | Nova semana | `0 23 * * 2` | Esvaziar lista `espera` |
-| Cobrança | `0 9 1 * *` | Enviar "Cobrança" (`PIX: {{pix}}`<br>`MENSAL: {{valor_mensal}}`<br>`{{mencoes}}`) |
+| Cobrança | `0 9 1 * *` | Enviar "Cobrança" (`*PAGAMENTO {{mes_anterior}}*`<br>`PIX: {{pix}}`<br>`{{cobranca_mensais}}`<br>`*AVULSOS*`<br>`{{cobranca_avulsos}}`), **abre cobrança** |
+| Lembrete de pagamento | `0 9 10 * *` | Enviar "Falta pagar" (`💸 Falta pagar: {{pendentes_pagamento}}`) |
 
 ## Criando um novo recurso de grupo
 
