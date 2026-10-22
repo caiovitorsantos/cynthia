@@ -264,6 +264,7 @@
         display_name: "Name in lists"
         lists: "Lists"
         attendance: "Attendance"
+        admin: "admin"
       members_empty: "Nobody here yet. Sync the groups."
       save_members: "Save members"
       lists:

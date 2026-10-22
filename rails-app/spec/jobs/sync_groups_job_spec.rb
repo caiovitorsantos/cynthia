@@ -27,8 +27,8 @@ RSpec.describe SyncGroupsJob do
           name: "Grupo 1",
           participants_count: 2,
           participants: [
-            { jid: "5511999999999@s.whatsapp.net", name: "Caio" },
-            { jid: "5511888888888@s.whatsapp.net", name: nil }
+            { jid: "5511999999999@s.whatsapp.net", name: "Caio", admin: true },
+            { jid: "5511888888888@s.whatsapp.net", name: nil, admin: false }
           ]
         }
       ].to_json,
@@ -43,6 +43,8 @@ RSpec.describe SyncGroupsJob do
     caio = group.group_participants.find_by(jid: "5511999999999@s.whatsapp.net")
     expect(caio.name).to eq("Caio")
     expect(caio.phone_number).to eq("5511999999999")
+    expect(caio).to be_admin
+    expect(group.group_participants.find_by(jid: "5511888888888@s.whatsapp.net")).not_to be_admin
   end
 
   it "remove participantes que saíram do grupo numa nova sincronização" do

@@ -264,6 +264,7 @@
         display_name: "Nome nas listas"
         lists: "Listas"
         attendance: "Presença"
+        admin: "admin"
       members_empty: "Ninguém por aqui ainda. Sincroniza os grupos."
       save_members: "Salvar membros"
       lists:

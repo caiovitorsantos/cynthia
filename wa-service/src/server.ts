@@ -64,6 +64,7 @@ app.get("/groups", async (_req, res) => {
     participants: group.participants.map((participant) => ({
       jid: participant.id,
       name: whatsapp.getContactName(participant.id) ?? participant.name ?? participant.notify,
+      admin: Boolean(participant.admin), // "admin" ou "superadmin" (criador)
     })),
   }));
 

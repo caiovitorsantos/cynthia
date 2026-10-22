@@ -25,6 +25,7 @@ class SyncGroupsJob
         jid: participant["jid"],
         phone_number: phone_number_from_jid(participant["jid"]),
         name: participant["name"],
+        admin: participant["admin"] == true,
         synced_at: Time.current
       }
     end
@@ -36,7 +37,7 @@ class SyncGroupsJob
         unique_by: [ :whatsapp_group_id, :jid ],
         on_duplicate: Arel.sql(
           "name = COALESCE(EXCLUDED.name, group_participants.name), " \
-          "phone_number = EXCLUDED.phone_number, synced_at = EXCLUDED.synced_at, " \
+          "phone_number = EXCLUDED.phone_number, admin = EXCLUDED.admin, synced_at = EXCLUDED.synced_at, " \
           "updated_at = EXCLUDED.updated_at"
         )
       )

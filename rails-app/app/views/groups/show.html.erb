@@ -67,7 +67,10 @@
         <tbody>
           <% @participants.each do |participant| %>
             <tr class="border-t border-wa-line" data-filter-target="item" data-keys="<%= participant.member_lists.map(&:key).presence&.join(" ") || "-" %>">
-              <td data-label="<%= t(".member.name") %>" class="py-2 pr-3"><%= participant.name.presence || "—" %></td>
+              <td data-label="<%= t(".member.name") %>" class="py-2 pr-3">
+                <%= participant.name.presence || "—" %>
+                <% if participant.admin? %><span class="text-xs text-wa-text bg-wa-bubble rounded-full px-2 py-0.5 ml-1"><%= t(".member.admin") %></span><% end %>
+              </td>
               <td data-label="<%= t(".member.number") %>" class="py-2 pr-3 font-mono text-xs"><%= participant.phone_number %></td>
               <td data-label="<%= t(".member.display_name") %>" class="py-2 pr-3">
                 <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
