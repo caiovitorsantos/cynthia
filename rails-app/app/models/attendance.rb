@@ -1,6 +1,7 @@
 # Recurso de grupo "Lista de presença" (ver GroupRule). Cada mensagem enviada por um passo de
 # fluxo marcado "abre rodada" abre uma rodada; reações/respostas nela viram Attendance::Response.
 # As listas acompanhadas (tracked_lists) são as cobradas em {{presenca}} e {{pendentes}}.
+# Listas copiadas, editadas e coladas no grupo também contam (ver read_list).
 module Attendance
   DEFAULTS = {
     "tracked_lists" => [],
@@ -9,8 +10,13 @@ module Attendance
     "accept_replies" => true,
     "confirmed_mark" => "✅",
     "declined_mark" => "❌",
-    "pending_mark" => ""
+    "pending_mark" => "",
+    "read_lists" => true,
+    "extras_section" => "Avulsos"
   }.freeze
+
+  # "3. Carla ✅", " 12) Leonardo ❌"
+  LIST_LINE = /\A\s*\d+\s*[.)-]\s*(.*)\z/
 
   # {{nome}} ou {{nome:lista}}. Sem lista: as acompanhadas (exceto confirmados, que pega quem
   # está fora delas). {{lista}}/{{mencoes}} com lista são do próprio grupo (WhatsappGroup).
@@ -43,7 +49,9 @@ module Attendance
         "accept_replies" => params[:accept_replies] == "1",
         "confirmed_mark" => params[:confirmed_mark].to_s.strip,
         "declined_mark" => params[:declined_mark].to_s.strip,
-        "pending_mark" => params[:pending_mark].to_s.strip
+        "pending_mark" => params[:pending_mark].to_s.strip,
+        "read_lists" => params[:read_lists] == "1",
+        "extras_section" => params[:extras_section].to_s.strip
       }.select { |key, _| params.key?(key) } # campo ausente no formulário mantém o valor salvo
     end
 
@@ -68,6 +76,7 @@ module Attendance
     end
 
     def handle_event(rule, event)
+      return read_list(rule, event) if event[:kind] == "list"
       return unless %w[reaction reply].include?(event[:kind])
       return if event[:kind] == "reply" && !settings(rule)["accept_replies"]
 
@@ -94,7 +103,8 @@ module Attendance
         people = group.group_participants.where(id: confirmed_ids).includes(:member_lists).to_a
         in_lists = ->(participant, list_keys) { participant.member_lists.any? { |list| list_keys.include?(list.key) } }
         people = list_key ? people.select { |p| in_lists.(p, keys) } : people.reject { |p| in_lists.(p, tracked_keys(rule)) }
-        group.format_list(people.sort_by { |participant| participant.label.to_s.downcase }.map(&:label))
+        guests = list_key ? [] : Response.where(message_log: current_round(rule), group_participant_id: nil, status: "confirmed").pluck(:guest_name)
+        group.format_list((people.map(&:label) + guests).sort_by { |label| label.to_s.downcase })
       when "pendentes"
         statuses = statuses(rule)
         people = group.members_of(keys).reject { |participant| statuses.key?(participant.id) }
@@ -106,7 +116,21 @@ module Attendance
     # { group_participant_id => "confirmed"/"declined" } da rodada atual.
     def statuses(rule)
       round = current_round(rule)
-      round ? Response.where(message_log: round).pluck(:group_participant_id, :status).to_h : {}
+      round ? Response.where(message_log: round).where.not(group_participant_id: nil).pluck(:group_participant_id, :status).to_h : {}
+    end
+
+    # Convidados (só nome) da rodada atual: { "Pedro" => "confirmed" }.
+    def guest_statuses(rule)
+      Response.where(message_log: current_round(rule), group_participant_id: nil).pluck(:guest_name, :status).to_h
+    end
+
+    # Nomes de listas coladas que ainda não batem com nenhum membro.
+    def unmatched_names(rule)
+      round = current_round(rule)
+      return [] unless round
+
+      people = GroupParticipant.where(whatsapp_group_id: rule.whatsapp_group_id).to_a
+      round.unmatched_names.reject { |name| participant_named(people, name) }
     end
 
     def mark(config, status)
@@ -133,9 +157,82 @@ module Attendance
       Response.find_or_initialize_by(message_log: round, group_participant: participant).update!(status: status)
     end
 
-    def status_for(config, text)
-      if config["confirm_emojis"].split.any? { |emoji| text.start_with?(emoji) } then "confirmed"
-      elsif config["decline_emojis"].split.any? { |emoji| text.start_with?(emoji) } then "declined"
+    # Lista da rodada copiada, editada e colada no grupo. Cada linha numerada é uma pessoa;
+    # as linhas antes do primeiro título são as listas cobradas, e na seção de avulsos
+    # (extras_section) estar na lista já é confirmar. Como cópias podem estar desatualizadas,
+    # uma colagem preenche quem ainda não respondeu, mas só a linha da própria pessoa muda uma
+    # resposta já registrada. Nomes sem membro correspondente viram convidados (nos avulsos)
+    # ou ficam em unmatched_names (nas listas cobradas) para o admin associar.
+    def read_list(rule, event)
+      config = settings(rule)
+      round = current_round(rule)
+      return unless config["read_lists"] && round
+
+      lines = event[:text].to_s.lines.map(&:strip)
+      header_index = lines.index(&:present?)
+      return unless header_index && round_headers(round).include?(normalize(lines[header_index]))
+
+      group = rule.whatsapp_group
+      people = GroupParticipant.where(whatsapp_group_id: group.id).to_a
+      sender = people.find { |participant| participant.jid == event[:participant_jid] }
+      responses = Response.where(message_log: round).index_by { |response| response.group_participant_id || response.guest_name }
+      extras = normalize(config["extras_section"])
+      in_extras = false
+      unmatched = []
+
+      lines.drop(header_index + 1).each do |line|
+        next if line.empty?
+
+        content = line[LIST_LINE, 1]
+        unless content # título de seção
+          in_extras = extras.present? && normalize(line) == extras
+          next
+        end
+
+        name = content.gsub(/[^\p{L}\p{N}\s.'@-]/, "").squish
+        next if name.empty?
+
+        participant = participant_named(people, name)
+        status = status_for(config, content, anywhere: true) || ("confirmed" if in_extras)
+        if !participant && !in_extras
+          unmatched << name
+        elsif status
+          key = participant&.id || name
+          next if responses[key] && (participant.nil? || participant != sender)
+
+          responses[key] = Response.find_or_initialize_by(message_log: round, group_participant: participant, guest_name: (name unless participant))
+          responses[key].update!(status: status)
+        end
+      end
+
+      round.update!(unmatched_names: (round.unmatched_names + unmatched).uniq) if unmatched.any?
+    end
+
+    # Primeira linha das mensagens da rodada (a que abriu e as ligadas a ela, como o !lista).
+    def round_headers(round)
+      MessageLog.where(id: round.id).or(MessageLog.where(round_id: round.id)).pluck(:rendered_body)
+        .filter_map { |body| normalize(body.to_s.lines.find(&:present?)).presence }.uniq
+    end
+
+    # Pelo número (@5511...) ou pelo nome na lista / nome no WhatsApp, sem acento nem caixa.
+    # Nome ambíguo (dois membros) não casa com ninguém.
+    def participant_named(people, name)
+      digits = name[/\A@?(\d{8,})\z/, 1]
+      return people.find { |participant| participant.phone_number == digits } if digits
+
+      key = normalize(name.delete_prefix("@"))
+      matches = people.select { |participant| [ participant.display_name, participant.name ].compact.any? { |label| normalize(label) == key } }
+      matches.first if matches.one?
+    end
+
+    def normalize(text)
+      I18n.transliterate(text.to_s).downcase.gsub(/[^a-z0-9 ]/, " ").squish
+    end
+
+    def status_for(config, text, anywhere: false)
+      found = ->(emoji) { anywhere ? text.include?(emoji) : text.start_with?(emoji) }
+      if config["confirm_emojis"].split.any?(&found) then "confirmed"
+      elsif config["decline_emojis"].split.any?(&found) then "declined"
       end
     end
   end

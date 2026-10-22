@@ -10,18 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "attendances", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.bigint "group_participant_id", null: false
+    t.bigint "group_participant_id"
+    t.string "guest_name"
     t.bigint "message_log_id", null: false
     t.string "status", null: false
     t.datetime "updated_at", null: false
     t.index ["group_participant_id"], name: "index_attendances_on_group_participant_id"
     t.index ["message_log_id", "group_participant_id"], name: "index_attendances_on_message_log_id_and_group_participant_id", unique: true
+    t.index ["message_log_id", "guest_name"], name: "index_attendances_on_message_log_id_and_guest_name", unique: true, where: "(guest_name IS NOT NULL)"
     t.index ["message_log_id"], name: "index_attendances_on_message_log_id"
   end
 
@@ -93,6 +95,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_130000) do
     t.bigint "round_id"
     t.datetime "sent_at"
     t.string "status", default: "pending", null: false
+    t.jsonb "unmatched_names", default: [], null: false
     t.datetime "updated_at", null: false
     t.string "wa_message_id"
     t.index ["flow_id"], name: "index_message_logs_on_flow_id"

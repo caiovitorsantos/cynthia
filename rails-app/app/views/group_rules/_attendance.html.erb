@@ -1,6 +1,8 @@
 <%# Bloco do recurso "Lista de presença" na página do grupo. %>
 <% settings = Attendance.settings(rule) %>
 <% tracked = lists.select { |list| settings["tracked_lists"].include?(list.key) } %>
+<% unmatched = Attendance.unmatched_names(rule) %>
+<% guests = Attendance.guest_statuses(rule) %>
 <% round_flows = group.flows.select { |flow| flow.active? && flow.steps.any? { |step| step["opens_round"] == "1" } } %>
 
 <div class="flex items-start justify-between gap-4">
@@ -28,6 +30,17 @@
     <% end %>
   </li>
 </ol>
+
+<% if guests.any? %>
+  <p class="mt-3 text-sm"><strong>Convidados na rodada:</strong>
+    <%= guests.map { |name, status| "#{name} #{Attendance.mark(settings, status)}".strip }.to_sentence %></p>
+<% end %>
+<% if unmatched.any? %>
+  <p class="mt-3 text-sm bg-yellow-50 border border-yellow-200 rounded px-3 py-2">
+    ⚠️ <strong>Nomes não reconhecidos nas listas coladas:</strong> <%= unmatched.to_sentence %>.
+    Preencha o "Nome nas listas" do membro com o nome exato (em Membros e listas) para associar.
+  </p>
+<% end %>
 
 <details class="mt-4 border-t border-gray-100 pt-3" <%= "open" if tracked.none? %>>
   <summary class="text-sm font-medium text-wa-teal cursor-pointer">Configurar</summary>
@@ -66,6 +79,23 @@
         <%= f.check_box :accept_replies, { checked: settings["accept_replies"] }, "1", nil %>
         <%= f.label :accept_replies, "Aceitar respostas citando a lista (além das reações)" %>
       </div>
+    </fieldset>
+
+    <fieldset class="grid sm:grid-cols-2 gap-3 min-w-0">
+      <legend class="font-medium mb-1">Listas copiadas e coladas no grupo</legend>
+      <div class="sm:col-span-2 flex items-center gap-2">
+        <%= f.hidden_field :read_lists, value: "0", id: nil %>
+        <%= f.check_box :read_lists, { checked: settings["read_lists"] }, "1", nil %>
+        <%= f.label :read_lists, "Ler a lista quando alguém copia, marca ✅/❌ e cola no grupo" %>
+      </div>
+      <div>
+        <%= f.label :extras_section, "Título da seção de avulsos", class: "block text-xs text-wa-muted" %>
+        <%= f.text_field :extras_section, value: settings["extras_section"], placeholder: "Avulsos", class: "w-full" %>
+      </div>
+      <p class="text-xs text-wa-muted self-end">
+        Nessa seção, estar na lista já é confirmar; nomes sem cadastro entram como convidados. Uma lista colada
+        preenche quem ainda não respondeu, mas só a linha da própria pessoa muda uma resposta já registrada.
+      </p>
     </fieldset>
 
     <fieldset class="grid sm:grid-cols-3 gap-3 min-w-0">

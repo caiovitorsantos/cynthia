@@ -30,7 +30,7 @@ function cacheContacts(contacts: Partial<Contact>[]): void {
 }
 
 type InboundEvent = {
-  kind: "reaction" | "reply" | "command";
+  kind: "reaction" | "reply" | "command" | "list";
   group_jid: string;
   message_id: string;
   participant_jid: string;
@@ -38,8 +38,10 @@ type InboundEvent = {
   text: string;
 };
 
-// Reações, respostas que citam uma mensagem e comandos ("!..."), em grupos. O Rails
-// decide o que fazer com cada um; o resto ele ignora.
+const NUMBERED_LINE = /^\s*\d+\s*[.)-]/;
+
+// Reações, respostas que citam uma mensagem, comandos ("!...") e listas numeradas coladas, em
+// grupos. O Rails decide o que fazer com cada um; o resto ele ignora.
 function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
   const groupJid = msg.key.remoteJid;
   if (!groupJid?.endsWith("@g.us")) return undefined;
@@ -51,6 +53,11 @@ function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
   // Comandos valem também do próprio número conectado (o dono do bot digitando no celular).
   if (text.trim().startsWith("!")) {
     return { ...base, kind: "command", message_id: msg.key.id ?? "", text };
+  }
+
+  // Lista copiada e colada (2+ linhas "N. nome"): o Rails confere se é a lista da rodada.
+  if (text.split("\n").filter((line) => NUMBERED_LINE.test(line)).length >= 2) {
+    return { ...base, kind: "list", message_id: msg.key.id ?? "", text };
   }
 
   if (!participantJid || msg.key.fromMe) return undefined;

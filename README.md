@@ -348,7 +348,22 @@ respostas citando a mensagem contam, e as marcas de confirmado/cancelado/sem res
 | `{{confirmados}}` | quem confirmou fora das listas cobradas | `1. Ellie` |
 | `{{pendentes}}` | marca quem das listas cobradas não respondeu | `@Carla @Igor` |
 
-Todas aceitam uma lista específica, como em `{{presenca:espera}}`. Reações em mensagens que mostram a
+**Lista copiada e colada.** O costume de copiar a lista, marcar ✅/❌ (ou pôr o nome em Avulsos) e
+colar no grupo também funciona:
+
+- A lista é reconhecida pela primeira linha, igual à da mensagem da rodada (ex.: `PRESENÇA 21/10`).
+- Cada linha numerada é uma pessoa, achada pelo "Nome nas listas" ou pelo nome no WhatsApp.
+- Na seção de avulsos (título configurável, padrão "Avulsos"), estar na lista já é confirmar; nomes
+  sem cadastro entram como **convidados**.
+- Como cópias podem estar desatualizadas, uma colagem **preenche quem ainda não respondeu**, mas só a
+  **linha da própria pessoa** muda uma resposta já registrada.
+- Nomes que não batem com ninguém aparecem no recurso como "não reconhecidos"; preencha o "Nome nas
+  listas" do membro com esse nome para associar.
+
+Para os nomes da cópia baterem sozinhos, use `{{lista}}` ou `{{presenca}}` (nomes) no template que
+abre a rodada, em vez de `{{mencoes}}`.
+
+Todas as variáveis aceitam uma lista específica, como em `{{presenca:espera}}`. Reações em mensagens que mostram a
 rodada (um lembrete com `{{pendentes}}`, a resposta ao `!lista`) também contam para a mesma rodada.
 
 ### Exemplo completo: grupo de vôlei
@@ -389,8 +404,8 @@ header `Authorization: <INTERNAL_API_TOKEN>`.
 | `POST` | `/logout` | Encerra a sessão e gera um novo QR |
 
 **Webhook (wa-service → Rails):** `POST RAILS_WEBHOOK_URL` (`/webhooks/whatsapp`) com
-`{kind: "reaction" | "reply" | "command", group_jid, message_id, participant_jid, push_name, text}`.
-Uma reação removida chega com `text` vazio. Mensagens que começam com `!` chegam como `command`.
+`{kind: "reaction" | "reply" | "command" | "list", group_jid, message_id, participant_jid, push_name, text}`.
+Uma reação removida chega com `text` vazio. Mensagens que começam com `!` chegam como `command`; texto com 2+ linhas numeradas, como `list`.
 
 ## Desenvolvimento
 
@@ -437,7 +452,8 @@ O `wa-service` roda com `tsx watch`: mudanças em `wa-service/src` recarregam so
 ## Limitações conhecidas
 
 - **Risco de bloqueio** do número, inerente ao uso do Baileys.
-- **Lista copiada e colada não é lida.** Só reações e respostas citando a mensagem viram confirmação.
+- **Lista colada só é reconhecida pelo cabeçalho**: a primeira linha precisa ser igual à da mensagem
+  da rodada (ex.: `PRESENÇA 21/10`), ignorando formatação, acentos e maiúsculas.
 - **Uma rodada aberta por grupo:** a última mensagem enviada que abre rodada.
 - **Lembrete sem pendentes sai mesmo assim**, com `{{pendentes}}` vazio.
 - **Fluxo que falha no meio não é repetido** (para não duplicar envios); o erro fica no Sidekiq.

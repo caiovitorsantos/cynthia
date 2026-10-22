@@ -109,6 +109,73 @@ RSpec.describe Attendance do
     expect(responses.sole.status).to eq("confirmed")
   end
 
+  describe "lista copiada e colada no grupo" do
+    let!(:adriana) { member("2", "Adriana", mensal) }
+    let!(:berto) { member("3", "Berto Silva", mensal, display_name: "Berto") }
+    let!(:lew) { member("9", "Lew") }
+
+    before { round.update!(rendered_body: "*PRESENÇA 21/10*\n_CONFIRMAR ATÉ ÀS 14h_\n\n1. Adriana\n2. Berto\n3. Caio\n\n*Avulsos*\n1.") }
+
+    def paste(text, jid:) = described_class.handle_event(rule, { kind: "list", message_id: "X", participant_jid: "#{jid}@lid", push_name: nil, text: text })
+
+    def status_of(participant) = responses.find_by(group_participant: participant)&.status
+
+    let(:filled) do
+      <<~TEXT
+        PRESENÇA 21/10
+        CONFIRMAR ATÉ ÀS 14h
+
+          1. Adriana ✅
+          2. Berto
+          3. Caio ❌
+          4. Caio F. ✅
+          5. Feh ❓ 🤒
+
+        Avulsos
+         1.  Lew
+         2. Pedro ✅
+      TEXT
+    end
+
+    it "registra marcas das listas cobradas, avulsos (membros e convidados) e guarda nomes desconhecidos" do
+      paste(filled, jid: "2")
+
+      expect([ status_of(adriana), status_of(berto), status_of(caio), status_of(lew) ]).to eq([ "confirmed", nil, "declined", "confirmed" ])
+      expect(described_class.guest_statuses(rule)).to eq("Pedro" => "confirmed")
+      expect(described_class.unmatched_names(rule)).to eq([ "Caio F.", "Feh" ])
+
+      result = TemplateRenderer.call(Template.new(body: "{{confirmados}}"), {}, whatsapp_group: group)
+      expect(result.body).to eq("1. Lew\n2. Pedro")
+    end
+
+    it "uma cópia desatualizada não desfaz respostas dos outros; a própria linha muda" do
+      record("✅") # Caio confirma pela reação
+      paste(filled, jid: "2") # Adriana cola uma cópia antiga com Caio ❌
+      expect(status_of(caio)).to eq("confirmed")
+
+      paste(filled, jid: "1") # o próprio Caio cola com ❌
+      expect(status_of(caio)).to eq("declined")
+    end
+
+    it "associa o nome desconhecido depois que o admin preenche o nome na lista" do
+      paste(filled, jid: "2")
+      caio.update!(display_name: "Caio F.")
+
+      expect(described_class.unmatched_names(rule)).to eq([ "Feh" ])
+      paste(filled, jid: "2")
+      expect(status_of(caio)).to eq("declined") # resposta já existia: só a linha do próprio Caio muda
+    end
+
+    it "ignora listas de outra rodada e quando a leitura está desligada" do
+      paste(filled.sub("21/10", "14/10"), jid: "2")
+      expect(responses).to be_empty
+
+      rule.update!(settings: rule.settings.merge("read_lists" => false))
+      paste(filled, jid: "2")
+      expect(responses).to be_empty
+    end
+  end
+
   describe "variáveis" do
     let!(:adriana) { member("2", "Adriana", mensal) }
     let!(:berto) { member("3", "Berto Silva", mensal, display_name: "Berto") }
@@ -168,6 +235,7 @@ RSpec.describe Attendance do
       settings = described_class.settings_from(params(tracked_lists: [ "", "mensal", "espera" ], accept_replies: "0"))
 
       expect(settings).to eq("tracked_lists" => [ "mensal", "espera" ], "accept_replies" => false)
+      expect(described_class.settings_from(params(read_lists: "0", extras_section: " Convidados "))).to eq("read_lists" => false, "extras_section" => "Convidados")
     end
   end
 end
