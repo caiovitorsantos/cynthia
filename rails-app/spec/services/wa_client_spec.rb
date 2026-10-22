@@ -28,7 +28,7 @@ RSpec.describe WaClient do
 
       expect {
         described_class.send_message(group_jid: "g@g.us", message: "oi")
-      }.to raise_error(WaClient::Error)
+      }.to raise_error(WaClient::Error) { |e| expect(e.message).not_to include("boom") }
     end
 
     it "inclui mentions no payload quando presente" do

@@ -32,6 +32,9 @@ class Flow < ApplicationRecord
   scope :active, -> { where(active: true) }
 
   # Linhas do formulário → passos, só com os campos do tipo escolhido. Linha sem tipo é descartada.
+  # Todos os campos que algum tipo de passo aceita (para o permit do formulário).
+  STEP_FIELDS = STEPS.values.flat_map { |step| step[:fields] }.uniq.freeze
+
   def self.steps_from(rows)
     rows.to_h.values.filter_map do |row|
       step = STEPS[row[:type]]

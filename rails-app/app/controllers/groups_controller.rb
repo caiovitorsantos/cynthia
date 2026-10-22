@@ -22,7 +22,7 @@ class GroupsController < ApplicationController
   # Membros: nome na lista e listas de cada um.
   def update
     group = WhatsappGroup.find(params[:id])
-    participants_params = params.fetch(:participants, {}).permit!.to_h
+    participants_params = (params.slice(:participants).permit(participants: [ :display_name, { member_list_ids: [] } ])[:participants] || {}).to_h
 
     GroupParticipant.transaction do
       group.group_participants.where(id: participants_params.keys).find_each do |participant|
@@ -38,14 +38,14 @@ class GroupsController < ApplicationController
 
   def variables
     group = WhatsappGroup.find(params[:id])
-    group.update!(variables: WhatsappGroup.variables_from(params.fetch(:variables, {}).permit!), signature: params[:signature].to_s.strip,
+    group.update!(variables: WhatsappGroup.variables_from(params.slice(:variables).permit(variables: [ :name, :value ])[:variables] || {}), signature: params[:signature].to_s.strip,
                   locale: params[:locale].presence || group.locale)
     redirect_to group_path(group, anchor: "variaveis"), notice: t(".notice")
   end
 
   def lists
     group = WhatsappGroup.find(params[:id])
-    group.update_lists!(params.fetch(:lists, {}).permit!)
+    group.update_lists!(params.slice(:lists).permit(lists: [ :id, :name ])[:lists] || {})
     group.update!(params.permit(:list_style, :list_empty_text))
     redirect_to group_path(group, anchor: "membros"), notice: t(".notice")
   rescue ActiveRecord::RecordInvalid => e

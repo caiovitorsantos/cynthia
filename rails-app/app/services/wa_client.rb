@@ -54,7 +54,10 @@ class WaClient
 
     def handle(response)
       raise NotConnected, "wa-service não está conectado" if response.status == 503
-      raise Error, "wa-service respondeu #{response.status}: #{response.body}" unless response.success?
+      unless response.success?
+        Rails.logger.warn("wa-service respondeu #{response.status}: #{response.body.inspect.truncate(500)}")
+        raise Error, "wa-service respondeu #{response.status}"
+      end
 
       response.body
     end
