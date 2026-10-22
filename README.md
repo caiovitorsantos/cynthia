@@ -11,7 +11,7 @@ Nasceu para automatizar um grupo de vôlei: toda terça uma rotina manda a lista
 mensalistas marcados, as reações viram confirmações, um lembrete marca quem ainda não respondeu,
 `!lista` mostra a lista atual e, no início do mês, sai a cobrança.
 
-![Página de um grupo com a Lista de presença ativa (print da versão anterior)](docs/screenshots/grupo-regra.png)
+![Fluxos e rotinas de um grupo](docs/screenshots/grupo-fluxos.png)
 
 > [!WARNING]
 > O envio usa o [Baileys](https://github.com/WhiskeySockets/Baileys), uma biblioteca **não oficial**
@@ -57,29 +57,31 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 
 ## Telas
 
-> Prints da versão anterior, antes de templates e fluxos irem para dentro de cada grupo.
-
 | Login | Conexão |
 |---|---|
 | ![Tela de login](docs/screenshots/login.png) | ![Status da conexão](docs/screenshots/conexao.png) |
 
-| Grupos (com seleção em lote) | Template com prévia |
+| Grupos (com seleção em lote) | Logs |
 |---|---|
-| ![Lista de grupos](docs/screenshots/grupos.png) | ![Edição de template](docs/screenshots/template.png) |
+| ![Lista de grupos](docs/screenshots/grupos.png) | ![Logs de envio](docs/screenshots/logs.png) |
 
-| Agendamentos | Logs |
+**Membros e listas do grupo**
+
+![Listas de membros e membros com suas listas e presença](docs/screenshots/grupo-membros.png)
+
+| Fluxo de comando (`!espera`) | Rotina (cobrança do mês) |
 |---|---|
-| ![Agendamentos](docs/screenshots/agendamentos.png) | ![Logs de envio](docs/screenshots/logs.png) |
+| ![Fluxo de comando](docs/screenshots/fluxo-comando.png) | ![Rotina com dois passos](docs/screenshots/fluxo-rotina.png) |
 
-**Configuração da regra Lista de presença**
-
-![Configuração da regra](docs/screenshots/regra-config.png)
+| Template com prévia | Recurso "Lista de presença" |
+|---|---|
+| ![Edição de template](docs/screenshots/template.png) | ![Configuração da lista de presença](docs/screenshots/grupo-recursos.png) |
 
 **No celular**
 
 <p>
   <img src="docs/screenshots/mobile-grupo.png" alt="Grupo no celular" width="260">
-  <img src="docs/screenshots/mobile-agendamentos.png" alt="Agendamentos no celular" width="260">
+  <img src="docs/screenshots/mobile-fluxo.png" alt="Fluxo no celular" width="260">
   <img src="docs/screenshots/mobile-logs.png" alt="Logs no celular" width="260">
 </p>
 
