@@ -11,9 +11,8 @@
 
     <%= yield :head %>
 
-    <link rel="icon" href="/icon.png?v=cynthia16" type="image/png">
-    <link rel="icon" href="/icon.svg?v=cynthia16" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png?v=cynthia16">
+    <link rel="icon" href="/icon.png?v=cynthia-arte" type="image/png">
+    <link rel="apple-touch-icon" href="/icon.png?v=cynthia-arte">
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
@@ -24,7 +23,7 @@
       <div class="container mx-auto px-4 sm:px-5">
         <div class="flex items-center gap-3 pt-4 <%= logged_in? ? "pb-2" : "pb-4" %>">
           <%= link_to (logged_in? ? groups_path : root_path), class: "flex items-center gap-3 min-w-0" do %>
-            <%= image_tag "cynthia-face.svg", alt: "", class: "w-10 h-10 [image-rendering:pixelated]" %>
+            <%= image_tag "cynthia-face.png", alt: "", class: "w-10 h-10" %>
             <span class="text-lg sm:text-xl font-semibold truncate">Cynth<span class="text-wa-green">.ia</span></span>
           <% end %>
           <% if logged_in? %>
