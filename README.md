@@ -238,8 +238,8 @@ O `SendGuard` bloqueia o envio antes de chegar ao WhatsApp:
 ### Passo a passo
 
 ```bash
-git clone git@github.com:caiovitorsantos/whatsapp-scheduler.git
-cd whatsapp-scheduler
+git clone git@github.com:caiovitorsantos/sindizap.git
+cd sindizap
 cp .env.example .env
 ```
 
