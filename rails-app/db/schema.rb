@@ -10,9 +10,26 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "assistant_actions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "kind", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.boolean "reported", default: false, null: false
+    t.text "result"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "assistant_messages", force: :cascade do |t|
+    t.jsonb "content", default: [], null: false
+    t.datetime "created_at", null: false
+    t.string "role", null: false
+    t.datetime "updated_at", null: false
+  end
 
   create_table "attendances", force: :cascade do |t|
     t.datetime "created_at", null: false

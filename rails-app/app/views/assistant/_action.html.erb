@@ -1,0 +1,40 @@
+<%# Cartão de uma ação proposta pela Cynth.ia: prévia e Confirmar/Cancelar enquanto pendente. %>
+<% payload = action.payload %>
+<div id="<%= dom_id(action) %>" class="border border-wa-line rounded-lg p-3 text-sm bg-wa-panel">
+  <p class="text-xs font-semibold uppercase tracking-wide text-wa-muted mb-1">
+    <%= t("assistant.actions.#{action.kind}") %> · <%= action.group&.name || "?" %>
+  </p>
+  <% case action.kind %>
+  <% when "create_template" %>
+    <p class="font-medium"><%= payload["name"] %></p>
+    <p class="mt-1 bg-wa-bubble rounded-lg px-3 py-2 whitespace-pre-wrap break-words"><%= payload["body"] %></p>
+  <% when "create_flow" %>
+    <p class="font-medium"><%= payload["name"] %></p>
+    <p class="text-wa-muted">
+      <%= payload["trigger"] == "command" ? payload["command"] : (payload["cron_expression"].present? ? cron_in_words(payload["cron_expression"]) : payload["run_at"]) %>
+    </p>
+    <ol class="list-decimal list-inside text-xs mt-1">
+      <% Array(payload["steps"]).each do |step| %>
+        <li><%= t("flow_steps.#{step["type"]}", default: step["type"].to_s) %><%= ": #{step["template_name"] || step["list_key"] || step["name"]}" if step["template_name"] || step["list_key"] || step["name"] %></li>
+      <% end %>
+    </ol>
+  <% when "set_variable" %>
+    <p><code class="font-mono">{{<%= payload["name"] %>}}</code> = <%= payload["value"] %></p>
+  <% end %>
+
+  <div class="mt-2">
+    <% if action.pending? %>
+      <div class="flex gap-3">
+        <%= button_to t("assistant.confirm"), confirm_assistant_action_path(action), class: "btn-wa text-xs px-3 py-1" %>
+        <%= button_to t("assistant.cancel"), cancel_assistant_action_path(action), class: "text-xs text-wa-muted hover:underline cursor-pointer" %>
+      </div>
+    <% else %>
+      <p class="text-xs <%= action.status == "failed" ? "text-red-400" : "text-wa-muted" %>">
+        <%= t("assistant.status.#{action.status}", result: action.result) %>
+        <% if action.status == "done" && action.group %>
+          · <%= link_to t("assistant.open_group"), group_path(action.group, anchor: action.kind == "create_template" ? "templates" : (action.kind == "create_flow" ? "fluxos" : "variaveis")), class: "text-wa-teal hover:underline", data: { turbo_frame: "_top" } %>
+        <% end %>
+      </p>
+    <% end %>
+  </div>
+</div>

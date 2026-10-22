@@ -7,6 +7,14 @@ Rails.application.routes.draw do
 
   patch "locale" => "locales#update"
 
+  resource :assistant, only: [ :show, :create, :destroy ], controller: "assistant"
+  resources :assistant_actions, only: [] do
+    member do
+      post :confirm
+      post :cancel
+    end
+  end
+
   get "login" => "sessions#new"
   post "login" => "sessions#create"
   delete "logout" => "sessions#destroy"

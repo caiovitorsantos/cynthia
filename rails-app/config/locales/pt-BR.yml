@@ -519,6 +519,33 @@
     destroy:
       notice: "Template apagado. Menos uma coisa pra eu mandar."
       alert: "Não dá pra apagar: %{errors}. Tira dos fluxos primeiro."
+  assistant:
+    title: "Conversa com a Cynth.ia"
+    open: "Falar com a Cynth.ia"
+    subtitle: "assistente do painel, de má vontade"
+    context: "no grupo %{group}"
+    reset: "Nova conversa"
+    reset_confirm: "Apagar esta conversa? Propostas não confirmadas são descartadas."
+    loading: "Carregando…"
+    typing: "Cynth.ia está digitando… sem pressa."
+    placeholder: "Ex.: cria uma rotina toda terça às 14h com a lista de presença"
+    send: "Enviar"
+    hello: "Ugh, oi. Pergunta como usar o painel ou pede pra eu criar um template, uma rotina ou uma variável. Eu mostro antes de salvar."
+    no_key_html: "Ugh. Ainda não tenho cérebro: falta a chave da Anthropic. Coloque <code>ANTHROPIC_API_KEY</code> no <code>.env</code> e reinicie o painel."
+    api_error: "Ugh, não consegui pensar agora: %{error}"
+    refused: "Isso eu não vou fazer. Pede outra coisa."
+    confirm: "Confirmar"
+    cancel: "Cancelar"
+    open_group: "abrir no grupo"
+    actions:
+      create_template: "Novo template"
+      create_flow: "Novo fluxo"
+      set_variable: "Variável"
+    status:
+      pending: "Aguardando você."
+      done: "Feito. De nada."
+      failed: "Não deu: %{result}"
+      cancelled: "Cancelado. Ótimo, menos trabalho."
   logs:
     index:
       title: "Logs"

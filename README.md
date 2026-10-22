@@ -413,6 +413,17 @@ grupo (a cópia é reconhecida pela primeira linha). Também dá para marcar ou 
 nunca volta sozinho, então cópias antigas não desfazem nada. Nomes com 💰 que não batem com ninguém
 aparecem como "não reconhecidos".
 
+### 6. Chat com a Cynth.ia
+
+O botão com o rosto dela, no canto do painel, abre um chat. Ela tira dúvidas sobre o sistema e, se você
+pedir ("cria uma rotina toda terça às 14h com a lista de presença no vôlei"), consulta o grupo e
+**propõe** o template, o fluxo ou a variável num cartão com prévia. Nada é salvo até você clicar em
+**Confirmar**, e a criação passa pelas mesmas validações do painel. Ela sabe em que grupo você está.
+
+Usa o modelo Claude Haiku 5.5 (barato: centavos de dólar por mês num grupo). Para ligar, crie uma chave
+em console.anthropic.com, coloque em `ANTHROPIC_API_KEY` no `.env` e reinicie o rails. Sem a chave, o
+chat avisa que falta. A conversa fica no banco; "Nova conversa" apaga o histórico.
+
 ### Exemplo completo: grupo de vôlei
 
 Listas `mensal` (cobrada pela presença) e `espera`; variáveis `pix` e `valor_mensal`.

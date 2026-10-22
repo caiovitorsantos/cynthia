@@ -519,6 +519,33 @@
     destroy:
       notice: "Plantilla borrada. Una cosa menos que enviar."
       alert: "No se puede borrar: %{errors}. Quítala de los flujos primero."
+  assistant:
+    title: "Conversación con Cynth.ia"
+    open: "Hablar con Cynth.ia"
+    subtitle: "asistente del panel, a regañadientes"
+    context: "en el grupo %{group}"
+    reset: "Nueva conversación"
+    reset_confirm: "¿Borrar esta conversación? Las propuestas sin confirmar se descartan."
+    loading: "Cargando…"
+    typing: "Cynth.ia está escribiendo… sin prisa."
+    placeholder: "Ej.: crea una rutina cada martes a las 14h con la lista de asistencia"
+    send: "Enviar"
+    hello: "Ugh, hola. Pregunta cómo usar el panel o pídeme crear una plantilla, una rutina o una variable. Te lo muestro antes de guardar."
+    no_key_html: "Ugh. Todavía no tengo cerebro: falta la clave de Anthropic. Pon <code>ANTHROPIC_API_KEY</code> en el <code>.env</code> y reinicia el panel."
+    api_error: "Ugh, no puedo pensar ahora: %{error}"
+    refused: "Eso no lo voy a hacer. Pide otra cosa."
+    confirm: "Confirmar"
+    cancel: "Cancelar"
+    open_group: "abrir en el grupo"
+    actions:
+      create_template: "Nueva plantilla"
+      create_flow: "Nuevo flujo"
+      set_variable: "Variable"
+    status:
+      pending: "Esperándote."
+      done: "Hecho. De nada."
+      failed: "No funcionó: %{result}"
+      cancelled: "Cancelado. Genial, menos trabajo."
   logs:
     index:
       title: "Registros"

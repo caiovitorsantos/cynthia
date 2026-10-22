@@ -519,6 +519,33 @@
     destroy:
       notice: "Template deleted. One less thing for me to send."
       alert: "Can't delete it: %{errors}. Take it out of the flows first."
+  assistant:
+    title: "Chat with Cynth.ia"
+    open: "Talk to Cynth.ia"
+    subtitle: "panel assistant, reluctantly"
+    context: "in group %{group}"
+    reset: "New chat"
+    reset_confirm: "Delete this chat? Unconfirmed proposals are discarded."
+    loading: "Loading…"
+    typing: "Cynth.ia is typing… no rush."
+    placeholder: "E.g.: create a routine every Tuesday at 2pm with the attendance list"
+    send: "Send"
+    hello: "Ugh, hi. Ask how the panel works or tell me to create a template, a routine or a variable. I'll show it before saving."
+    no_key_html: "Ugh. No brain yet: the Anthropic key is missing. Put <code>ANTHROPIC_API_KEY</code> in <code>.env</code> and restart the panel."
+    api_error: "Ugh, can't think right now: %{error}"
+    refused: "Not doing that. Ask for something else."
+    confirm: "Confirm"
+    cancel: "Cancel"
+    open_group: "open in group"
+    actions:
+      create_template: "New template"
+      create_flow: "New flow"
+      set_variable: "Variable"
+    status:
+      pending: "Waiting for you."
+      done: "Done. You're welcome."
+      failed: "Didn't work: %{result}"
+      cancelled: "Cancelled. Great, less work."
   logs:
     index:
       title: "Logs"
