@@ -1,6 +1,6 @@
-# Automação de Grupos de WhatsApp
+# Sindizap
 
-Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
+**O síndico do seu grupo.** Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
 **listas de membros**, **variáveis**, **templates** e **fluxos**: um gatilho (um horário, a "rotina", ou
 um comando como `!entrar` mandado no grupo) seguido de passos, como enviar um template, pôr ou tirar
 alguém de uma lista ou mudar uma variável. Recursos opcionais, como a **lista de presença**, registram
