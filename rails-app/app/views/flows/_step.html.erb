@@ -1,0 +1,45 @@
+<%# Um passo do fluxo. index pode ser "__INDEX__" (modelo usado pelo botão "Adicionar passo"). %>
+<% steps_for = ->(type) { Flow::STEPS.select { |_, config| config[:fields].include?(type) }.keys.join(" ") } %>
+<% name = ->(field) { "flow[steps][#{index}][#{field}]" } %>
+<li class="bg-white rounded-lg shadow-sm p-3" data-controller="flow-step">
+  <div class="flex items-center gap-2 mb-2">
+    <span class="text-sm font-semibold text-wa-muted" data-step-number></span>
+    <div class="ml-auto flex items-center gap-1 text-wa-muted">
+      <button type="button" data-action="steps#up" class="px-2 py-1 rounded hover:bg-wa-panel cursor-pointer" aria-label="Mover para cima" title="Mover para cima">↑</button>
+      <button type="button" data-action="steps#down" class="px-2 py-1 rounded hover:bg-wa-panel cursor-pointer" aria-label="Mover para baixo" title="Mover para baixo">↓</button>
+      <button type="button" data-action="steps#remove" class="px-2 py-1 rounded text-red-600 hover:bg-red-50 cursor-pointer" aria-label="Remover passo" title="Remover passo">✕</button>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-3 items-end">
+    <div class="flex-1 min-w-52">
+      <label class="block text-xs text-wa-muted">O que fazer</label>
+      <%= select_tag name.("type"), options_for_select(Flow::STEPS.map { |type, config| [ config[:label], type ] }, step["type"]),
+            include_blank: "— escolha —", class: "w-full", data: { flow_step_target: "type", action: "flow-step#toggle" } %>
+    </div>
+    <div data-flow-step-target="field" data-types="<%= steps_for.("template_id") %>" class="min-w-48">
+      <label class="block text-xs text-wa-muted">Template</label>
+      <%= select_tag name.("template_id"), options_for_select(templates, step["template_id"]), include_blank: "— escolha —", class: "w-full" %>
+    </div>
+    <div data-flow-step-target="field" data-types="<%= steps_for.("list_key") %>" class="min-w-48">
+      <label class="block text-xs text-wa-muted">Lista</label>
+      <%= select_tag name.("list_key"), options_for_select(lists, step["list_key"]), include_blank: "— escolha —", class: "w-full" %>
+    </div>
+    <div data-flow-step-target="field" data-types="<%= steps_for.("name") %>" class="min-w-36">
+      <label class="block text-xs text-wa-muted">Variável</label>
+      <%= text_field_tag name.("name"), step["name"], placeholder: "pix", class: "w-full font-mono" %>
+    </div>
+    <div data-flow-step-target="field" data-types="<%= steps_for.("value") %>" class="flex-1 min-w-48">
+      <label class="block text-xs text-wa-muted">Valor</label>
+      <%= text_field_tag name.("value"), step["value"], placeholder: "{{argumento}}", class: "w-full" %>
+    </div>
+  </div>
+  <div data-flow-step-target="field" data-types="<%= steps_for.("opens_round") %>" class="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-xs">
+    <% [ [ "opens_round", "abre rodada de presença" ], [ "opens_billing", "abre cobrança do mês anterior" ] ].each do |field, label| %>
+      <label class="flex items-center gap-1.5">
+        <%= hidden_field_tag name.(field), "0", id: nil %>
+        <%= check_box_tag name.(field), "1", step[field] == "1", id: nil %>
+        <%= label %>
+      </label>
+    <% end %>
+  </div>
+</li>

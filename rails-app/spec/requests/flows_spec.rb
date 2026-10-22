@@ -34,6 +34,13 @@ RSpec.describe "Fluxos e templates do grupo", type: :request do
     expect(response.body).to include("Entrar", "!entrar", "Pôr quem mandou o comando numa lista")
   end
 
+  it "salva os passos na ordem do formulário, mesmo com chaves fora de ordem (passos movidos)" do
+    post group_flows_path(group), params: { flow: { name: "Limpar", trigger: "schedule", cron_expression: "0 9 * * 2", timezone: "America/Sao_Paulo",
+      steps: { "1730000000000" => { type: "set_variable", name: "x", value: "1" }, "0" => { type: "clear_list", list_key: "espera" } } } }
+
+    expect(group.flows.sole.steps.map { |step| step["type"] }).to eq(%w[set_variable clear_list])
+  end
+
   it "não remove template usado por um fluxo" do
     template = group.templates.create!(name: "Oi", body: "oi")
     group.flows.create!(name: "Rotina", trigger: "schedule", cron_expression: "0 9 * * *", steps: [ { "type" => "send_message", "template_id" => template.id.to_s } ])

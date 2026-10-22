@@ -77,7 +77,7 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 
 | Template com prévia | Regras: presença e cobrança mensal |
 |---|---|
-| ![Edição de template](docs/screenshots/template.png) | ![Lista de presença e cobrança mensal do grupo](docs/screenshots/grupo-recursos.png) |
+| ![Edição de template](docs/screenshots/template.png) | ![Lista de presença e cobrança mensal do grupo](docs/screenshots/grupo-regras.png) |
 
 **No celular**
 
@@ -274,13 +274,14 @@ reiniciar.
 
 ## Guia de uso
 
-Tudo acontece na página do grupo (**Grupos** → nome do grupo), dividida em Fluxos, Templates, Membros e
-listas, Variáveis e Regras.
+Tudo acontece na página do grupo (**Grupos** → nome do grupo), dividida em abas: **Membros e listas**,
+Fluxos, Templates, Variáveis e Regras. A aba fica na URL (ex.: `#fluxos`). Remover o grupo do painel e
+sair dele no WhatsApp ficam no menu **⋯**.
 
 ### 1. Listas de membros e variáveis
 
-Em **Membros e listas**, crie as listas (ex.: Mensal, Espera) e marque, na tabela de membros, em quais
-listas cada pessoa está. "Nome nas listas" troca o nome exibido. A chave da lista (`mensal`) é o que os
+Em **Membros e listas**, marque na tabela em quais listas cada pessoa está; o filtro no topo mostra
+quem está em cada lista (ou em nenhuma). Crie, renomeie e formate listas em "Gerenciar listas". "Nome nas listas" troca o nome exibido. A chave da lista (`mensal`) é o que os
 templates usam; renomear a lista não quebra nada. O formato (numerada, `•`, `-` ou sem marcador) e o
 texto de lista vazia valem para todas as listas do grupo.
 
@@ -306,15 +307,13 @@ As datas usam o fuso do fluxo. Regras ativas oferecem variáveis extras (abaixo)
 
 ### 3. Fluxos
 
-**Nova rotina** cria um fluxo de horário: informe **ou** um cron **ou** uma data de envio único
-("Pré-visualizar" mostra os próximos disparos). **Novo comando** cria um fluxo disparado por uma
-palavra começando com `!`, mandada por qualquer participante (inclusive o dono do número conectado).
+**Nova rotina** cria um fluxo de horário. Em "Repetir", escolha **uma vez** (data e hora), **todo dia**,
+**toda semana** (marque os dias) ou **todo mês** (dia do mês), mais o horário. Quem precisa de algo
+diferente usa **Avançado (cron)**, com "Ver próximos envios". Na lista de fluxos o horário aparece por
+extenso, como "toda terça às 14:00". **Novo comando** cria um fluxo disparado por uma palavra começando
+com `!`, mandada por qualquer participante (inclusive o dono do número conectado).
 
-| Cron | Quando |
-|---|---|
-| `0 14 * * 2` | Toda terça às 14h |
-| `0 9 1 * *` | Dia 1 de cada mês às 9h |
-| `0 9 * * 1-5` | Dias úteis às 9h |
+Os passos são montados no próprio formulário: **+ Adicionar passo**, ↑/↓ para reordenar e ✕ para remover.
 
 Passos disponíveis:
 

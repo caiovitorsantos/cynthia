@@ -1,4 +1,3 @@
-<% steps_for = ->(type) { Flow::STEPS.select { |_, config| config[:fields].include?(type) }.keys.join(" ") } %>
 <% lists = @group.member_lists.sort_by(&:name).map { |list| [ list.name, list.key ] } %>
 <% templates = @group.templates.order(:name).map { |template| [ template.name, template.id.to_s ] } %>
 
@@ -25,32 +24,60 @@
     </div>
   </div>
 
-  <fieldset class="border rounded-lg p-4 space-y-3 min-w-0" data-flow-trigger-target="panel" data-trigger="schedule">
-    <legend class="text-sm font-medium px-1">Quando roda: recorrente (cron) OU envio único (data), não os dois</legend>
+  <% cron = simple_cron(@flow.cron_expression) %>
+  <% mode = if @flow.run_at.present? then "once" elsif @flow.cron_expression.blank? then "weekly" else cron&.dig(:mode) || "custom" end %>
+  <fieldset class="border rounded-lg p-4 space-y-3 min-w-0" data-flow-trigger-target="panel" data-trigger="schedule"
+            data-controller="schedule" data-action="change->schedule#update input->schedule#update">
+    <legend class="text-sm font-medium px-1">Quando roda</legend>
 
-    <div class="flex flex-wrap gap-2 items-end">
-      <div class="flex-1 min-w-40">
-        <%= f.label :cron_expression, "Cron", class: "block text-xs text-gray-600" %>
-        <%= f.text_field :cron_expression, placeholder: "0 9 * * 1-5", class: "mt-1 block w-full rounded border-gray-300 font-mono text-sm" %>
+    <div class="flex flex-wrap gap-3 items-end">
+      <div>
+        <label class="block text-xs text-wa-muted" for="schedule_mode">Repetir</label>
+        <%= select_tag :schedule_mode, options_for_select([ [ "Uma vez", "once" ], [ "Todo dia", "daily" ], [ "Toda semana", "weekly" ], [ "Todo mês", "monthly" ], [ "Avançado (cron)", "custom" ] ], mode),
+              id: "schedule_mode", data: { schedule_target: "mode" } %>
       </div>
-      <div class="w-full sm:w-56">
-        <%= f.label :timezone, "Timezone", class: "block text-xs text-gray-600" %>
-        <%= f.text_field :timezone, class: "mt-1 block w-full rounded border-gray-300 text-sm" %>
+      <div data-schedule-target="section" data-modes="monthly">
+        <label class="block text-xs text-wa-muted" for="schedule_monthday">Dia do mês</label>
+        <%= number_field_tag :schedule_monthday, cron&.dig(:monthday) || 1, in: 1..31, id: "schedule_monthday", class: "w-20", data: { schedule_target: "monthday" } %>
       </div>
-      <button type="submit" formaction="<%= cron_preview_group_flows_path(@group) %>" formmethod="get" formnovalidate
-              data-turbo-frame="cron_preview_frame"
-              class="bg-gray-200 px-3 py-2 rounded text-sm hover:bg-gray-300 whitespace-nowrap">
-        Pré-visualizar
-      </button>
+      <div data-schedule-target="section" data-modes="daily weekly monthly">
+        <label class="block text-xs text-wa-muted" for="schedule_time">Horário</label>
+        <%= time_field_tag :schedule_time, cron&.dig(:time) || "09:00", id: "schedule_time", data: { schedule_target: "time" } %>
+      </div>
+      <div data-schedule-target="section" data-modes="once">
+        <%= f.label :run_at, "Data e hora", class: "block text-xs text-wa-muted" %>
+        <%= f.datetime_field :run_at, data: { schedule_target: "runAt" } %>
+      </div>
     </div>
 
-    <%= turbo_frame_tag "cron_preview_frame" do %>
-      <%= render "cron_preview_content", cron: nil, timezone: @flow.timezone %>
-    <% end %>
+    <div data-schedule-target="section" data-modes="weekly" class="flex flex-wrap gap-2" role="group" aria-label="Dias da semana">
+      <% selected = cron&.dig(:weekdays) || [ Date.current.wday ] %>
+      <% FlowsHelper::WEEKDAYS_SHORT.each_with_index.to_a.rotate(1).each do |label, day| %>
+        <label class="cursor-pointer">
+          <input type="checkbox" value="<%= day %>" class="peer sr-only" data-schedule-target="weekday" <%= "checked" if selected.include?(day) %>>
+          <span class="inline-block rounded-full border border-gray-300 px-3 py-1 text-sm peer-checked:bg-wa-teal peer-checked:text-white peer-checked:border-wa-teal peer-focus-visible:ring-2 peer-focus-visible:ring-wa-green"><%= label %></span>
+        </label>
+      <% end %>
+    </div>
 
-    <div>
-      <%= f.label :run_at, "Data/hora (envio único)", class: "block text-xs text-gray-600" %>
-      <%= f.datetime_field :run_at, class: "mt-1 block w-full rounded border-gray-300 text-sm" %>
+    <div data-schedule-target="section" data-modes="custom" class="space-y-2">
+      <div class="flex flex-wrap gap-2 items-end">
+        <div class="flex-1 min-w-40">
+          <%= f.label :cron_expression, "Cron (minuto hora dia mês dia-da-semana)", class: "block text-xs text-wa-muted" %>
+          <%= f.text_field :cron_expression, placeholder: "0 9 * * 1-5", class: "w-full font-mono text-sm", data: { schedule_target: "cron" } %>
+        </div>
+        <div class="w-full sm:w-56">
+          <%= f.label :timezone, "Fuso horário", class: "block text-xs text-wa-muted" %>
+          <%= f.text_field :timezone, class: "w-full text-sm" %>
+        </div>
+        <button type="submit" formaction="<%= cron_preview_group_flows_path(@group) %>" formmethod="get" formnovalidate
+                data-turbo-frame="cron_preview_frame" class="bg-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-300 whitespace-nowrap cursor-pointer">
+          Ver próximos envios
+        </button>
+      </div>
+      <%= turbo_frame_tag "cron_preview_frame" do %>
+        <%= render "cron_preview_content", cron: nil, timezone: @flow.timezone %>
+      <% end %>
     </div>
   </fieldset>
 
@@ -64,52 +91,21 @@
     </p>
   </fieldset>
 
-  <fieldset class="min-w-0">
+  <fieldset class="min-w-0" data-controller="steps">
     <legend class="text-sm font-medium mb-1">Passos (executados em ordem)</legend>
-    <p class="text-xs text-wa-muted mb-3">
-      Para adicionar mais de um passo, salve e edite de novo: sempre sobra uma linha vazia no fim.
-      Para remover um passo, escolha "—" no tipo. Mensagens seguidas saem com ~<%= SendGuard::THROTTLE_WINDOW %>s de intervalo.
-    </p>
+    <p class="text-xs text-wa-muted mb-3">Mensagens seguidas saem com ~<%= SendGuard::THROTTLE_WINDOW %>s de intervalo, para não parecer spam.</p>
 
-    <ol class="space-y-3">
-      <% (@flow.steps + [ {} ]).each_with_index do |step, index| %>
-        <% name = ->(field) { "flow[steps][#{index}][#{field}]" } %>
-        <li class="bg-white rounded-lg shadow-sm p-3 flex flex-wrap gap-3 items-end" data-controller="flow-step">
-          <span class="text-sm font-semibold text-wa-muted w-6"><%= index + 1 %>.</span>
-          <div class="flex-1 min-w-52">
-            <label class="block text-xs text-wa-muted">Tipo</label>
-            <%= select_tag name.("type"), options_for_select(Flow::STEPS.map { |type, config| [ config[:label], type ] }, step["type"]),
-                  include_blank: "—", class: "w-full", data: { flow_step_target: "type", action: "flow-step#toggle" } %>
-          </div>
-          <div data-flow-step-target="field" data-types="<%= steps_for.("template_id") %>" class="min-w-48">
-            <label class="block text-xs text-wa-muted">Template</label>
-            <%= select_tag name.("template_id"), options_for_select(templates, step["template_id"]), include_blank: "— escolha —", class: "w-full" %>
-          </div>
-          <div data-flow-step-target="field" data-types="<%= steps_for.("opens_round") %>" class="flex items-center gap-2 pb-2">
-            <%= hidden_field_tag name.("opens_round"), "0", id: nil %>
-            <%= check_box_tag name.("opens_round"), "1", step["opens_round"] == "1", id: "step_#{index}_opens_round" %>
-            <label for="step_<%= index %>_opens_round" class="text-xs">abre rodada de presença</label>
-          </div>
-          <div data-flow-step-target="field" data-types="<%= steps_for.("opens_billing") %>" class="flex items-center gap-2 pb-2">
-            <%= hidden_field_tag name.("opens_billing"), "0", id: nil %>
-            <%= check_box_tag name.("opens_billing"), "1", step["opens_billing"] == "1", id: "step_#{index}_opens_billing" %>
-            <label for="step_<%= index %>_opens_billing" class="text-xs">abre cobrança do mês anterior</label>
-          </div>
-          <div data-flow-step-target="field" data-types="<%= steps_for.("list_key") %>" class="min-w-48">
-            <label class="block text-xs text-wa-muted">Lista</label>
-            <%= select_tag name.("list_key"), options_for_select(lists, step["list_key"]), include_blank: "— escolha —", class: "w-full" %>
-          </div>
-          <div data-flow-step-target="field" data-types="<%= steps_for.("name") %>" class="min-w-36">
-            <label class="block text-xs text-wa-muted">Variável</label>
-            <%= text_field_tag name.("name"), step["name"], placeholder: "pix", class: "w-full font-mono" %>
-          </div>
-          <div data-flow-step-target="field" data-types="<%= steps_for.("value") %>" class="flex-1 min-w-48">
-            <label class="block text-xs text-wa-muted">Valor</label>
-            <%= text_field_tag name.("value"), step["value"], placeholder: "{{argumento}}", class: "w-full" %>
-          </div>
-        </li>
+    <% locals = { lists: lists, templates: templates } %>
+    <ol class="space-y-3" data-steps-target="list">
+      <% (@flow.steps.presence || [ {} ]).each_with_index do |step, index| %>
+        <%= render "step", step: step, index: index, **locals %>
       <% end %>
     </ol>
+    <template data-steps-target="template"><%= render "step", step: {}, index: "__INDEX__", **locals %></template>
+
+    <button type="button" data-action="steps#add" class="mt-3 text-sm font-medium text-wa-teal border border-dashed border-wa-teal rounded-lg px-4 py-2 w-full hover:bg-wa-bubble/40 cursor-pointer">
+      + Adicionar passo
+    </button>
   </fieldset>
 
   <div class="flex items-center gap-2">

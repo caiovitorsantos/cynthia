@@ -13,7 +13,7 @@
 }
 
 @layer base {
-  input[type="text"], input[type="password"], input[type="datetime-local"], select, textarea {
+  input[type="text"], input[type="password"], input[type="datetime-local"], input[type="time"], input[type="number"], select, textarea {
     @apply border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-wa-green focus:ring-1 focus:ring-wa-green;
   }
 

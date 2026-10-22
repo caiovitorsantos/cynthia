@@ -1,6 +1,9 @@
 class GroupsController < ApplicationController
   def index
-    @groups = WhatsappGroup.order(:name)
+    # Grupos configurados (com fluxos ou regras) primeiro.
+    @groups = WhatsappGroup.includes(:group_rules).left_joins(:flows).group(:id)
+      .select("whatsapp_groups.*, COUNT(flows.id) AS flows_count").to_a
+      .sort_by { |group| [ group.flows_count.zero? && group.group_rules.empty? ? 1 : 0, group.name.to_s.downcase ] }
   end
 
   def show

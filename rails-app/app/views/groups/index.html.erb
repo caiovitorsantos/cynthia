@@ -27,10 +27,9 @@
         <th class="py-2 px-3 w-8">
           <input type="checkbox" aria-label="Selecionar todos" data-select-all-target="all" data-action="select-all#toggleAll">
         </th>
-        <th class="py-2 px-3">Nome</th>
-        <th class="py-2 px-3">JID</th>
-        <th class="py-2 px-3">Participantes</th>
-        <th class="py-2 px-3">Sincronizado em</th>
+        <th class="py-2 px-3">Grupo</th>
+        <th class="py-2 px-3">Automação</th>
+        <th class="py-2 px-3">Sincronizado</th>
       </tr>
     </thead>
     <tbody>
@@ -40,14 +39,28 @@
             <%= check_box_tag "ids[]", group.id, false, id: "group_#{group.id}", aria: { label: "Selecionar #{group.name}" },
                   data: { select_all_target: "item", action: "select-all#refresh" } %>
           </td>
-          <td data-label="Nome" class="py-2 px-3"><%= link_to group.name, group_path(group), class: "text-wa-teal font-medium hover:underline" %></td>
-          <td data-label="JID" class="py-2 px-3 font-mono text-xs"><%= group.jid %></td>
-          <td data-label="Participantes" class="py-2 px-3"><%= group.participants_count %></td>
-          <td data-label="Sincronizado" class="py-2 px-3"><%= group.synced_at&.strftime("%d/%m/%Y %H:%M") %></td>
+          <td data-label="Grupo" class="py-2 px-3">
+            <%= link_to group.name, group_path(group), class: "text-wa-teal font-medium hover:underline" %>
+            <span class="block text-xs text-wa-muted"><%= pluralize(group.participants_count.to_i, "membro", plural: "membros") %></span>
+          </td>
+          <td data-label="Automação" class="py-2 px-3">
+            <div class="flex flex-wrap gap-1 text-xs">
+              <% if group.flows_count.positive? %>
+                <span class="rounded-full bg-wa-bubble text-wa-teal px-2 py-0.5"><%= pluralize(group.flows_count, "fluxo", plural: "fluxos") %></span>
+              <% end %>
+              <% group.group_rules.each do |rule| %>
+                <span class="rounded-full bg-wa-panel text-wa-text px-2 py-0.5"><%= rule.name %></span>
+              <% end %>
+              <% if group.flows_count.zero? && group.group_rules.empty? %>
+                <span class="text-wa-muted">—</span>
+              <% end %>
+            </div>
+          </td>
+          <td data-label="Sincronizado" class="py-2 px-3 text-xs text-wa-muted"><%= group.synced_at&.strftime("%d/%m %H:%M") || "—" %></td>
         </tr>
       <% end %>
       <% if @groups.empty? %>
-        <tr><td colspan="5" class="py-4 px-3 text-center text-wa-muted">Nenhum grupo sincronizado ainda.</td></tr>
+        <tr><td colspan="4" class="py-4 px-3 text-center text-wa-muted">Nenhum grupo sincronizado ainda.</td></tr>
       <% end %>
     </tbody>
   </table>
