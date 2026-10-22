@@ -85,6 +85,17 @@ RSpec.describe CynthiaAssistant do
     expect(described_class.new.send(:get_group, { "group_id" => group.id })[:note]).to include("untrusted")
   end
 
+  it "envia o workspace quando a chave não é de um workspace" do
+    ENV["ANTHROPIC_WORKSPACE_ID"] = "wrkspc_teste"
+    stub = stub_request(:post, api).with(headers: { "anthropic-workspace-id" => "wrkspc_teste" }).to_return(api_response([ { type: "text", text: "ok" } ], "end_turn"))
+
+    described_class.new.reply("oi")
+
+    expect(stub).to have_been_requested
+  ensure
+    ENV.delete("ANTHROPIC_WORKSPACE_ID")
+  end
+
   it "erros da API viram mensagem da Cynth.ia" do
     stub_request(:post, api).to_return(status: 401, headers: { "Content-Type" => "application/json" },
                                        body: { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } }.to_json)

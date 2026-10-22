@@ -131,7 +131,7 @@ class CynthiaAssistant
       response = @client.messages.create(
         model: MODEL, max_tokens: 16_000,
         system_: [ { type: "text", text: "#{SYSTEM}\nAlways reply in #{LANGUAGES.fetch(locale.to_s, 'Brazilian Portuguese')}." } ],
-        tools: TOOLS, messages: AssistantMessage.history
+        tools: TOOLS, messages: AssistantMessage.history, **workspace
       )
       content = response.content.map { |block| JSON.parse(block.to_json) }
       AssistantMessage.create!(role: "assistant", content: content)
@@ -151,6 +151,11 @@ class CynthiaAssistant
   end
 
   private
+
+  # Chaves de usuário (não presas a um workspace) exigem o workspace em cada chamada.
+  def workspace
+    ENV["ANTHROPIC_WORKSPACE_ID"].present? ? { workspace_id: ENV["ANTHROPIC_WORKSPACE_ID"] } : {}
+  end
 
   # Contexto da página e desfechos de ações confirmadas/canceladas desde o último turno.
   def user_blocks(text, group)

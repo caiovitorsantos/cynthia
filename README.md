@@ -421,7 +421,8 @@ pedir ("cria uma rotina toda terça às 14h com a lista de presença no vôlei")
 **Confirmar**, e a criação passa pelas mesmas validações do painel. Ela sabe em que grupo você está.
 
 Usa o modelo Claude Haiku 5.5 (barato: centavos de dólar por mês num grupo). Para ligar, crie uma chave
-em console.anthropic.com, coloque em `ANTHROPIC_API_KEY` no `.env` e reinicie o rails. Sem a chave, o
+em console.anthropic.com, coloque em `ANTHROPIC_API_KEY` no `.env` e reinicie o rails. Se a chave não for
+de um workspace (a API avisa "not scoped to a workspace"), informe também `ANTHROPIC_WORKSPACE_ID`. Sem a chave, o
 chat avisa que falta. A conversa fica no banco; "Nova conversa" apaga o histórico.
 
 ### Exemplo completo: grupo de vôlei
