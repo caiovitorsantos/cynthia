@@ -63,7 +63,7 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 |---|---|
 | ![Tela de login](docs/screenshots/login.png) | ![Modal da conta](docs/screenshots/conta.png) |
 
-| Grupos (com seleção em lote) | Logs |
+| Grupos (ações em lote aparecem ao marcar) | Logs |
 |---|---|
 | ![Lista de grupos](docs/screenshots/grupos.png) | ![Logs de envio](docs/screenshots/logs.png) |
 
