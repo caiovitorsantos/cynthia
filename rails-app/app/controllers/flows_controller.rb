@@ -59,6 +59,6 @@ class FlowsController < ApplicationController
 
   def flow_params
     permitted = params.require(:flow).permit(:name, :trigger, :command, :cron_expression, :run_at, :timezone, :active)
-    permitted.merge(steps: Flow.steps_from(params[:flow].fetch(:steps, {}).permit!))
+    permitted.merge(steps: Flow.steps_from(params.require(:flow).slice(:steps).permit(steps: [ :type, *Flow::STEP_FIELDS ])[:steps] || {}))
   end
 end
