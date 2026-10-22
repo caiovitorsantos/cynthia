@@ -72,7 +72,7 @@ RSpec.describe Flow do
 
       ellie = group.group_participants.find_by!(jid: "9@lid")
       expect(espera.group_participants).to eq([ ellie ])
-      expect(MessageLog.last).to have_attributes(flow: flow, rendered_body: "Espera:\n1. Ellie", opens_round: false)
+      expect(MessageLog.last).to have_attributes(flow: flow, rendered_body: "Espera:\n1. Ellie\n\n_🤖 Cindy_", opens_round: false)
     end
 
     it "espaça mensagens seguidas pela janela do SendGuard e marca a que abre rodada" do
@@ -104,6 +104,15 @@ RSpec.describe Flow do
 
       expect(espera.group_participants).to be_empty
     end
+  end
+
+  it "rotinas saem sem a assinatura da Cindy" do
+    flow = group.flows.create!(name: "x", trigger: "schedule", cron_expression: "0 9 * * *", steps: [ step("send_message", template_id: aviso.id.to_s) ])
+    allow(DeliverMessageJob).to receive(:perform_in)
+
+    flow.run!
+
+    expect(MessageLog.last.rendered_body).to eq("Espera:\n(ninguém)")
   end
 
   describe "RunDueFlowsJob" do
