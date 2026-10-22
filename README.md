@@ -75,9 +75,9 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 |---|---|
 | ![Fluxo de comando](docs/screenshots/fluxo-comando.png) | ![Rotina com dois passos](docs/screenshots/fluxo-rotina.png) |
 
-| Template com prévia | Recurso "Lista de presença" |
+| Template com prévia | Recursos: presença e cobrança mensal |
 |---|---|
-| ![Edição de template](docs/screenshots/template.png) | ![Configuração da lista de presença](docs/screenshots/grupo-recursos.png) |
+| ![Edição de template](docs/screenshots/template.png) | ![Lista de presença e cobrança mensal do grupo](docs/screenshots/grupo-recursos.png) |
 
 **No celular**
 
