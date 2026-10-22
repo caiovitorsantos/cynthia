@@ -1,8 +1,8 @@
-# Recurso opcional ligado a um grupo, configurado em settings. Cada kind é implementado por um
+# Regra opcional ligada a um grupo, configurado em settings. Cada kind é implementado por um
 # módulo que responde a:
-#   provides_variable?(rule, key)                 se a variável de template é deste recurso
+#   provides_variable?(rule, key)                 se a variável de template é desta regra
 #   render_variable(rule, key, mentions)          valor da variável (nil se não for dela)
-#   settings_from(params)                         settings a partir do formulário do recurso
+#   settings_from(params)                         settings a partir do formulário da regra
 #   before_message(rule, step, now)               antes de renderizar um passo "Enviar template"
 #   prepare_message(rule, message_log, template)  antes de salvar cada mensagem enviada ao grupo
 #   handle_event(rule, event)                     reação, resposta ou lista colada no grupo

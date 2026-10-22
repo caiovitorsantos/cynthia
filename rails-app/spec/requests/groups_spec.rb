@@ -93,7 +93,7 @@ RSpec.describe "Groups", type: :request do
     end
   end
 
-  describe "recurso de presença" do
+  describe "regra de presença" do
     let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei") }
 
     before do
@@ -101,7 +101,15 @@ RSpec.describe "Groups", type: :request do
       group.member_lists.create!(name: "Titular")
     end
 
-    it "sem o recurso, a página não mostra a coluna de presença" do
+    it "organiza a página em abas, com membros primeiro e filtro por lista" do
+      get group_path(group)
+
+      tabs = response.body.scan(/role="tab"[^>]*>([^<]+)</).flatten
+      expect(tabs).to eq([ "Membros e listas", "Fluxos", "Templates", "Variáveis", "Regras" ])
+      expect(response.body).to include('data-filter-key-param="titular"', 'data-filter-key-param="-"', 'data-keys="-"')
+    end
+
+    it "sem a regra, a página não mostra a coluna de presença" do
       get group_path(group)
 
       expect(response.body).not_to include("Presença</th>")

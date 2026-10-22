@@ -1,4 +1,4 @@
-# Recurso de grupo "Lista de presença" (ver GroupRule). Cada mensagem enviada por um passo de
+# Regra de grupo "Lista de presença" (ver GroupRule). Cada mensagem enviada por um passo de
 # fluxo marcado "abre rodada" abre uma rodada; reações/respostas nela viram Attendance::Response.
 # As listas acompanhadas (tracked_lists) são as cobradas em {{presenca}} e {{pendentes}}.
 # Listas copiadas, editadas e coladas no grupo também contam (ver read_list).
@@ -40,7 +40,7 @@ module Attendance
       list_key.nil? || rule.whatsapp_group.member_lists.any? { |list| list.key == list_key }
     end
 
-    # Converte o formulário do recurso em settings (os nomes dos campos são as chaves).
+    # Converte o formulário da regra em settings (os nomes dos campos são as chaves).
     def settings_from(params)
       {
         "tracked_lists" => Array(params[:tracked_lists]).compact_blank,

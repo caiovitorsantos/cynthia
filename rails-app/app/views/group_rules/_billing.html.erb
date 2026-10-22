@@ -1,4 +1,4 @@
-<%# Bloco do recurso "Cobrança mensal" na página do grupo. %>
+<%# Bloco da regra "Cobrança mensal" na página do grupo. %>
 <% settings = Billing.settings(rule) %>
 <% charged = lists.select { |list| settings["charged_lists"].include?(list.key) } %>
 <% billing_flows = group.flows.select { |flow| flow.active? && flow.steps.any? { |step| step["opens_billing"] == "1" } } %>

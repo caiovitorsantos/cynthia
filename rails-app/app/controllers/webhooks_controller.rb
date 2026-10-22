@@ -1,5 +1,5 @@
 # Eventos do wa-service: comandos disparam os fluxos de comando do grupo; reações e respostas
-# vão para os recursos do grupo. Autenticado pelo INTERNAL_API_TOKEN.
+# vão para as regras do grupo. Autenticado pelo INTERNAL_API_TOKEN.
 class WebhooksController < ActionController::API
   before_action :authenticate
 

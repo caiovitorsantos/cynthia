@@ -205,7 +205,7 @@ RSpec.describe Attendance do
       expect(result.mentioned_jids).to eq([ "1@lid" ])
     end
 
-    it "usa o formato do grupo e as marcas do recurso" do
+    it "usa o formato do grupo e as marcas da regra" do
       record("✅", jid: "2@lid")
       group.update!(list_style: "bullet", list_empty_text: "(ninguém)")
       rule.update!(settings: rule.settings.merge("confirmed_mark" => "👍", "pending_mark" => "⏳"))
@@ -218,7 +218,7 @@ RSpec.describe Attendance do
       expect { render("{{presenca:titular}}") }.to raise_error(TemplateRenderer::MissingVariableError)
     end
 
-    it "sem o recurso, só as variáveis de lista com chave existem" do
+    it "sem a regra, só as variáveis de lista com chave existem" do
       rule.destroy!
       group.reload
 

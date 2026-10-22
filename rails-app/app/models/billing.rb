@@ -1,7 +1,7 @@
-# Recurso de grupo "Cobrança mensal" (ver GroupRule). Um passo "Enviar template" marcado
+# Regra de grupo "Cobrança mensal" (ver GroupRule). Um passo "Enviar template" marcado
 # "abre cobrança" abre a cobrança do mês anterior: uma mensalidade para cada membro das listas
 # que pagam (charged_lists) e uma diária para cada dia em que um avulso confirmou presença numa
-# rodada daquele mês (recurso Lista de presença). Pagamentos são marcados com 💰 numa cópia
+# rodada daquele mês (regra Lista de presença). Pagamentos são marcados com 💰 numa cópia
 # colada da lista no grupo ou pelo painel; pago nunca volta sozinho, então cópias antigas não
 # desfazem nada.
 module Billing

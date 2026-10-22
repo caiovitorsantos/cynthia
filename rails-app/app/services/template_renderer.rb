@@ -13,7 +13,7 @@ class TemplateRenderer
 
   class << self
     # Prioridade dos valores: variables (ex.: {{remetente}} de um comando) > variáveis do grupo >
-    # padrões do template > automáticas, de listas e de recursos do grupo.
+    # padrões do template > automáticas, de listas e de regras do grupo.
     def call(template, variables, whatsapp_group: nil, now: Time.current)
       variables = template.default_variables.to_h
         .merge(whatsapp_group&.variables || {})

@@ -4,7 +4,7 @@
 WhatsApp tem, só que automática. Painel self-hosted para **automatizar tarefas de grupos de WhatsApp**. Cada grupo tem as suas
 **listas de membros**, **variáveis**, **templates** e **fluxos**: um gatilho (um horário, a "rotina", ou
 um comando como `!entrar` mandado no grupo) seguido de passos, como enviar um template, pôr ou tirar
-alguém de uma lista ou mudar uma variável. Recursos opcionais, como a **lista de presença**, registram
+alguém de uma lista ou mudar uma variável. Regras opcionais, como a **lista de presença**, registram
 quem confirma com ✅ ou cancela com ❌ reagindo à mensagem.
 
 Nasceu para automatizar um grupo de vôlei: toda terça uma rotina manda a lista de presença com os
@@ -26,7 +26,7 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 - [Arquitetura](#arquitetura)
 - [Como rodar](#como-rodar)
 - [Guia de uso](#guia-de-uso)
-- [Criando um novo recurso de grupo](#criando-um-novo-recurso-de-grupo)
+- [Criando uma nova regra de grupo](#criando-uma-nova-regra-de-grupo)
 - [API interna do wa-service](#api-interna-do-wa-service)
 - [Desenvolvimento](#desenvolvimento)
 - [Limitações conhecidas](#limitações-conhecidas)
@@ -52,7 +52,7 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
   (`@{{todos}}`) e prévia ao vivo com a formatação do WhatsApp (`*negrito*`, `_itálico_`, `~riscado~`).
 - **Fluxos**: gatilho + passos em ordem. Fluxo de horário (rotina) é recorrente (cron, com fuso) ou de
   envio único; fluxo de comando roda quando alguém manda `!algo` no grupo. Botão "Executar agora".
-- **Recursos** opcionais: **Cobrança mensal** (mensalidades e diárias de avulsos, pagamento marcado
+- **Regras** opcionais: **Cobrança mensal** (mensalidades e diárias de avulsos, pagamento marcado
   com 💰) e **Lista de presença**. Cada mensagem de um passo marcado "abre rodada" abre
   uma rodada; reações e respostas citando a mensagem viram confirmação ou cancelamento das listas
   cobradas.
@@ -75,7 +75,7 @@ mensalistas marcados, as reações viram confirmações, um lembrete marca quem 
 |---|---|
 | ![Fluxo de comando](docs/screenshots/fluxo-comando.png) | ![Rotina com dois passos](docs/screenshots/fluxo-rotina.png) |
 
-| Template com prévia | Recursos: presença e cobrança mensal |
+| Template com prévia | Regras: presença e cobrança mensal |
 |---|---|
 | ![Edição de template](docs/screenshots/template.png) | ![Lista de presença e cobrança mensal do grupo](docs/screenshots/grupo-recursos.png) |
 
@@ -159,33 +159,33 @@ sequenceDiagram
     participant P as Participante
     participant W as wa-service
     participant WH as WebhooksController
-    participant A as Attendance (recurso)
+    participant A as Attendance (regra)
 
     P->>W: reage ✅ na lista (ou responde citando)
     W->>WH: POST /webhooks/whatsapp {group_jid, message_id, participant_jid, text}
-    WH->>A: handle_event (para cada recurso do grupo)
+    WH->>A: handle_event (para cada regra do grupo)
     A->>A: acha a rodada pela mensagem e grava Attendance::Response
     Note over A: {{presenca}}, {{confirmados}} e {{pendentes}}<br/>leem a rodada atual nos próximos envios
 ```
 
-### Núcleo × recursos do grupo
+### Núcleo × regras do grupo
 
-O núcleo (grupos, listas, templates, fluxos, envio, webhook) **não sabe nada de presença**. Recursos
+O núcleo (grupos, listas, templates, fluxos, envio, webhook) **não sabe nada de presença**. Regras
 são linhas em `group_rules` (`kind` + `settings` em JSON) e cada `kind` é implementado por um módulo. O
 núcleo só chama esses ganchos:
 
 | Gancho | Quando é chamado |
 |---|---|
-| `provides_variable?(rule, key)` | ao validar um fluxo: a variável é deste recurso? |
+| `provides_variable?(rule, key)` | ao validar um fluxo: a variável é desta regra? |
 | `render_variable(rule, key, mentions)` | ao renderizar um template para o grupo |
 | `before_message(rule, step, now)` | antes de renderizar um passo "Enviar template" (ex.: abre a cobrança) |
 | `prepare_message(rule, message_log, template)` | antes de salvar cada mensagem enviada ao grupo |
 | `handle_event(rule, event)` | quando chega uma reação, resposta ou lista colada no grupo |
-| `settings_from(params)` | ao salvar o formulário do recurso |
+| `settings_from(params)` | ao salvar o formulário da regra |
 
-Hoje existem dois recursos: **Lista de presença** (`app/models/attendance.rb`) e **Cobrança mensal**
+Hoje existem duas regras: **Lista de presença** (`app/models/attendance.rb`) e **Cobrança mensal**
 (`app/models/billing.rb`). Veja
-[Criando um novo recurso de grupo](#criando-um-novo-recurso-de-grupo). Os passos de fluxo ficam em
+[Criando uma nova regra de grupo](#criando-uma-nova-regra-de-grupo). Os passos de fluxo ficam em
 `Flow::STEPS` (`app/models/flow.rb`): um passo novo é uma entrada ali e um `when` em `Flow#run!`.
 
 ### Modelo de dados
@@ -275,7 +275,7 @@ reiniciar.
 ## Guia de uso
 
 Tudo acontece na página do grupo (**Grupos** → nome do grupo), dividida em Fluxos, Templates, Membros e
-listas, Variáveis e Recursos.
+listas, Variáveis e Regras.
 
 ### 1. Listas de membros e variáveis
 
@@ -302,7 +302,7 @@ Em **Variáveis**, guarde pares nome → valor (ex.: `pix`), usados como `{{pix}
 | `@{{Caio}}` ou `@{{5511999999999}}` | Menciona o participante (pelo nome exato ou pelo número) |
 | `@{{todos}}` (ou `@{{all}}`) | Mostra "@todos" e notifica **todos** os participantes sincronizados |
 
-As datas usam o fuso do fluxo. Recursos ativos oferecem variáveis extras (abaixo).
+As datas usam o fuso do fluxo. Regras ativas oferecem variáveis extras (abaixo).
 
 ### 3. Fluxos
 
@@ -334,9 +334,9 @@ Os passos rodam em ordem, então um template enviado depois de "Pôr na lista" j
 atualizada. Mensagens seguidas saem com ~21 s de intervalo (limite do `SendGuard`). Um fluxo que usa
 uma variável que ninguém oferece é recusado ao salvar.
 
-### 4. Recurso "Lista de presença"
+### 4. Regra "Lista de presença"
 
-Em **Recursos**, clique em **Ativar**. O checklist mostra o que falta:
+Em **Regras**, clique em **Ativar**. O checklist mostra o que falta:
 
 1. **Listas cobradas**: as listas que aparecem em `{{presenca}}` e são cobradas em `{{pendentes}}`.
 2. **Fluxo que abre a rodada**: uma rotina com um passo "Enviar template" marcado "abre rodada".
@@ -361,7 +361,7 @@ colar no grupo também funciona:
   sem cadastro entram como **convidados**.
 - Como cópias podem estar desatualizadas, uma colagem **preenche quem ainda não respondeu**, mas só a
   **linha da própria pessoa** muda uma resposta já registrada.
-- Nomes que não batem com ninguém aparecem no recurso como "não reconhecidos"; preencha o "Nome nas
+- Nomes que não batem com ninguém aparecem na regra como "não reconhecidos"; preencha o "Nome nas
   listas" do membro com esse nome para associar.
 
 Para os nomes da cópia baterem sozinhos, use `{{lista}}` ou `{{presenca}}` (nomes) no template que
@@ -370,9 +370,9 @@ abre a rodada, em vez de `{{mencoes}}`.
 Todas as variáveis aceitam uma lista específica, como em `{{presenca:espera}}`. Reações em mensagens que mostram a
 rodada (um lembrete com `{{pendentes}}`, a resposta ao `!lista`) também contam para a mesma rodada.
 
-### 5. Recurso "Cobrança mensal"
+### 5. Regra "Cobrança mensal"
 
-Em **Recursos**, ative **Cobrança mensal** e marque as **listas que pagam mensalidade** (ex.: Mensal).
+Em **Regras**, ative **Cobrança mensal** e marque as **listas que pagam mensalidade** (ex.: Mensal).
 Numa rotina (ex.: dia 1 às 9h), marque o passo "Enviar template" como **"abre cobrança do mês
 anterior"**. Antes de renderizar, ele cria:
 
@@ -405,12 +405,12 @@ Listas `mensal` (cobrada pela presença) e `espera`; variáveis `pix` e `valor_m
 | Cobrança | `0 9 1 * *` | Enviar "Cobrança" (`*PAGAMENTO {{mes_anterior}}*`<br>`PIX: {{pix}}`<br>`{{cobranca_mensais}}`<br>`*AVULSOS*`<br>`{{cobranca_avulsos}}`), **abre cobrança** |
 | Lembrete de pagamento | `0 9 10 * *` | Enviar "Falta pagar" (`💸 Falta pagar: {{pendentes_pagamento}}`) |
 
-## Criando um novo recurso de grupo
+## Criando uma nova regra de grupo
 
-1. Crie um módulo em `app/models/<recurso>.rb` que responda aos ganchos da tabela
-   [Núcleo × recursos do grupo](#núcleo--recursos-do-grupo). Use `app/models/attendance.rb` como modelo.
+1. Crie um módulo em `app/models/<regra>.rb` que responda aos ganchos da tabela
+   [Núcleo × regras do grupo](#núcleo--regras-do-grupo). Use `app/models/attendance.rb` como modelo.
 2. Registre-o em `GroupRule::HANDLERS` e `GroupRule::NAMES` (`app/models/group_rule.rb`).
-3. Crie o bloco em `app/views/group_rules/_<kind>.html.erb` e renderize-o na seção Recursos da página
+3. Crie o bloco em `app/views/group_rules/_<kind>.html.erb` e renderize-o na aba Regras da página
    do grupo (`app/views/groups/show.html.erb`).
 4. Guarde as configurações em `rule.settings` (JSON). Tabelas próprias só se precisar guardar dados,
    como `attendances` na Lista de presença.
@@ -458,13 +458,14 @@ O `wa-service` roda com `tsx watch`: mudanças em `wa-service/src` recarregam so
 ├── docker-compose.yml
 ├── rails-app/
 │   ├── app/
-│   │   ├── controllers/      # painel, login, webhook, grupos, fluxos, templates, recursos
+│   │   ├── controllers/      # painel, login, webhook, grupos, fluxos, templates, regras
 │   │   ├── jobs/             # rotinas, execução de fluxo, envio, sincronização, saída em lote
 │   │   ├── models/
 │   │   │   ├── flow.rb             # fluxos: gatilhos e passos (componentes)
 │   │   │   ├── member_list.rb      # listas de membros
-│   │   │   ├── group_rule.rb       # registro de recursos por grupo
-│   │   │   └── attendance.rb       # recurso "Lista de presença"
+│   │   │   ├── group_rule.rb       # registro de regras por grupo
+│   │   │   ├── attendance.rb       # regra "Lista de presença"
+│   │   │   └── billing.rb          # regra "Cobrança mensal"
 │   │   ├── services/         # TemplateRenderer, SendGuard, WaClient, ScheduleCalculator
 │   │   └── views/
 │   ├── config/schedule.yml   # cron do sidekiq-cron

@@ -1,4 +1,4 @@
-<%# Bloco do recurso "Lista de presença" na página do grupo. %>
+<%# Bloco da regra "Lista de presença" na página do grupo. %>
 <% settings = Attendance.settings(rule) %>
 <% tracked = lists.select { |list| settings["tracked_lists"].include?(list.key) } %>
 <% unmatched = Attendance.unmatched_names(rule) %>
