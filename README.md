@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="rails-app/app/assets/images/cynthia-badge.svg" alt="Cynth.ia, administradora de grupos em pixel art, entediada na frente de um CRT que diz UGH" width="360">
+  <img src="rails-app/app/assets/images/cynthia-badge.svg" alt="Cynth.ia, administradora de grupos em pixel art, entediada na frente de um CRT que diz UGH" width="352">
 </p>
 
 # Cynth.ia
@@ -455,7 +455,7 @@ docker compose exec wa npx tsc --noEmit -p .
 # Recompilar o CSS depois de usar classes novas do Tailwind (o container não roda o watch)
 docker compose exec rails bin/rails tailwindcss:build
 
-# Regerar o logo pixel art (selo e rosto) depois de mexer nos desenhos
+# Regerar o logo pixel art 16-bit (selo e rosto) depois de mexer nos desenhos
 python3 rails-app/script/logo.py rails-app/app/assets/images
 
 # Migrations
