@@ -15,9 +15,6 @@ class Flow < ApplicationRecord
   # Disponíveis nos templates e valores de passos de um fluxo de comando.
   COMMAND_VARIABLES = %w[remetente argumento].freeze
 
-  # Assinatura das respostas a comandos: quem responde no grupo é a Cindy.
-  SIGNATURE = "\n\n_🤖 Cindy_".freeze
-
   belongs_to :whatsapp_group
   has_many :message_logs, dependent: :nullify
 
@@ -99,7 +96,8 @@ class Flow < ApplicationRecord
 
   def send_template(template, variables, opens_round:, delay:)
     result = TemplateRenderer.call(template, variables, whatsapp_group: whatsapp_group, now: Time.current.in_time_zone(timezone))
-    body = command? ? result.body + SIGNATURE : result.body
+    # Respostas a comandos levam a assinatura do grupo (padrão "_🤖 Cindy_"; vazia desliga).
+    body = command? && whatsapp_group.signature.present? ? "#{result.body}\n\n#{whatsapp_group.signature}" : result.body
     message_log = message_logs.new(group_jid: whatsapp_group.jid, rendered_body: body, status: "pending", opens_round: opens_round)
     whatsapp_group.group_rules.each { |rule| rule.handler.prepare_message(rule, message_log, template) }
     message_log.save!

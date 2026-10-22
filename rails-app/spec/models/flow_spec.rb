@@ -115,6 +115,19 @@ RSpec.describe Flow do
     expect(MessageLog.last.rendered_body).to eq("Espera:\n(ninguém)")
   end
 
+  it "usa a assinatura do grupo nas respostas a comandos, e nenhuma se estiver vazia" do
+    flow = command_flow(step("send_message", template_id: aviso.id.to_s))
+    allow(DeliverMessageJob).to receive(:perform_in)
+
+    group.update!(signature: "— Sindi do vôlei 🏐")
+    flow.run!
+    expect(MessageLog.last.rendered_body).to eq("Espera:\n(ninguém)\n\n— Sindi do vôlei 🏐")
+
+    group.update!(signature: "")
+    flow.run!
+    expect(MessageLog.last.rendered_body).to eq("Espera:\n(ninguém)")
+  end
+
   describe "RunDueFlowsJob" do
     it "dispara as rotinas vencidas e calcula a próxima execução" do
       flow = group.flows.create!(name: "x", trigger: "schedule", cron_expression: "0 9 * * *", steps: [ step("send_message", template_id: aviso.id.to_s) ])

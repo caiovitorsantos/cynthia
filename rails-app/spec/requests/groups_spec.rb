@@ -130,9 +130,10 @@ RSpec.describe "Groups", type: :request do
       "0" => { name: "PIX", value: "pix@exemplo.com" },
       "1" => { name: "Valor mensal", value: "R$45" },
       "2" => { name: "", value: "ignorado" }
-    } }
+    }, signature: " _— Cindy do vôlei_ " }
 
     expect(response).to redirect_to(group_path(group, anchor: "variaveis"))
     expect(group.reload.variables).to eq("pix" => "pix@exemplo.com", "valor_mensal" => "R$45")
+    expect(group.signature).to eq("_— Cindy do vôlei_")
   end
 end

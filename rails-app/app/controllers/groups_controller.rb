@@ -35,7 +35,7 @@ class GroupsController < ApplicationController
 
   def variables
     group = WhatsappGroup.find(params[:id])
-    group.update!(variables: WhatsappGroup.variables_from(params.fetch(:variables, {}).permit!))
+    group.update!(variables: WhatsappGroup.variables_from(params.fetch(:variables, {}).permit!), signature: params[:signature].to_s.strip)
     redirect_to group_path(group, anchor: "variaveis"), notice: "Variáveis do grupo atualizadas."
   end
 

@@ -229,7 +229,12 @@
         <% end %>
       </tbody>
     </table>
-    <%= submit_tag "Salvar variáveis", class: "btn-wa" %>
+    <div>
+      <%= label_tag :signature, "Assinatura da Cindy nas respostas a comandos", class: "block text-sm font-medium" %>
+      <%= text_field_tag :signature, @group.signature, placeholder: "(sem assinatura)", class: "w-full sm:w-80" %>
+      <p class="text-xs text-wa-muted mt-1">Vai no fim das mensagens de fluxos de comando. Deixe vazio para não assinar; rotinas nunca levam assinatura.</p>
+    </div>
+    <%= submit_tag "Salvar variáveis e assinatura", class: "btn-wa" %>
   <% end %>
 </section>
 

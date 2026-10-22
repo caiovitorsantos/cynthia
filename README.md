@@ -320,8 +320,9 @@ Passos disponíveis:
 | Esvaziar lista | Tira todo mundo da lista |
 | Definir variável do grupo | O valor aceita variáveis, ex.: `{{argumento}}` |
 
-Mensagens de fluxos de comando saem assinadas com `_🤖 Cindy_` no fim, para o grupo saber que quem
-respondeu foi a assistente. Rotinas saem sem assinatura.
+Mensagens de fluxos de comando saem com a assinatura do grupo no fim (padrão `_🤖 Cindy_`), para o
+grupo saber que quem respondeu foi a assistente. Cada grupo muda o texto na seção Variáveis; vazio não
+assina. Rotinas saem sem assinatura.
 
 Os passos rodam em ordem, então um template enviado depois de "Pôr na lista" já sai com a lista
 atualizada. Mensagens seguidas saem com ~21 s de intervalo (limite do `SendGuard`). Um fluxo que usa
