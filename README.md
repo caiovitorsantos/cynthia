@@ -425,6 +425,17 @@ em console.anthropic.com, coloque em `ANTHROPIC_API_KEY` no `.env` e reinicie o 
 de um workspace (a API avisa "not scoped to a workspace"), informe também `ANTHROPIC_WORKSPACE_ID`. Sem a chave, o
 chat avisa que falta. A conversa fica no banco; "Nova conversa" apaga o histórico.
 
+**No grupo.** Marque a Cynth.ia numa mensagem (`@Cynth.ia quem confirmou hoje?`) e ela responde ali
+mesmo, marcando quem perguntou. No grupo ela só enxerga aquele grupo: presença da rodada, quem deve na
+cobrança, listas, templates, fluxos e como usar os comandos.
+
+- **Qualquer pessoa** pode perguntar.
+- **Só admins** podem pedir mudanças (template, fluxo, variável). Ela responde com a prévia completa do
+  que vai criar e só executa quando um admin responde **sim** citando essa mensagem.
+- **Comandos `!` que mexem em dados do grupo** (definir variável, esvaziar lista) só rodam para admins;
+  consultas como `!lista` e entrar/sair da própria lista (`!espera`) valem para todos.
+- Até 20 respostas por hora por grupo, e as respostas passam pelos limites anti-spam.
+
 ### Exemplo completo: grupo de vôlei
 
 Listas `mensal` (cobrada pela presença) e `espera`; variáveis `pix` e `valor_mensal`.
@@ -464,8 +475,9 @@ header `Authorization: <INTERNAL_API_TOKEN>`.
 | `POST` | `/logout` | Encerra a sessão e gera um novo QR |
 
 **Webhook (wa-service → Rails):** `POST RAILS_WEBHOOK_URL` (`/webhooks/whatsapp`) com
-`{kind: "reaction" | "reply" | "command" | "list", group_jid, message_id, participant_jid, push_name, text}`.
-Uma reação removida chega com `text` vazio. Mensagens que começam com `!` chegam como `command`; texto com 2+ linhas numeradas, como `list`.
+`{kind: "reaction" | "reply" | "command" | "list" | "mention", group_jid, message_id, participant_jid, push_name, text}`.
+Uma reação removida chega com `text` vazio. Mensagens que começam com `!` chegam como `command`; texto com 2+ linhas numeradas, como `list`; mensagens
+que marcam o número conectado, como `mention`. Os participantes de `/groups` trazem `admin` (true/false).
 
 ## Desenvolvimento
 

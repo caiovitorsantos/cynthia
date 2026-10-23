@@ -121,20 +121,39 @@ class CynthiaAssistant
     @client = client
   end
 
-  # Acrescenta a mensagem do usuário, roda o laço de ferramentas e devolve as ações propostas.
+  # Painel: acrescenta a mensagem do usuário à conversa guardada, roda o laço e devolve as ações propostas.
   def reply(text, group: nil, locale: I18n.locale)
     @group = group
-    proposed = []
+    @channel = "panel"
     AssistantMessage.create!(role: "user", content: user_blocks(text, group))
+    run(system: "#{SYSTEM}\nAlways reply in #{language(locale)}.", tools: TOOLS,
+        history: -> { AssistantMessage.history }, store: ->(role, content) { AssistantMessage.create!(role: role, content: content) })
+  end
 
+  # Grupo: marcaram a Cynth.ia numa mensagem. Conversa de um turno (sem memória), só com dados deste
+  # grupo; quem não é admin só consulta. Devolve [texto da resposta, ações propostas].
+  def reply_in_group(group, sender:, text:)
+    @group = group
+    @channel = "group"
+    messages = [ { role: "user", content: [ { type: "text", text: "[from: #{sender.label}#{' (group admin)' if sender.admin?}]\n#{text}" } ] } ]
+    tools = TOOLS.reject { |tool| tool[:name] == "list_groups" }
+    tools = tools.reject { |tool| PROPOSALS.key?(tool[:name]) } unless sender.admin?
+    proposed = run(system: group_system(group, admin: sender.admin?), tools: tools,
+                   history: -> { messages }, store: ->(role, content) { messages << { role: role, content: content } })
+    [ messages.last[:content].select { |block| block["type"] == "text" }.map { |block| block["text"] }.join("\n").strip, proposed ]
+  end
+
+  private
+
+  # Laço de ferramentas: chama o modelo, guarda cada turno (blocos crus, só acrescentados) e roda as
+  # ferramentas até ele terminar. Devolve as ações propostas.
+  def run(system:, tools:, history:, store:)
+    proposed = []
     MAX_TOOL_ROUNDS.times do
-      response = @client.messages.create(
-        model: MODEL, max_tokens: 16_000,
-        system_: [ { type: "text", text: "#{SYSTEM}\nAlways reply in #{LANGUAGES.fetch(locale.to_s, 'Brazilian Portuguese')}." } ],
-        tools: TOOLS, messages: AssistantMessage.history, **workspace
-      )
+      response = @client.messages.create(model: MODEL, max_tokens: 16_000, system_: [ { type: "text", text: system } ],
+                                         tools: tools, messages: history.call, **workspace)
       content = response.content.map { |block| JSON.parse(block.to_json) }
-      AssistantMessage.create!(role: "assistant", content: content)
+      store.call("assistant", content)
       raise Error, I18n.t("assistant.refused") if response.stop_reason == :refusal
       break unless response.stop_reason == :tool_use
 
@@ -143,14 +162,26 @@ class CynthiaAssistant
         proposed << action if action
         { type: "tool_result", tool_use_id: call["id"], content: output.to_json }
       end
-      AssistantMessage.create!(role: "user", content: results)
+      store.call("user", results)
     end
     proposed
   rescue Anthropic::Errors::APIError => e
     raise Error, I18n.t("assistant.api_error", error: e.message)
   end
 
-  private
+  def language(locale) = LANGUAGES.fetch(locale.to_s, "Brazilian Portuguese")
+
+  def group_system(group, admin:)
+    <<~PROMPT
+      #{SYSTEM}
+      Right now you are answering inside the WhatsApp group "#{group.name}" (group_id #{group.id}), because a member
+      mentioned you. Your reply is sent as a WhatsApp message: plain text with WhatsApp formatting (*bold*, _italic_),
+      no markdown headers, tables or links, at most a few lines. Only this group exists for you; never mention other
+      groups. Answer questions with get_group (attendance, payments, lists, templates, flows, how to use the commands).
+      #{admin ? "The person is a group admin: you may propose changes with the propose_* tools. The panel appends the full preview to your message and an admin confirms by replying \"sim\" to it, so just say what you proposed." : "The person is not a group admin: they can ask anything, but if they ask for changes, say only admins can ask you for that."}
+      Always reply in #{language(group.locale)}.
+    PROMPT
+  end
 
   # Chaves de usuário (não presas a um workspace) exigem o workspace em cada chamada.
   def workspace
@@ -166,6 +197,7 @@ class CynthiaAssistant
   end
 
   def run_tool(name, input)
+    input = input.merge("group_id" => @group.id) if @channel == "group" # no grupo, só existe este grupo
     if (kind = PROPOSALS[name])
       return [ { error: "group #{input['group_id']} not found" }, nil ] unless WhatsappGroup.exists?(input["group_id"])
       # Com um grupo aberto, só propõe nele: dados de outro grupo não viram ação aqui por engano.
@@ -173,8 +205,8 @@ class CynthiaAssistant
         return [ { error: "only the open group ##{@group.id} can be changed from this page; ask the user to open the other group" }, nil ]
       end
 
-      action = AssistantAction.create!(kind: kind, payload: input)
-      [ { proposed: "action ##{action.id}", status: "waiting for the user to confirm in the panel" }, action ]
+      action = AssistantAction.create!(kind: kind, payload: input, channel: @channel)
+      [ { proposed: "action ##{action.id}", status: "waiting for confirmation" }, action ]
     else
       [ send(name, input), nil ]
     end
@@ -202,7 +234,35 @@ class CynthiaAssistant
         { name: flow.name, trigger: flow.trigger, command: flow.command, cron_expression: flow.cron_expression,
           active: flow.active, steps: flow.steps.map { |step| step["type"] } }
       end,
-      rules: group.group_rules.map { |rule| { kind: rule.kind, settings: rule.settings } }
+      rules: group.group_rules.map { |rule| { kind: rule.kind, settings: rule.settings } },
+      attendance_round: (rule = group.rule("attendance")) && attendance_summary(rule),
+      billing: (rule = group.rule("billing")) && billing_summary(rule)
+    }
+  end
+
+  # Quem confirmou, cancelou ou não respondeu na rodada atual de presença.
+  def attendance_summary(rule)
+    round = Attendance.current_round(rule)
+    return { open: false } unless round
+
+    statuses = Attendance.statuses(rule)
+    people = rule.whatsapp_group.group_participants.where(id: statuses.keys).index_by(&:id)
+    names = ->(status) { statuses.select { |_, value| value == status }.keys.filter_map { |id| people[id]&.label } }
+    {
+      open: true, opened_at: round.sent_at,
+      confirmed: names.("confirmed") + Attendance.guest_statuses(rule).select { |_, value| value == "confirmed" }.keys,
+      declined: names.("declined"),
+      no_reply: rule.whatsapp_group.members_of(Attendance.tracked_keys(rule)).reject { |p| statuses.key?(p.id) }.map(&:label)
+    }
+  end
+
+  # Cobrança do mês aberto: quem já pagou e quem deve.
+  def billing_summary(rule)
+    charges = Billing.current_charges(rule)
+    {
+      period: Billing.current_period(rule),
+      paid: charges.select(&:paid?).map { |charge| [ charge.label, charge.kind, charge.date ].compact.join(" ") },
+      unpaid: charges.reject(&:paid?).map { |charge| [ charge.label, charge.kind, charge.date ].compact.join(" ") }
     }
   end
 end

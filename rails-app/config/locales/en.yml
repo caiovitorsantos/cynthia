@@ -541,6 +541,19 @@
       create_template: "New template"
       create_flow: "New flow"
       set_variable: "Variable"
+    group:
+      proposal: "Proposal #%{id}:"
+      summary:
+        create_template: "new template \"%{name}\""
+        create_flow: "new flow \"%{name}\""
+        set_variable: "variable {{%{name}}}"
+      confirm_hint: "_Admin: reply *yes* to this message and I'll do it. Ugh._"
+      result:
+        done: "Done: %{what}. You're welcome."
+        failed: "Didn't work (%{what}): %{result}"
+        pending: "Still pending: %{what}"
+        cancelled: "Cancelled: %{what}"
+      admins_only: "%{command} is admins only. Ugh."
     status:
       pending: "Waiting for you."
       done: "Done. You're welcome."

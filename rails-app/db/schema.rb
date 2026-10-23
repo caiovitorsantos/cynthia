@@ -10,18 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "assistant_actions", force: :cascade do |t|
+    t.string "channel", default: "panel", null: false
     t.datetime "created_at", null: false
     t.string "kind", null: false
+    t.bigint "message_log_id"
     t.jsonb "payload", default: {}, null: false
     t.boolean "reported", default: false, null: false
     t.text "result"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.index ["message_log_id"], name: "index_assistant_actions_on_message_log_id"
   end
 
   create_table "assistant_messages", force: :cascade do |t|
@@ -164,6 +167,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_200000) do
     t.index ["jid"], name: "index_whatsapp_groups_on_jid", unique: true
   end
 
+  add_foreign_key "assistant_actions", "message_logs", on_delete: :nullify
   add_foreign_key "attendances", "group_participants", on_delete: :cascade
   add_foreign_key "attendances", "message_logs", on_delete: :cascade
   add_foreign_key "charges", "group_participants", on_delete: :cascade

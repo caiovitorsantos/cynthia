@@ -541,6 +541,19 @@
       create_template: "Nueva plantilla"
       create_flow: "Nuevo flujo"
       set_variable: "Variable"
+    group:
+      proposal: "Propuesta #%{id}:"
+      summary:
+        create_template: "nueva plantilla \"%{name}\""
+        create_flow: "nuevo flujo \"%{name}\""
+        set_variable: "variable {{%{name}}}"
+      confirm_hint: "_Admin: responde *sí* a este mensaje y lo hago. Ugh._"
+      result:
+        done: "Hecho: %{what}. De nada."
+        failed: "No funcionó (%{what}): %{result}"
+        pending: "Aún pendiente: %{what}"
+        cancelled: "Cancelado: %{what}"
+      admins_only: "%{command} es solo para admins. Ugh."
     status:
       pending: "Esperándote."
       done: "Hecho. De nada."

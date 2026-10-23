@@ -2,13 +2,39 @@
 # quando o usuário confirma, passando pelas mesmas validações do painel.
 class AssistantAction < ApplicationRecord
   KINDS = %w[create_template create_flow set_variable].freeze
+  CHANNELS = %w[panel group].freeze
+  YES = %w[sim s yes y si sí ok confirmo confirma confirmar 👍 ✅].freeze
   STATUSES = %w[pending done failed cancelled].freeze
   NOTE_PREFIX = "[painel]".freeze
 
   validates :kind, inclusion: { in: KINDS }
   validates :status, inclusion: { in: STATUSES }
+  validates :channel, inclusion: { in: CHANNELS }
 
-  scope :unreported, -> { where(reported: false).where.not(status: "pending") }
+  belongs_to :message_log, optional: true
+
+  scope :panel, -> { where(channel: "panel") }
+  scope :unreported, -> { panel.where(reported: false).where.not(status: "pending") }
+
+  # Admin respondeu "sim" citando a mensagem da Cynth.ia com propostas: executa e responde no grupo.
+  # Devolve true se a resposta era para ela (para não cair em outras regras).
+  def self.confirm_from_group_reply(group, event)
+    log = MessageLog.find_by(wa_message_id: event[:message_id], group_jid: group.jid)
+    actions = log ? where(message_log: log, status: "pending").order(:id).to_a : []
+    return false if actions.empty?
+
+    sender = group.group_participants.find_by(jid: event[:participant_jid])
+    word = event[:text].to_s.strip.downcase.split.first.to_s.delete(".!,")
+    return true unless sender&.admin? && YES.include?(word)
+
+    actions.each(&:confirm!)
+    I18n.with_locale(group.locale) do
+      body = actions.map { |action| I18n.t("assistant.group.result.#{action.status}", what: action.summary, result: action.result) }.join("\n")
+      reply = MessageLog.create!(group_jid: group.jid, rendered_body: body, status: "pending")
+      DeliverMessageJob.perform_async(reply.id, [])
+    end
+    true
+  end
 
   def group
     WhatsappGroup.find_by(id: payload["group_id"])
@@ -23,6 +49,26 @@ class AssistantAction < ApplicationRecord
     update!(status: "done", result: record)
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound, ArgumentError => e
     update!(status: "failed", result: e.message)
+  end
+
+  # Uma linha que diz o que é ("template \"Lembrete\"").
+  def summary
+    I18n.t("assistant.group.summary.#{kind}", name: payload["name"])
+  end
+
+  # Prévia completa para o grupo: tudo o que será salvo, já que a confirmação é por texto.
+  def preview
+    lines = [ "*#{I18n.t("assistant.group.proposal", id: id)}* #{summary}" ]
+    case kind
+    when "create_template" then lines << payload["body"].to_s
+    when "set_variable" then lines << "{{#{payload["name"]}}} = #{payload["value"]}"
+    when "create_flow"
+      lines << payload.slice("trigger", "command", "cron_expression", "run_at", "timezone").compact_blank.map { |field, value| "#{field}: #{value}" }.join(" · ")
+      Array(payload["steps"]).each_with_index do |step, index|
+        lines << "#{index + 1}. #{step.map { |field, value| "#{field}: #{value}" }.join(", ")}"
+      end
+    end
+    lines.join("\n")
   end
 
   def cancel!

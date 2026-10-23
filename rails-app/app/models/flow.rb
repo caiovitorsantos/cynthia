@@ -53,6 +53,12 @@ class Flow < ApplicationRecord
   def schedule? = trigger == "schedule"
   def command? = trigger == "command"
 
+  # Mexe em dados do grupo (variáveis, esvaziar lista)? Então, por comando, só admin pode rodar.
+  # Pôr/tirar a si mesmo de uma lista (ex.: !espera) continua liberado para todos.
+  def modifies_group?
+    steps.any? { |step| %w[set_variable clear_list].include?(step["type"]) }
+  end
+
   def template_ids
     steps.filter_map { |step| step["template_id"].to_i if step["type"] == "send_message" }
   end

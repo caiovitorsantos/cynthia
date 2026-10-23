@@ -3,7 +3,7 @@
 <% unless CynthiaAssistant.available? %>
   <p class="text-sm text-wa-muted"><%= t("assistant.no_key_html") %></p>
 <% else %>
-  <% items = (AssistantMessage.ordered.to_a + AssistantAction.order(:id).to_a).sort_by(&:created_at) %>
+  <% items = (AssistantMessage.ordered.to_a + AssistantAction.panel.order(:id).to_a).sort_by(&:created_at) %>
   <div class="space-y-2">
     <% if items.none? { |item| item.is_a?(AssistantMessage) } %>
       <div class="flex justify-start"><p class="bg-wa-raised rounded-lg rounded-tl-none px-3 py-2 text-sm max-w-[85%]"><%= t("assistant.hello") %></p></div>

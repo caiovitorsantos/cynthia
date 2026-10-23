@@ -19,9 +19,9 @@ class AssistantController < ApplicationController
 
   # Nova conversa: apaga o histórico e descarta propostas não confirmadas.
   def destroy
-    AssistantAction.where(status: "pending").find_each(&:cancel!)
+    AssistantAction.panel.where(status: "pending").find_each(&:cancel!)
     AssistantMessage.delete_all
-    AssistantAction.update_all(reported: true)
+    AssistantAction.panel.update_all(reported: true)
     render_conversation
   end
 

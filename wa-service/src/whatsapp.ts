@@ -30,7 +30,7 @@ function cacheContacts(contacts: Partial<Contact>[]): void {
 }
 
 type InboundEvent = {
-  kind: "reaction" | "reply" | "command" | "list";
+  kind: "reaction" | "reply" | "command" | "list" | "mention";
   group_jid: string;
   message_id: string;
   participant_jid: string;
@@ -40,8 +40,18 @@ type InboundEvent = {
 
 const NUMBERED_LINE = /^\s*\d+\s*[.)-]/;
 
-// Reações, respostas que citam uma mensagem, comandos ("!...") e listas numeradas coladas, em
-// grupos. O Rails decide o que fazer com cada um; o resto ele ignora.
+// "5511999:12@s.whatsapp.net" e "5511999@s.whatsapp.net" são o mesmo usuário (sem o dispositivo).
+const bareJid = (jid: string) => jid.replace(/:\d+(?=@)/, "");
+
+// Marcaram o número conectado (a Cynth.ia) na mensagem?
+function mentionsMe(msg: WAMessage): boolean {
+  const own = [sock?.user?.id, sock?.user?.lid].filter(Boolean).map((jid) => bareJid(jid as string));
+  const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid ?? [];
+  return mentioned.some((jid) => own.includes(bareJid(jid)));
+}
+
+// Reações, respostas que citam uma mensagem, comandos ("!..."), listas numeradas coladas e
+// menções à Cynth.ia, em grupos. O Rails decide o que fazer com cada um; o resto ele ignora.
 function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
   const groupJid = msg.key.remoteJid;
   if (!groupJid?.endsWith("@g.us")) return undefined;
@@ -61,6 +71,10 @@ function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
   }
 
   if (!participantJid || msg.key.fromMe) return undefined;
+
+  if (mentionsMe(msg)) {
+    return { ...base, kind: "mention", message_id: msg.key.id ?? "", text };
+  }
 
   const reaction = msg.message?.reactionMessage;
   if (reaction?.key?.id) {
