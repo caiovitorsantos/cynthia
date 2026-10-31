@@ -8,7 +8,15 @@ Rails.application.configure do
 
   # DB Redis separado do dev (mesmo host), para specs nao mexerem no
   # estado do Sidekiq/SendGuard rodando em desenvolvimento.
-  ENV["REDIS_URL"] = ENV["REDIS_URL"].to_s.sub(%r{/\d+\z}, "") + "/1"
+  # Sem REDIS_URL (CI), cai no localhost: antes virava só "/1" e o Sidekiq tentava um socket chamado "/1".
+  ENV["REDIS_URL"] = (ENV["REDIS_URL"].presence || "redis://localhost:6379").sub(%r{/\d+\z}, "") + "/1"
+
+  # Valores fictícios para rodar os specs sem .env (CI); o .env, quando existe, tem prioridade.
+  ENV["ADMIN_PASSWORD"] ||= "test-admin-password"
+  ENV["INTERNAL_API_TOKEN"] ||= "test-internal-token"
+  ENV["WA_SERVICE_URL"] ||= "http://wa.test:3001"
+  # A chave real do .env nunca vale em teste: cada spec que precisa da Cynth.ia liga uma fictícia.
+  ENV.delete("ANTHROPIC_API_KEY")
 
   # DATABASE_URL do .env aponta pro banco de dev e tem prioridade sobre
   # o database.yml mesmo com RAILS_ENV=test; sem isso, os testes rodariam

@@ -10,7 +10,7 @@ RSpec.describe "Chat da Cynth.ia", type: :request do
     expect(response.body).to include('data-controller="assistant"', "no grupo Vôlei", %(name="group_id" id="group_id" value="#{group.id}"))
 
     get assistant_path
-    expect(response.body).to include('<turbo-frame id="assistant_conversation">', "ANTHROPIC_API_KEY") unless CynthiaAssistant.available?
+    expect(response.body).to include('<turbo-frame id="assistant_conversation">', "ANTHROPIC_API_KEY")
   end
 
   it "confirma e cancela propostas pelo cartão" do
@@ -27,12 +27,15 @@ RSpec.describe "Chat da Cynth.ia", type: :request do
   end
 
   it "o cartão do fluxo mostra todos os campos que serão salvos" do
+    ENV["ANTHROPIC_API_KEY"] = "test-key" # sem chave, o chat mostra só o aviso de chave ausente
     AssistantAction.create!(kind: "create_flow", payload: { "group_id" => group.id, "name" => "F", "trigger" => "command", "command" => "!pix",
                                                             "steps" => [ { "type" => "set_variable", "name" => "pix", "value" => "chave@x" } ] })
 
     get assistant_path
 
     expect(response.body).to include("!pix", "chave@x", "America/Sao_Paulo")
+  ensure
+    ENV.delete("ANTHROPIC_API_KEY")
   end
 
   it "nova conversa apaga o histórico e descarta propostas pendentes" do

@@ -5,16 +5,23 @@ on:
   push:
     branches: [ main ]
 
+# Actions fixadas por SHA completo (comentário = tag); o Dependabot (.github/dependabot.yml) propõe as atualizações.
+permissions: {}
+
 # O monorepo tem dois apps; o GitHub só lê workflows da raiz.
 jobs:
   rails_scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: rails-app
     steps:
-      - uses: actions/checkout@v6
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
           working-directory: rails-app
           bundler-cache: true
@@ -27,12 +34,16 @@ jobs:
 
   rails_lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: rails-app
     steps:
-      - uses: actions/checkout@v6
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
           working-directory: rails-app
           bundler-cache: true
@@ -41,6 +52,8 @@ jobs:
 
   rails_test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16
@@ -50,15 +63,24 @@ jobs:
         ports: [ "5432:5432" ]
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+      # SendGuard e os tetos da Cynth.ia usam o Redis de verdade nos specs.
+      redis:
+        image: redis:7
+        ports: [ "6379:6379" ]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       RAILS_ENV: test
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/rails_app_test
+      REDIS_URL: redis://localhost:6379/0
     defaults:
       run:
         working-directory: rails-app
     steps:
-      - uses: actions/checkout@v6
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
           working-directory: rails-app
           bundler-cache: true
@@ -69,12 +91,16 @@ jobs:
 
   wa_service:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: wa-service
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -84,3 +110,4 @@ jobs:
       - run: npm test
       - name: npm audit (dependências de produção)
         run: npm audit --omit=dev --audit-level=high
+

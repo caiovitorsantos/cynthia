@@ -42,5 +42,7 @@
 
     "esModuleInterop": true,
     "resolveJsonModule": true,
-  }
+  },
+  // Os testes rodam via tsx (npm test) e não vão para dist/, que entra na imagem de produção.
+  "exclude": ["src/**/*.test.ts"]
 }
