@@ -1,0 +1,110 @@
+# Production on a single VPS: Caddy (automatic TLS) in front of Rails; Sidekiq, the WhatsApp service,
+# Postgres and Redis stay on the internal network. Only Caddy publishes ports.
+# Images come from the registry (GHCR) by tag; `deploy.sh <tag>` does the rollout and the rollback.
+name: cynthia
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - '${CADDY_HTTP_PORT:-80}:80'
+      - '${CADDY_HTTPS_PORT:-443}:443'
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      rails:
+        condition: service_healthy
+    logging: &logging
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+
+  rails:
+    image: ${IMAGE_RAILS:?}:${TAG:?}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Rails 8 uses three databases in production (primary, cache, cable): `DATABASE_URL` only reaches the
+      # primary one, the others have their own variable. `db:prepare` creates the missing ones on boot.
+      DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia
+      CACHE_DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia_cache
+      CABLE_DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia_cable
+      REDIS_URL: redis://redis:6379/0
+      WA_SERVICE_URL: http://wa:3001
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:80/up']
+      interval: 15s
+      timeout: 5s
+      start_period: 40s
+      retries: 5
+    logging: *logging
+
+  sidekiq:
+    image: ${IMAGE_RAILS:?}:${TAG:?}
+    command: ['bundle', 'exec', 'sidekiq']
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia
+      CACHE_DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia_cache
+      CABLE_DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia_cable
+      REDIS_URL: redis://redis:6379/0
+      WA_SERVICE_URL: http://wa:3001
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    logging: *logging
+
+  wa:
+    image: ${IMAGE_WA:?}:${TAG:?}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RAILS_WEBHOOK_URL: http://rails:80/webhooks/whatsapp
+    volumes:
+      # The WhatsApp session: lose it and the number has to be paired again. It is backed up (backup.sh).
+      - wa_auth:/app/auth
+    logging: *logging
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cynthia
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: cynthia
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cynthia -d cynthia']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db_data:
+  redis_data:
+  wa_auth:
