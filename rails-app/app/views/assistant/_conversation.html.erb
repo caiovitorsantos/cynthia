@@ -1,7 +1,7 @@
 <%# Conversa com a Cynth.ia: mensagens e cartões de ação, em ordem. %>
 <% error ||= nil %>
 <% unless CynthiaAssistant.available? %>
-  <p class="text-sm text-wa-muted"><%= t("assistant.no_key_html") %></p>
+  <p data-assistant-reply class="text-sm text-wa-muted"><%= t("assistant.no_key_html") %></p>
 <% else %>
   <% items = (AssistantMessage.ordered.to_a + AssistantAction.panel.order(:id).to_a).sort_by(&:created_at) %>
   <div class="space-y-2">
@@ -13,12 +13,12 @@
         <%= render "assistant/action", action: item %>
       <% elsif (text = item.visible_text) %>
         <div class="flex <%= item.role == "user" ? "justify-end" : "justify-start" %>">
-          <p class="<%= item.role == "user" ? "bg-wa-bubble rounded-tr-none" : "bg-wa-raised rounded-tl-none" %> rounded-lg px-3 py-2 text-sm max-w-[85%] whitespace-pre-line break-words"><%= text %></p>
+          <p <%= "data-assistant-reply" unless item.role == "user" %> class="<%= item.role == "user" ? "bg-wa-bubble rounded-tr-none" : "bg-wa-raised rounded-tl-none" %> rounded-lg px-3 py-2 text-sm max-w-[85%] whitespace-pre-line break-words"><%= text %></p>
         </div>
       <% end %>
     <% end %>
     <% if error %>
-      <div class="flex justify-start"><p class="bg-red-950/60 text-red-200 rounded-lg rounded-tl-none px-3 py-2 text-sm max-w-[85%]"><%= error %></p></div>
+      <div class="flex justify-start"><p data-assistant-reply class="bg-red-950/60 text-red-200 rounded-lg rounded-tl-none px-3 py-2 text-sm max-w-[85%] break-words"><%= error %></p></div>
     <% end %>
   </div>
 <% end %>

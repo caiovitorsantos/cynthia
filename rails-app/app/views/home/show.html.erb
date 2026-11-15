@@ -15,7 +15,12 @@
     </div>
   </div>
   <div class="order-1 md:order-2 flex justify-center">
-    <%= image_tag "cynthia.png", alt: t(".art_alt"), class: "w-[420px] max-w-full drop-shadow-[0_0_40px_rgba(0,168,132,0.25)]" %>
+    <%# RNF-02: WebP (25 KB) com PNG de reserva; é o LCP da página, então carrega com prioridade alta. %>
+    <picture>
+      <source srcset="<%= image_path "cynthia.webp" %>" type="image/webp">
+      <%= image_tag "cynthia.png", alt: t(".art_alt"), width: 534, height: 486, fetchpriority: "high",
+            class: "w-[420px] max-w-full h-auto drop-shadow-[0_0_40px_rgba(0,168,132,0.25)]" %>
+    </picture>
   </div>
 </section>
 

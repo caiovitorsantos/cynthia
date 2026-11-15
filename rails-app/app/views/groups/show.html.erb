@@ -8,7 +8,15 @@
   <div class="min-w-0">
     <%= link_to t(".back"), groups_path, class: "text-sm text-wa-muted hover:underline" %>
     <h1 class="text-2xl font-semibold text-wa-text truncate"><%= @group.name %></h1>
-    <p class="text-sm text-wa-muted"><%= t("common.members", count: @participants.size) %> · <%= t("common.flows", count: @flows.size) %></p>
+    <p class="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-wa-muted">
+      <span><%= t("common.members", count: @participants.size) %> · <%= t("common.flows", count: @flows.size) %></span>
+      <%# RF-28: estado do aviso de IA de terceiro, com texto (não só cor). %>
+      <% if (notice_at = @group.ai_notice_sent_at) %>
+        <span class="text-xs text-wa-muted bg-wa-panel rounded-full px-2 py-0.5"><%= t(".ai_notice_sent", date: l(notice_at.to_date)) %></span>
+      <% else %>
+        <span class="text-xs text-amber-300 bg-yellow-950/40 border border-yellow-800/60 rounded-full px-2 py-0.5"><%= t(".ai_notice_pending") %></span>
+      <% end %>
+    </p>
   </div>
   <details class="relative shrink-0">
     <summary class="list-none cursor-pointer rounded-full px-3 py-1 text-xl leading-none text-wa-muted hover:bg-wa-surface" aria-label="<%= t(".more") %>">⋯</summary>
@@ -23,15 +31,18 @@
   </details>
 </div>
 
+<%# Aba inicial renderizada no servidor (?tab=, senão a primeira); tabs_controller ajusta pela âncora/aba lembrada. %>
+<% tabs = %w[membros fluxos templates variaveis regras] %>
+<% active = tabs.include?(params[:tab]) ? params[:tab] : tabs.first %>
 <div data-controller="tabs">
 <nav class="flex border-b border-wa-line mb-6 overflow-x-auto no-scrollbar" role="tablist">
-  <% %w[membros fluxos templates variaveis regras].each do |anchor| %>
-    <a href="#<%= anchor %>" role="tab" data-tabs-target="tab" data-action="tabs#select"
+  <% tabs.each do |anchor| %>
+    <a href="#<%= anchor %>" role="tab" aria-selected="<%= anchor == active %>" data-tabs-target="tab" data-action="tabs#select"
        class="px-4 py-2 -mb-px border-b-2 border-transparent text-sm font-medium whitespace-nowrap text-wa-muted hover:text-wa-text aria-selected:border-wa-teal aria-selected:text-wa-teal"><%= t(".tabs.#{anchor}") %></a>
   <% end %>
 </nav>
 
-<section id="membros" data-tabs-target="panel" class="<%= section %>">
+<section id="membros" data-tabs-target="panel" class="<%= section %>" <%= "hidden" unless active == "membros" %>>
   <div data-controller="filter">
     <% counts = lists.to_h { |list| [ list.key, @participants.count { |participant| participant.member_lists.include?(list) } ] } %>
     <% filters = [ [ t(".filter_all"), "", @participants.size ] ] + lists.map { |list| [ list.name, list.key, counts[list.key] ] } +
@@ -74,7 +85,8 @@
               <td data-label="<%= t(".member.number") %>" class="py-2 pr-3 font-mono text-xs"><%= participant.phone_number %></td>
               <td data-label="<%= t(".member.display_name") %>" class="py-2 pr-3">
                 <%= text_field_tag "participants[#{participant.id}][display_name]", participant.display_name,
-                      placeholder: participant.name, class: "rounded border-wa-line text-sm w-full" %>
+                      placeholder: participant.name, class: "rounded border-wa-line text-sm w-full",
+                      aria: { label: "#{t(".member.display_name")}: #{participant.name.presence || participant.phone_number}" } %>
               </td>
               <td data-label="<%= t(".member.lists") %>" class="py-2 pr-3">
                 <%= hidden_field_tag "participants[#{participant.id}][member_list_ids][]", "", id: nil %>
@@ -118,7 +130,7 @@
             <tr>
               <td class="pr-3 py-1">
                 <%= hidden_field_tag "lists[#{index}][id]", list.id %>
-                <%= text_field_tag "lists[#{index}][name]", list.name, placeholder: (list.new_record? ? t(".lists.new") : nil) %>
+                <%= text_field_tag "lists[#{index}][name]", list.name, placeholder: (list.new_record? ? t(".lists.new") : nil), aria: { label: t(".lists.name") } %>
               </td>
               <td class="pr-3 py-1 font-mono text-xs text-wa-muted"><%= list.key %></td>
               <td class="py-1 text-xs text-wa-muted"><%= counts[list.key] unless list.new_record? %></td>
@@ -142,7 +154,7 @@
   </details>
 </section>
 
-<section id="fluxos" data-tabs-target="panel" class="<%= section %>">
+<section id="fluxos" data-tabs-target="panel" class="<%= section %>" <%= "hidden" unless active == "fluxos" %>>
   <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
     <h2 class="<%= heading %>"><%= t(".flows.title") %></h2>
     <div class="flex gap-3 text-sm">
@@ -199,7 +211,7 @@
   </table>
 </section>
 
-<section id="templates" data-tabs-target="panel" class="<%= section %>">
+<section id="templates" data-tabs-target="panel" class="<%= section %>" <%= "hidden" unless active == "templates" %>>
   <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
     <h2 class="<%= heading %>"><%= t(".templates.title") %></h2>
     <%= link_to t(".templates.new"), new_group_template_path(@group), class: "btn-wa text-sm" %>
@@ -228,7 +240,7 @@
   </table>
 </section>
 
-<section id="variaveis" data-tabs-target="panel" class="<%= section %>">
+<section id="variaveis" data-tabs-target="panel" class="<%= section %>" <%= "hidden" unless active == "variaveis" %>>
   <h2 class="<%= heading %> mb-1"><%= t(".variables.title") %></h2>
   <p class="text-xs text-wa-muted mb-3">
     <%= t(".variables.help_html") %>
@@ -243,11 +255,13 @@
         <% (@group.variables.to_a + [ [ "", "" ] ]).each_with_index do |(name, value), index| %>
           <tr>
             <td data-label="<%= t(".variables.name") %>" class="py-1 pr-3 align-top">
-              <%= text_field_tag "variables[#{index}][name]", name, placeholder: (name.empty? ? t(".variables.new") : nil), class: "w-full font-mono" %>
+              <%= text_field_tag "variables[#{index}][name]", name, placeholder: (name.empty? ? t(".variables.new") : nil), class: "w-full font-mono",
+                    aria: { label: t(".variables.name") } %>
               <% if name.present? %><span class="block text-xs text-wa-muted font-mono mt-1">{{<%= name %>}}</span><% end %>
             </td>
             <td data-label="<%= t(".variables.value") %>" class="py-1 align-top">
-              <%= text_area_tag "variables[#{index}][value]", value, rows: [ value.to_s.lines.count, 1 ].max, class: "w-full" %>
+              <%= text_area_tag "variables[#{index}][value]", value, rows: [ value.to_s.lines.count, 1 ].max, class: "w-full",
+                    aria: { label: name.present? ? "#{t(".variables.value")}: {{#{name}}}" : t(".variables.value") } %>
             </td>
           </tr>
         <% end %>
@@ -267,7 +281,7 @@
   <% end %>
 </section>
 
-<section id="regras" data-tabs-target="panel" class="<%= section %>">
+<section id="regras" data-tabs-target="panel" class="<%= section %>" <%= "hidden" unless active == "regras" %>>
   <h2 class="<%= heading %> mb-3"><%= t(".rules.title") %></h2>
 
   <% GroupRule::HANDLERS.each_key do |kind| %>

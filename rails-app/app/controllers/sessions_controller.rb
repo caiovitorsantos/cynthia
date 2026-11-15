@@ -10,6 +10,7 @@ class SessionsController < ApplicationController
     if valid_credentials?(params[:username].to_s, params[:password].to_s)
       reset_session
       session[:admin] = true
+      AnalyticsEvent.track(:admin_logado)
       redirect_to groups_path
     else
       flash.now[:alert] = t(".alert")

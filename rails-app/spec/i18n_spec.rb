@@ -11,4 +11,14 @@ RSpec.describe "Traduções" do
     expect(by_locale["en"]).to match_array(by_locale["pt-BR"])
     expect(by_locale["es"]).to match_array(by_locale["pt-BR"])
   end
+
+  it "TC-28: o aviso de IA existe nos três idiomas e cita presença/pagamento, Anthropic, os dados e que só responde marcada" do
+    {
+      "pt-BR" => [ "presença", "pagou", "Anthropic", "nunca o telefone", "chave Pix", "Só respondo quando me marcam" ],
+      "en" => [ "attendance", "paid", "Anthropic", "never phone numbers", "Pix key", "only answer when mentioned" ],
+      "es" => [ "asistencia", "pagó", "Anthropic", "nunca el teléfono", "clave Pix", "Solo respondo cuando me mencionan" ]
+    }.each do |locale, words|
+      expect(I18n.t("assistant.group.ai_notice", locale: locale)).to include(*words)
+    end
+  end
 end

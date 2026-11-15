@@ -11,8 +11,8 @@
 
     <%= yield :head %>
 
-    <link rel="icon" href="/icon.png?v=cynthia-arte" type="image/png">
-    <link rel="apple-touch-icon" href="/icon.png?v=cynthia-arte">
+    <link rel="icon" href="/favicon-32.png?v=cynthia-arte" type="image/png" sizes="32x32">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=cynthia-arte">
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
@@ -23,7 +23,7 @@
       <div class="container mx-auto px-4 sm:px-5">
         <div class="flex items-center gap-3 pt-4 <%= logged_in? ? "pb-2" : "pb-4" %>">
           <%= link_to (logged_in? ? groups_path : root_path), class: "flex items-center gap-3 min-w-0" do %>
-            <%= image_tag "cynthia-face.png", alt: "", class: "w-10 h-10" %>
+            <%= render "layouts/face", size: 40, class: "w-10 h-10" %>
             <span class="text-lg sm:text-xl font-semibold truncate">Cynth<span class="text-wa-green">.ia</span></span>
           <% end %>
           <% if logged_in? %>
@@ -63,7 +63,7 @@
           <% next if message.blank? %>
           <div class="flex items-start gap-2 shadow-2xl transition-opacity duration-300" role="status"
                data-controller="toast" data-toast-duration-value="<%= duration %>">
-            <%= image_tag "cynthia-face.png", alt: "", class: "w-9 h-9 rounded-full bg-wa-raised shrink-0" %>
+            <%= render "layouts/face", size: 36, class: "w-9 h-9 rounded-full bg-wa-raised shrink-0" %>
             <div class="<%= bubble %> rounded-lg rounded-tl-none px-3 py-2 text-sm border border-wa-line flex items-start gap-3">
               <p><span class="block text-xs font-medium text-wa-green">Cynth.ia</span><%= message %></p>
               <button type="button" data-action="toast#close" aria-label="<%= t("layouts.account.close") %>" class="text-wa-muted hover:text-wa-text leading-none text-lg cursor-pointer">×</button>

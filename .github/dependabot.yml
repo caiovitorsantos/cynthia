@@ -1,0 +1,32 @@
+# Mantém dependências, actions (fixadas por SHA) e imagens base atualizadas com PRs semanais.
+# Os PRs passam pelo CI (brakeman, bundler-audit, npm audit, testes) antes do merge.
+version: 2
+updates:
+  - package-ecosystem: bundler
+    directory: /rails-app
+    schedule: { interval: weekly }
+    groups:
+      bundler-minor-patch: { update-types: [minor, patch] }
+
+  - package-ecosystem: npm
+    directory: /wa-service
+    schedule: { interval: weekly }
+    groups:
+      npm-minor-patch: { update-types: [minor, patch] }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+
+  - package-ecosystem: docker
+    directories: [/rails-app, /wa-service]
+    schedule: { interval: weekly }
+
+  # S-08: postgres, redis e caddy do Compose de produção, fixados por digest. Major fica de fora: postgres 16 -> 17
+  # exige dump/restore do volume e redis/caddy major mudam config; isso é decisão de manutenção, não PR semanal.
+  - package-ecosystem: docker-compose
+    directories: [/deploy]
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]

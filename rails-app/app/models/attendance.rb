@@ -148,7 +148,9 @@ module Attendance
       # Reação removida: apaga a resposta.
       if event[:kind] == "reaction" && text.empty?
         participant = group.group_participants.find_by(jid: event[:participant_jid])
-        Response.where(message_log: round, group_participant: participant).destroy_all if participant
+        if participant && Response.where(message_log: round, group_participant: participant).destroy_all.any?
+          AnalyticsEvent.track(:presenca_desfeita, rodada_id: round.id, whatsapp_group_id: group.id, participante_id: participant.id)
+        end
         return
       end
 
@@ -156,7 +158,21 @@ module Attendance
       return unless status
 
       participant = group.participant_for!(event[:participant_jid], event[:push_name])
-      Response.find_or_initialize_by(message_log: round, group_participant: participant).update!(status: status)
+      response = Response.find_or_initialize_by(message_log: round, group_participant: participant)
+      track_response(rule, response, event[:kind] == "reaction" ? "reacao" : "resposta") { response.update!(status: status) }
+    end
+
+    # presenca_registrada (tracking-plan), só quando a resposta é criada ou muda: sem nome; convidado só como booleano.
+    def track_response(rule, response, origem)
+      existed = response.persisted?
+      yield
+      return unless response.saved_change_to_status?
+
+      participant = response.group_participant
+      AnalyticsEvent.track(:presenca_registrada, rodada_id: response.message_log_id, whatsapp_group_id: rule.whatsapp_group_id,
+                           participante_id: participant&.id, convidado: participant.nil?,
+                           membro_cobrado: participant.present? && participant.member_lists.where(key: tracked_keys(rule)).exists?,
+                           status: response.status, origem: origem, alterou_resposta: existed)
     end
 
     # Lista da rodada copiada, editada e colada no grupo. Cada linha numerada é uma pessoa;
@@ -203,7 +219,7 @@ module Attendance
           next if responses[key] && (participant.nil? || participant != sender)
 
           responses[key] = Response.find_or_initialize_by(message_log: round, group_participant: participant, guest_name: (name unless participant))
-          responses[key].update!(status: status)
+          track_response(rule, responses[key], "lista") { responses[key].update!(status: status) }
         end
       end
 

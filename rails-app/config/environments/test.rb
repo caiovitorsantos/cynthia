@@ -17,6 +17,8 @@ Rails.application.configure do
   ENV["WA_SERVICE_URL"] ||= "http://wa.test:3001"
   # A chave real do .env nunca vale em teste: cada spec que precisa da Cynth.ia liga uma fictícia.
   ENV.delete("ANTHROPIC_API_KEY")
+  # Idem a URL da Anthropic falsa do e2e/.env.e2e: os specs interceptam api.anthropic.com com o WebMock.
+  ENV.delete("ANTHROPIC_BASE_URL")
 
   # DATABASE_URL do .env aponta pro banco de dev e tem prioridade sobre
   # o database.yml mesmo com RAILS_ENV=test; sem isso, os testes rodariam

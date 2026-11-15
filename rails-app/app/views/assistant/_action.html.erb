@@ -6,12 +6,12 @@
   </p>
   <% case action.kind %>
   <% when "create_template" %>
-    <p class="font-medium"><%= payload["name"] %></p>
+    <p class="font-medium break-words"><%= payload["name"] %></p>
     <p class="mt-1 bg-wa-bubble rounded-lg px-3 py-2 whitespace-pre-wrap break-words"><%= payload["body"] %></p>
   <% when "create_flow" %>
     <%# Mostra todos os campos que serão salvos, para a confirmação valer pelo que de fato roda. %>
-    <p class="font-medium"><%= payload["name"] %></p>
-    <dl class="text-xs text-wa-muted mt-1 grid grid-cols-[auto_1fr] gap-x-2">
+    <p class="font-medium break-words"><%= payload["name"] %></p>
+    <dl class="text-xs text-wa-muted mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 break-words">
       <dt><%= t("flows.form.trigger") %></dt><dd><%= t("flow_triggers.#{payload["trigger"]}", default: payload["trigger"].to_s) %></dd>
       <% if payload["command"].present? %><dt><%= t("flows.form.command") %></dt><dd class="font-mono"><%= payload["command"] %></dd><% end %>
       <% if payload["cron_expression"].present? %><dt>Cron</dt><dd><span class="font-mono"><%= payload["cron_expression"] %></span> · <%= cron_in_words(payload["cron_expression"]) %></dd><% end %>
@@ -23,13 +23,13 @@
         <li>
           <%= t("flow_steps.#{step["type"]}", default: step["type"].to_s) %>
           <% step.except("type").each do |field, value| %>
-            <span class="block pl-4 text-wa-muted"><span class="font-mono"><%= field %></span>: <%= value %></span>
+            <span class="block pl-4 text-wa-muted break-words"><span class="font-mono"><%= field %></span>: <%= value %></span>
           <% end %>
         </li>
       <% end %>
     </ol>
   <% when "set_variable" %>
-    <p><code class="font-mono">{{<%= payload["name"] %>}}</code> = <%= payload["value"] %></p>
+    <p class="break-words"><code class="font-mono">{{<%= payload["name"] %>}}</code> = <%= payload["value"] %></p>
   <% end %>
 
   <div class="mt-2">
@@ -39,7 +39,7 @@
         <%= button_to t("assistant.cancel"), cancel_assistant_action_path(action), class: "text-xs text-wa-muted hover:underline cursor-pointer" %>
       </div>
     <% else %>
-      <p class="text-xs <%= action.status == "failed" ? "text-red-400" : "text-wa-muted" %>">
+      <p data-assistant-target="outcome" tabindex="-1" class="text-xs break-words focus:outline-none focus-visible:ring-2 focus-visible:ring-wa-teal rounded <%= action.status == "failed" ? "text-red-400" : "text-wa-muted" %>">
         <%= t("assistant.status.#{action.status}", result: action.result) %>
         <% if action.status == "done" && action.group %>
           · <%= link_to t("assistant.open_group"), group_path(action.group, anchor: action.kind == "create_template" ? "templates" : (action.kind == "create_flow" ? "fluxos" : "variaveis")), class: "text-wa-teal hover:underline", data: { turbo_frame: "_top" } %>

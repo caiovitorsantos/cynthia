@@ -4,7 +4,11 @@
 class WebhooksController < ActionController::API
   before_action :authenticate
 
+  SESSION_EVENTS = %w[sessao_conectada sessao_caiu].freeze
+
   def whatsapp
+    return track_session if params[:kind] == "session"
+
     group = WhatsappGroup.find_by(jid: params.require(:group_jid))
     event = {
       kind: params.require(:kind),
@@ -13,15 +17,16 @@ class WebhooksController < ActionController::API
       push_name: params[:push_name],
       text: params[:text].to_s
     }
-    route_event(group, event) if group
+    from_me = params[:from_me] == true
+    route_event(group, event, from_me: from_me) if group
     head :no_content
   end
 
   private
 
-  def route_event(group, event)
+  def route_event(group, event, from_me: false)
     case event[:kind]
-    when "command" then run_commands(group, event)
+    when "command" then run_commands(group, event, from_me: from_me)
     when "mention" then GroupAssistantJob.perform_async(group.id, event.stringify_keys)
     else
       return if event[:kind] == "reply" && AssistantAction.confirm_from_group_reply(group, event)
@@ -30,10 +35,11 @@ class WebhooksController < ActionController::API
     end
   end
 
-  def run_commands(group, event)
-    # Sem participante = o próprio número conectado (o dono), que conta como admin.
-    admin = event[:participant_jid].blank? || group.group_participants.find_by(jid: event[:participant_jid])&.admin?
-    context = { "sender_jid" => event[:participant_jid], "push_name" => event[:push_name], "text" => event[:text] }
+  def run_commands(group, event, from_me:)
+    # O próprio número conectado (o dono) conta como admin, mas só com from_me explícito do wa-service:
+    # participante vazio sozinho não basta (S-07, T18).
+    admin = from_me || (event[:participant_jid].present? && group.group_participants.find_by(jid: event[:participant_jid])&.admin?)
+    context = { "sender_jid" => event[:participant_jid], "push_name" => event[:push_name], "text" => event[:text], "origem" => "comando" }
     group.flows.for_command(event[:text]).each do |flow|
       next RunFlowJob.perform_async(flow.id, context) if admin || !flow.modifies_group?
 
@@ -41,6 +47,17 @@ class WebhooksController < ActionController::API
                                   rendered_body: I18n.t("assistant.group.admins_only", locale: group.locale, command: flow.command))
       DeliverMessageJob.perform_async(denied.id, [])
     end
+  end
+
+  # Quedas e voltas da sessão do WhatsApp (tracking-plan, M4). Só os dois eventos e as três propriedades numéricas.
+  def track_session
+    name = params.require(:event)
+    return head :unprocessable_entity unless SESSION_EVENTS.include?(name)
+
+    properties = { apos_queda_s: params[:apos_queda_s], codigo: params[:codigo], logout: params[:logout] }
+      .select { |key, value| value.is_a?(Integer) || (key == :logout && [ true, false ].include?(value)) }
+    AnalyticsEvent.track(name, **properties)
+    head :no_content
   end
 
   def authenticate

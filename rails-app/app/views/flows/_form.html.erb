@@ -26,7 +26,9 @@
 
   <% cron = simple_cron(@flow.cron_expression) %>
   <% mode = if @flow.run_at.present? then "once" elsif @flow.cron_expression.blank? then "weekly" else cron&.dig(:mode) || "custom" end %>
-  <fieldset class="border border-wa-line rounded-lg p-4 space-y-3 min-w-0" data-flow-trigger-target="panel" data-trigger="schedule"
+  <%# RNF-02 (CLS): o servidor já esconde o que os controllers schedule/flow-trigger esconderiam no connect. %>
+  <% off = ->(modes) { "hidden" unless modes.split.include?(mode) } %>
+  <fieldset class="border border-wa-line rounded-lg p-4 space-y-3 min-w-0" data-flow-trigger-target="panel" data-trigger="schedule" <%= "hidden" unless @flow.trigger == "schedule" %>
             data-controller="schedule" data-action="change->schedule#update input->schedule#update">
     <legend class="text-sm font-medium px-1"><%= t(".when") %></legend>
 
@@ -36,21 +38,21 @@
         <%= select_tag :schedule_mode, options_for_select(%w[once daily weekly monthly custom].map { |option| [ t(".modes.#{option}"), option ] }, mode),
               id: "schedule_mode", data: { schedule_target: "mode" } %>
       </div>
-      <div data-schedule-target="section" data-modes="monthly">
+      <div data-schedule-target="section" data-modes="monthly" <%= off.("monthly") %>>
         <label class="block text-xs text-wa-muted" for="schedule_monthday"><%= t(".monthday") %></label>
         <%= number_field_tag :schedule_monthday, cron&.dig(:monthday) || 1, in: 1..31, id: "schedule_monthday", class: "w-20", data: { schedule_target: "monthday" } %>
       </div>
-      <div data-schedule-target="section" data-modes="daily weekly monthly">
+      <div data-schedule-target="section" data-modes="daily weekly monthly" <%= off.("daily weekly monthly") %>>
         <label class="block text-xs text-wa-muted" for="schedule_time"><%= t(".time") %></label>
         <%= time_field_tag :schedule_time, cron&.dig(:time) || "09:00", id: "schedule_time", data: { schedule_target: "time" } %>
       </div>
-      <div data-schedule-target="section" data-modes="once">
+      <div data-schedule-target="section" data-modes="once" <%= off.("once") %>>
         <%= f.label :run_at, t(".run_at"), class: "block text-xs text-wa-muted" %>
         <%= f.datetime_field :run_at, data: { schedule_target: "runAt" } %>
       </div>
     </div>
 
-    <div data-schedule-target="section" data-modes="weekly" class="flex flex-wrap gap-2" role="group" aria-label="<%= t(".weekdays") %>">
+    <div data-schedule-target="section" data-modes="weekly" <%= off.("weekly") %> class="flex flex-wrap gap-2" role="group" aria-label="<%= t(".weekdays") %>">
       <% selected = cron&.dig(:weekdays) || [ Date.current.wday ] %>
       <% t("date.abbr_day_names").each_with_index.to_a.rotate(1).each do |label, day| %>
         <label class="cursor-pointer">
@@ -60,7 +62,7 @@
       <% end %>
     </div>
 
-    <div data-schedule-target="section" data-modes="custom" class="space-y-2">
+    <div data-schedule-target="section" data-modes="custom" <%= off.("custom") %> class="space-y-2">
       <div class="flex flex-wrap gap-2 items-end">
         <div class="flex-1 min-w-40">
           <%= f.label :cron_expression, t(".cron"), class: "block text-xs text-wa-muted" %>
@@ -81,9 +83,9 @@
     </div>
   </fieldset>
 
-  <fieldset class="border border-wa-line rounded-lg p-4 space-y-2 min-w-0" data-flow-trigger-target="panel" data-trigger="command">
+  <fieldset class="border border-wa-line rounded-lg p-4 space-y-2 min-w-0" data-flow-trigger-target="panel" data-trigger="command" <%= "hidden" unless @flow.trigger == "command" %>>
     <legend class="text-sm font-medium px-1"><%= t(".command") %></legend>
-    <%= f.text_field :command, placeholder: "!lista", class: "block w-full sm:w-64 rounded border-wa-line font-mono text-sm" %>
+    <%= f.text_field :command, placeholder: "!lista", aria: { label: t(".command") }, class: "block w-full sm:w-64 rounded border-wa-line font-mono text-sm" %>
     <p class="text-xs text-wa-muted"><%= t(".command_help_html") %></p>
   </fieldset>
 

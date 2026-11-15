@@ -1,5 +1,5 @@
 # Um turno da conversa com a Cynth.ia, guardado como os blocos da API (inclusive os de
-# pensamento, que precisam voltar intactos). A conversa só cresce; "nova conversa" apaga tudo.
+# pensamento, que precisam voltar intactos). "Nova conversa" apaga tudo; AssistantRetentionJob apaga após 30 dias.
 class AssistantMessage < ApplicationRecord
   ROLES = %w[user assistant].freeze
 
@@ -7,8 +7,14 @@ class AssistantMessage < ApplicationRecord
 
   scope :ordered, -> { order(:id) }
 
+  # T8/TM-11: cada chamada leva só os últimos turnos, começando num turno do usuário com texto (nunca num
+  # tool_result sem o tool_use dele). Uma pergunta usa no máximo 1 + 2 × MAX_TOOL_ROUNDS turnos.
+  HISTORY_LIMIT = 40
+
   def self.history
-    ordered.map { |message| { role: message.role, content: message.content } }
+    recent = ordered.last(HISTORY_LIMIT)
+    start = recent.index { |message| message.role == "user" && message.content.any? { |block| block["type"] == "text" } }
+    recent.drop(start || recent.size).map { |message| { role: message.role, content: message.content } }
   end
 
   # Texto visível do turno: o que a pessoa escreveu ou a resposta dela (sem pensamento,

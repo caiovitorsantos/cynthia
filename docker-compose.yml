@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -15,6 +16,7 @@ services:
 
   redis:
     image: redis:7
+    restart: unless-stopped
     volumes:
       - redis_data:/data
     healthcheck:
@@ -27,11 +29,13 @@ services:
     build:
       context: ./rails-app
       dockerfile: Dockerfile.dev
+    restart: unless-stopped
     env_file: .env
     environment:
       WA_SERVICE_URL: http://wa:3001
+    # Só no loopback (T14/TM-17): o Rails de dev não fica exposto na rede local.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./rails-app:/rails
       - rails_bundle:/usr/local/bundle
@@ -46,9 +50,10 @@ services:
   wa:
     build:
       context: ./wa-service
-    env_file: .env
     restart: unless-stopped
+    # Só o que o wa-service usa (T7): sem chave da Anthropic, senha do admin nem master key.
     environment:
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       RAILS_WEBHOOK_URL: http://rails:3000/webhooks/whatsapp
     volumes:
       - ./wa-service:/app

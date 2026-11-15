@@ -1,34 +1,40 @@
 <%# Chat flutuante com a Cynth.ia (só logado). Sabe o grupo aberto na página, se houver. %>
+<%# Diálogo não modal (A23): a página continua usável com o chat aberto; Esc fecha e o foco volta ao botão. %>
 <div data-controller="assistant" class="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3">
-  <section data-assistant-target="panel" hidden aria-label="<%= t("assistant.title") %>"
+  <section id="assistant-panel" data-assistant-target="panel" hidden role="dialog" aria-modal="false" aria-label="<%= t("assistant.title") %>"
+           data-action="keydown.esc->assistant#close"
            class="w-[min(24rem,calc(100vw-2rem))] h-[min(36rem,calc(100vh-7rem))] flex flex-col rounded-xl border border-wa-line bg-wa-surface shadow-2xl overflow-hidden">
     <header class="flex items-center gap-2 px-3 py-2 bg-wa-header border-b border-wa-line">
-      <%= image_tag "cynthia-face.png", alt: "", class: "w-8 h-8 rounded-full" %>
+      <%= render "layouts/face", size: 32, loading: "lazy", class: "w-8 h-8 rounded-full" %>
       <div class="min-w-0">
-        <p class="text-sm font-semibold">Cynth.ia</p>
+        <h2 class="text-sm font-semibold">Cynth.ia</h2>
         <p class="text-xs text-wa-muted truncate"><%= @group ? t("assistant.context", group: @group.name) : t("assistant.subtitle") %></p>
       </div>
-      <%= button_to t("assistant.reset"), assistant_path, method: :delete, form: { class: "ml-auto", data: { turbo_confirm: t("assistant.reset_confirm") } },
+      <%= button_to t("assistant.reset"), assistant_path, method: :delete, form: { class: "ml-auto shrink-0", data: { turbo_confirm: t("assistant.reset_confirm") } },
             class: "text-xs text-wa-muted hover:text-wa-text cursor-pointer" %>
-      <button type="button" data-action="assistant#toggle" aria-label="<%= t("layouts.account.close") %>" class="text-xl leading-none text-wa-muted hover:text-wa-text px-1 cursor-pointer">×</button>
+      <button type="button" data-action="assistant#close" aria-label="<%= t("layouts.account.close") %>" class="text-xl leading-none text-wa-muted hover:text-wa-text px-1 cursor-pointer">×</button>
     </header>
-    <div data-assistant-target="scroll" class="flex-1 overflow-y-auto p-3 bg-wa-chat">
+    <div data-assistant-target="scroll" class="flex-1 overflow-y-auto overflow-x-hidden p-3 bg-wa-chat">
       <%= turbo_frame_tag "assistant_conversation", src: assistant_path, loading: :lazy do %>
         <p class="text-sm text-wa-muted"><%= t("assistant.loading") %></p>
       <% end %>
-      <p data-assistant-target="typing" hidden class="mt-2 text-xs text-wa-muted italic"><%= t("assistant.typing") %></p>
+      <p data-assistant-target="typing" hidden aria-hidden="true" class="mt-2 text-xs text-wa-muted italic"><%= t("assistant.typing") %></p>
     </div>
+    <%# A22/A24: região viva única; o controller põe nela "digitando…", a resposta, o erro ou o desfecho da proposta. %>
+    <p data-assistant-target="status" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></p>
     <%= form_with url: assistant_path, class: "flex items-end gap-2 p-2 border-t border-wa-line",
           data: { action: "turbo:submit-start->assistant#sending turbo:submit-end->assistant#sent" } do %>
       <%= hidden_field_tag :group_id, @group&.id %>
+      <%= label_tag :text, t("assistant.message_label"), class: "sr-only" %>
       <%= text_area_tag :text, nil, rows: 2, placeholder: t("assistant.placeholder"), required: true,
-            class: "flex-1 resize-none text-sm max-h-28", data: { assistant_target: "input", action: "keydown->assistant#submitOnEnter" } %>
-      <%= submit_tag t("assistant.send"), class: "btn-wa text-sm px-4 py-2" %>
+            class: "flex-1 min-w-0 resize-none text-sm max-h-28", data: { assistant_target: "input", action: "keydown->assistant#submitOnEnter" } %>
+      <%= submit_tag t("assistant.send"), class: "btn-wa text-sm px-4 py-2 shrink-0" %>
     <% end %>
   </section>
 
-  <button type="button" data-action="assistant#toggle" aria-label="<%= t("assistant.open") %>"
+  <button type="button" data-assistant-target="launcher" data-action="assistant#toggle" aria-label="<%= t("assistant.open") %>"
+          aria-expanded="false" aria-controls="assistant-panel"
           class="w-14 h-14 rounded-full bg-wa-green shadow-xl border-2 border-wa-green hover:scale-105 transition cursor-pointer overflow-hidden">
-    <%= image_tag "cynthia-face.png", alt: "", class: "w-full h-full" %>
+    <%= render "layouts/face", size: 56, class: "w-full h-full" %>
   </button>
 </div>

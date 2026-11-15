@@ -20,7 +20,7 @@ RSpec.describe "Fluxos e templates do grupo", type: :request do
       steps: { "0" => { type: "add_to_list", list_key: "espera" }, "1" => { type: "send_message", template_id: template.id, opens_round: "0" }, "2" => { type: "" } } } }
 
     flow = group.flows.sole
-    expect(response).to redirect_to(group_path(group, anchor: "fluxos"))
+    expect(response).to redirect_to(group_path(group, tab: "fluxos", anchor: "fluxos"))
     expect(flow).to have_attributes(command: "!entrar", cron_expression: nil, steps: [
       { "type" => "add_to_list", "list_key" => "espera" }, { "type" => "send_message", "template_id" => template.id.to_s, "opens_round" => "0" }
     ])
@@ -53,7 +53,7 @@ RSpec.describe "Fluxos e templates do grupo", type: :request do
 
   it "executa o fluxo agora em segundo plano" do
     flow = group.flows.create!(name: "Limpar", trigger: "schedule", cron_expression: "0 9 * * *", steps: [ { "type" => "clear_list", "list_key" => "espera" } ])
-    expect(RunFlowJob).to receive(:perform_async).with(flow.id)
+    expect(RunFlowJob).to receive(:perform_async).with(flow.id, { "origem" => "executar_agora" })
 
     post run_group_flow_path(group, flow)
   end

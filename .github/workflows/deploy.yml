@@ -1,6 +1,11 @@
-# Build once, deploy the same images: CI green on main -> images in GHCR (tag = commit) -> approval in the
-# `production` environment -> rollout on the VPS (deploy/deploy.sh, with automatic rollback) -> smoke test.
-# Rollback or redeploy of an older version: Actions > Deploy > Run workflow, with the image tag.
+# Build once, deploy the same images: CI green on main -> trivy -> images in GHCR (tag = commit, for people) ->
+# approval in the `production` environment -> rollout on the VPS by digest (deploy/deploy.sh, with automatic
+# rollback) -> smoke test. The deploy never uses a tag (G10): the digest comes from the push of the scanned image.
+# Rollback or redeploy of an older version: Actions > Deploy > Run workflow, with the two digests (they are in the
+# summary of the build that published them and in ~/cynthia/.deploy/ on the server).
+#
+# Accepted deviation (ADR-010): no staging and no OIDC. There is no cloud account; GHCR uses GITHUB_TOKEN and the
+# VPS is reached by an SSH key that only exists as a secret of the `production` environment (required reviewer).
 #
 # One-time setup (see deploy/RUNBOOK.md): environment `production` with a required reviewer, its secrets
 # DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS and the variable DOMAIN.
@@ -8,6 +13,8 @@ name: Deploy
 
 # Security: `workflow_run` runs with this repository's permissions, and `branches: [main]` also matches a pull request
 # from a fork whose branch is called `main`. The condition below only builds a push to `main` of this very repository.
+# A manual run (workflow_dispatch) only deploys when started from `main` (T22): the deploy files, deploy.sh and this
+# workflow then come from the reviewed branch, never from a feature branch.
 
 on:
   workflow_run:
@@ -16,8 +23,12 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      tag:
-        description: Image tag to deploy (empty = build and deploy the current main)
+      rails_digest:
+        description: Digest (sha256:...) of the cynthia-rails image to deploy (empty = build and deploy the current main)
+        required: false
+        default: ''
+      wa_digest:
+        description: Digest (sha256:...) of the cynthia-wa image of the same release (required with rails_digest)
         required: false
         default: ''
 
@@ -35,13 +46,14 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.head_repository.full_name == github.repository) ||
-      (github.event_name == 'workflow_dispatch' && inputs.tag == '')
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.rails_digest == '')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     outputs:
-      tag: ${{ steps.meta.outputs.tag }}
+      rails_image: ${{ steps.push.outputs.rails_image }}
+      wa_image: ${{ steps.push.outputs.wa_image }}
     steps:
       - name: Resolve the commit and the tag
         id: meta
@@ -54,40 +66,74 @@ jobs:
             echo "tag=${SHA:0:12}"
             echo "owner=${OWNER,,}"
           } >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ steps.meta.outputs.sha }}
           persist-credentials: false
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Rails image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: rails-app
-          push: true
+          load: true
           tags: ghcr.io/${{ steps.meta.outputs.owner }}/cynthia-rails:${{ steps.meta.outputs.tag }}
           cache-from: type=gha,scope=rails
           cache-to: type=gha,scope=rails,mode=max
       - name: WhatsApp service image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: wa-service
           file: wa-service/Dockerfile.prod
-          push: true
+          load: true
           tags: ghcr.io/${{ steps.meta.outputs.owner }}/cynthia-wa:${{ steps.meta.outputs.tag }}
           cache-from: type=gha,scope=wa
           cache-to: type=gha,scope=wa,mode=max
+      # S-03 (WHA-18): HIGH/CRITICAL com correção disponível barra o deploy antes de a imagem ir ao registro.
+      - name: Trivy (Rails)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/cynthia-rails:${{ steps.meta.outputs.tag }}
+          scanners: vuln # o scanner de segredos acusa falso positivo nos docs da gem anthropic
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Trivy (WhatsApp service)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/cynthia-wa:${{ steps.meta.outputs.tag }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      # The digest of the push is the content the trivy just scanned; the deploy gets that, not the tag.
+      - name: Push the scanned images
+        id: push
+        env:
+          IMAGE_PREFIX: ghcr.io/${{ steps.meta.outputs.owner }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          for app in rails wa; do
+            docker push "$IMAGE_PREFIX/cynthia-$app:$TAG"
+            # RepoDigests can list other repos (containerd store): take the one of the repo just pushed.
+            ref="$(docker inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$IMAGE_PREFIX/cynthia-$app:$TAG" \
+              | grep -m1 "^$IMAGE_PREFIX/cynthia-$app@sha256:" || true)"
+            [[ "$ref" =~ ^ghcr\.io/[a-z0-9._-]+/cynthia-$app@sha256:[0-9a-f]{64}$ ]] || { echo "no digest for cynthia-$app: '$ref'"; exit 1; }
+            echo "${app}_image=$ref" >> "$GITHUB_OUTPUT"
+            echo "- \`$ref\` (tag \`$TAG\`)" >> "$GITHUB_STEP_SUMMARY"
+          done
 
   deploy:
     needs: build
-    # Runs after a successful build, or alone when an existing tag is given (rollback / redeploy).
+    # Runs after a successful build, or alone when existing digests are given (rollback / redeploy).
     if: >-
       always() && (needs.build.result == 'success' ||
-      (needs.build.result == 'skipped' && github.event_name == 'workflow_dispatch' && inputs.tag != ''))
+      (needs.build.result == 'skipped' && github.event_name == 'workflow_dispatch' &&
+       github.ref == 'refs/heads/main' && inputs.rails_digest != ''))
     runs-on: ubuntu-latest
     # The required reviewers of this environment are the human approval of the production release.
     environment: production
@@ -95,16 +141,28 @@ jobs:
       contents: read
       packages: read
     env:
-      TAG: ${{ needs.build.outputs.tag || inputs.tag }}
+      BUILT_RAILS: ${{ needs.build.outputs.rails_image }}
+      BUILT_WA: ${{ needs.build.outputs.wa_image }}
+      INPUT_RAILS: ${{ inputs.rails_digest }}
+      INPUT_WA: ${{ inputs.wa_digest }}
       OWNER: ${{ github.repository_owner }}
       ACTOR: ${{ github.actor }}
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DOMAIN: ${{ vars.DOMAIN }}
     steps:
-      - name: Check the tag
-        run: '[[ "$TAG" =~ ^[A-Za-z0-9._-]{1,128}$ ]] || { echo "invalid image tag"; exit 1; }'
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Resolve the release (images by digest)
+        run: |
+          if [[ -n "$BUILT_RAILS" ]]; then
+            rails="$BUILT_RAILS" wa="$BUILT_WA"
+          else
+            rails="ghcr.io/${OWNER,,}/cynthia-rails@$INPUT_RAILS" wa="ghcr.io/${OWNER,,}/cynthia-wa@$INPUT_WA"
+          fi
+          for ref in "$rails" "$wa"; do
+            [[ "$ref" =~ ^ghcr\.io/[a-z0-9._-]+/cynthia-(rails|wa)@sha256:[0-9a-f]{64}$ ]] || { echo "invalid image: '$ref'"; exit 1; }
+          done
+          { echo "RAILS_IMAGE=$rails"; echo "WA_IMAGE=$wa"; } >> "$GITHUB_ENV"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
@@ -129,6 +187,6 @@ jobs:
       - name: Roll out
         run: |
           ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd cynthia && chmod +x deploy.sh backup.sh && IMAGE_RAILS=ghcr.io/${OWNER,,}/cynthia-rails IMAGE_WA=ghcr.io/${OWNER,,}/cynthia-wa ./deploy.sh '$TAG'"
+            "cd cynthia && chmod +x deploy.sh backup.sh && ./deploy.sh '$RAILS_IMAGE' '$WA_IMAGE'"
       - name: Smoke test
         run: curl -fsS --retry 10 --retry-delay 6 --retry-all-errors "https://$DOMAIN/up"

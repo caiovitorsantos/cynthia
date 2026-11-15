@@ -9,4 +9,9 @@ class GroupParticipant < ApplicationRecord
   def label
     display_name || name || phone_number
   end
+
+  # RF-29: rótulo para o que vai à Anthropic. Nunca o telefone nem o JID.
+  def ai_label
+    display_name || name || "Participante ##{id}"
+  end
 end

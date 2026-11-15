@@ -1,0 +1,8 @@
+<%# Rosto da Cynth.ia (RNF-02): WebP de 112 px (2x do maior uso, 56 px) com PNG de reserva; width/height fixos evitam CLS. %>
+<%# Sem loading: "lazy", o arquivo (4,7 KB) vai com prioridade alta: o botão do chat costuma ser o elemento de LCP do painel. %>
+<% lazy = local_assigns[:loading] == "lazy" %>
+<picture class="contents">
+  <source srcset="<%= image_path "cynthia-face.webp" %>" type="image/webp">
+  <%= image_tag "cynthia-face.png", alt: "", width: size, height: size, decoding: "async",
+        loading: lazy ? "lazy" : "eager", fetchpriority: lazy ? "auto" : "high", class: local_assigns[:class] %>
+</picture>
