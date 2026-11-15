@@ -109,7 +109,7 @@ O agente lê o socket do Docker (somente leitura): é o contêiner mais privileg
 ## 9. Manutenção
 
 - Atualizações de segurança do sistema: automáticas (`unattended-upgrades`); reinicie a VPS quando o aviso de reboot aparecer.
-- Imagens base (`postgres:16`, `redis:7`, `caddy:2`): fixadas por digest no `docker-compose.prod.yml`; o Dependabot abre o PR com o digest novo (só minor/patch) e o deploy seguinte aplica. Major (ex.: Postgres 17) é migração planejada (dump/restore), não PR.
+- Imagens base (`postgres:16`, `redis:7`, `caddy:2`): fixadas por digest no `docker-compose.prod.yml`; atualize o digest à mão num PR (o Dependabot está desligado; para religar, veja `.github/dependabot.disabled.yml`) e o deploy seguinte aplica. Major (ex.: Postgres 17) é migração planejada (dump/restore), não PR.
 - Rotação de segredos: edite o `.env` e rode `./deploy.sh $(cat .deploy/current)`.
 
 ## Limites conhecidos

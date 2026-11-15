@@ -5,7 +5,7 @@ on:
   push:
     branches: [ main ]
 
-# Actions fixadas por SHA completo (comentário = tag); o Dependabot (.github/dependabot.yml) propõe as atualizações.
+# Actions fixadas por SHA completo (comentário = tag); atualizadas à mão (Dependabot desligado: .github/dependabot.disabled.yml).
 permissions: {}
 
 # O monorepo tem dois apps; o GitHub só lê workflows da raiz.

@@ -1,7 +1,7 @@
 # Production on a single VPS: Caddy (automatic TLS) in front of Rails; Sidekiq, the WhatsApp service,
 # Postgres and Redis stay on the internal network. Only Caddy publishes ports.
 # Images come from the registry (GHCR) pinned by digest (G10): `deploy.sh <rails@sha256:...> <wa@sha256:...>` does the
-# rollout and the rollback. Third-party images are pinned by digest too; Dependabot (docker-compose) proposes updates.
+# rollout and the rollback. Third-party images are pinned by digest too; update them by hand (Dependabot is off: .github/dependabot.disabled.yml).
 name: cynthia
 
 # Datadog APM (ADR-012). Inert unless .env has COMPOSE_PROFILES=datadog (starts the agent) and
