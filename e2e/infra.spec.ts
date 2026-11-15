@@ -60,14 +60,13 @@ test("TM-18: imagens de produção sem root e sem modo dev", () => {
   expect(read("rails-app/Dockerfile")).toMatch(/^USER 1000:1000$/m);
 });
 
-test("TM-19/TM-24: deploy.yml só constrói push na main deste repo e o dispatch só a partir da main", () => {
+test("TM-19/TM-24: deploy.yml só por Run workflow a partir da main, com CI verde no commit", () => {
   const yml = read(".github/workflows/deploy.yml");
   expect(yml).toMatch(/^permissions: \{\}$/m);
+  // ADR-010 (revisão 2026-11-15): sem gatilho automático; o clique do dono é a aprovação.
+  expect(yml).not.toMatch(/^\s*workflow_run:/m);
   const build = yml.slice(yml.indexOf("  build:"), yml.indexOf("  deploy:"));
-  for (const cond of ["github.event.workflow_run.conclusion == 'success'", "github.event.workflow_run.event == 'push'",
-    "github.event.workflow_run.head_branch == 'main'", "github.event.workflow_run.head_repository.full_name == github.repository"]) {
-    expect(build).toContain(cond);
-  }
+  expect(build).toContain("gh run list -R \"$GITHUB_REPOSITORY\" -w CI -c \"$SHA\" -e push");
   const deploy = yml.slice(yml.indexOf("  deploy:"));
   expect(deploy).toMatch(/needs: build/);
   expect(deploy).toMatch(/needs\.build\.result == 'success'/);

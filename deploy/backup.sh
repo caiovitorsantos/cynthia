@@ -27,4 +27,6 @@ if [[ -n "${BACKUP_REMOTE:-}" ]]; then
   command -v rclone >/dev/null || { echo "backup: BACKUP_REMOTE is set but rclone is not installed" >&2; exit 1; }
   rclone copy "$OUT" "$BACKUP_REMOTE" --include 'db-*.dump' --include 'wa_auth-*.tgz'
 fi
+# monitor.sh alerts when this is older than 26 h: written only after every step above succeeded.
+touch "$OUT/last-ok"
 echo "backup: $STAMP ok"

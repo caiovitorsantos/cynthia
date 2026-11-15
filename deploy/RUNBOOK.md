@@ -4,7 +4,7 @@ Uma VPS com Docker Compose. Caddy na frente (TLS automático), Rails, Sidekiq, s
 Postgres e Redis na rede interna. Decisão e alternativas: `docs/adr/010-deploy-vps-compose-operado.md`.
 
 ```
-GitHub (main) ─ CI verde ─▶ build + trivy das imagens ─▶ GHCR (digest) ─▶ aprovação (environment production)
+Run workflow na main (só o dono: é a aprovação) ─ CI verde no commit ─▶ build + trivy ─▶ GHCR (digest)
         ─▶ SSH na VPS: deploy.sh <rails@sha256> <wa@sha256> ─▶ saúde ok? sim: fica · não: volta para a anterior ─▶ smoke https://DOMINIO/up
 ```
 
@@ -40,21 +40,21 @@ cp .env.production.example .env   # depois do primeiro deploy (os arquivos chega
 
 1. Gere a chave do deploy: `ssh-keygen -t ed25519 -f deploy_key -C cynthia-deploy`. A pública vai para `~deploy/.ssh/authorized_keys` na VPS.
 2. `ssh-keyscan -t ed25519 IP_DA_VPS` gera o `known_hosts`: confira a impressão digital com a do painel do provedor.
-3. Em **Settings → Environments → New environment: `production`**: ative **Required reviewers** (você). Esta é a aprovação manual de cada release.
-4. No environment `production`, crie os **secrets** `DEPLOY_HOST`, `DEPLOY_USER` (`deploy`), `DEPLOY_SSH_KEY` (a privada) e `DEPLOY_KNOWN_HOSTS`, e a **variable** `DOMAIN`.
+3. A aprovação é o próprio **Run workflow**: o deploy não tem gatilho automático e só quem tem escrita no repositório (o dono) pode dispará-lo (ADR-010, revisão 2026-11-15). Num repositório privado do GitHub Free não há revisor obrigatório em environment; o environment `production` fica só como registro (GitHub → Deployments).
+4. Crie os **secrets de repositório** (Settings → Secrets and variables → Actions) `DEPLOY_HOST`, `DEPLOY_USER` (`deploy`), `DEPLOY_SSH_KEY` (a privada) e `DEPLOY_KNOWN_HOSTS`, e a **variable** `DOMAIN`. De repositório porque segredo de environment em repositório privado exige GitHub Pro ou superior. Não dê escrita no repositório a mais ninguém sem rever isso: quem tem escrita pode implantar.
 5. Em **Settings → Actions → General**: workflows com permissão de leitura por padrão.
 6. Apague a chave privada local depois de cadastrar.
 
 ## 4. Deploy normal
 
-Merge na `main` → o workflow **CI** roda → o **Deploy** constrói as imagens e espera sua aprovação no GitHub → faz o rollout → testa `https://DOMINIO/up`.
+Merge na `main` → espere o **CI** ficar verde → **Actions → Deploy → Run workflow** (branch `main`, digests vazios): confere que o CI daquele commit passou, constrói e varre as imagens, faz o rollout → testa `https://DOMINIO/up`. Merge sozinho não implanta nada.
 Antes de trocar as imagens, o `deploy.sh` roda o `backup.sh` (as migrations rodam no boot, pelo `db:prepare`, e algumas só mexem em dados: a `20261031140000` apaga o histórico do chat). Se o backup falhar, nada muda e o deploy para; por isso `/var/backups/cynthia` (seção 7) precisa existir antes do primeiro deploy com versão anterior. Pular o backup só com `SKIP_BACKUP=1`, conscientemente.
 Se a versão nova não ficar saudável em 3 minutos (`/up` do Rails e `/health` do wa), o `deploy.sh` volta sozinho para a anterior e o workflow falha.
 
 ## 5. Rollback
 
 - Pelo GitHub: **Actions → Deploy → Run workflow** com os digests antigos em `rails_digest` e `wa_digest` (`sha256:...`; estão no resumo do run de build que os publicou e em `~/cynthia/.deploy/current` e `previous`). Tag não serve: o deploy só aceita digest.
-- Pela VPS: `cd ~/cynthia && ./deploy.sh $(cat .deploy/previous)` (sem aspas: o arquivo tem as duas referências).
+- Pela VPS: `cd ~/cynthia && ./deploy.sh $(cat .deploy/previous)` (sem aspas: o arquivo tem as duas referências). Não precisa de login no GHCR: o `deploy.sh` guarda a release atual e a anterior no disco (tags locais `cynthia-keep:*`) e só puxa o que não está lá. Uma release mais antiga que a anterior precisa de `docker login ghcr.io` com um token `read:packages`, ou do caminho pelo GitHub.
 - Rails, Sidekiq e wa são **uma release** (par de digests) e voltam juntos (S-07: o Rails novo espera o `from_me` do wa novo). Nunca troque a imagem de um só serviço à mão.
 - Ensaio local em 2026-11-15 (registro local, por digest): wa quebrado de propósito → rollback automático, os três serviços de volta na release anterior; rollback manual por `.deploy/previous` → saudável.
 - **As migrations não voltam.** Dado apagado ou alterado por migration volta só pelo backup tirado no início do deploy (seção 7). Escreva-as para a versão anterior continuar funcionando (adicionar coluna agora, remover só num deploy seguinte).
@@ -69,7 +69,10 @@ Agende `backup.sh` (Postgres + sessão do WhatsApp) no cron do usuário `deploy`
 
 ```
 0 3 * * *  cd /home/deploy/cynthia && ./backup.sh >> /home/deploy/cynthia/backup.log 2>&1
+*/5 * * * *  HC_MONITOR_URL=https://hc-ping.com/SEU-UUID bash /home/deploy/cynthia/monitor.sh >/dev/null 2>&1
 ```
+
+A segunda linha é o monitor (`monitor.sh`, precisa de `jq` no host): WhatsApp desconectado, contêiner parado, taxa de 5xx, p99, fila do Sidekiq, disco e backup sem sucesso há 26 h, avisando pelo Healthchecks.io. O backup só conta como feito quando grava `last-ok`; o monitor alerta sem ele. Detalhes, limiares e ações: `docs/runbook.md` do projeto.
 
 Guarda 14 dias em `/var/backups/cynthia` (crie a pasta com dono `deploy`). Para copiar para fora da máquina, instale o `rclone`, configure um remoto com `crypt` e ponha `BACKUP_REMOTE=nome:pasta` no `.env`. **Backup só na própria VPS não é backup.**
 

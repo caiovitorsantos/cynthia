@@ -34,7 +34,11 @@ wait_healthy() {
 # Called inside `if`, where `set -e` does not apply: every step has to fail the function by itself.
 rollout() {
   export IMAGE_RAILS="$1" IMAGE_WA="$2"
-  if [[ "${SKIP_PULL:-0}" != 1 ]]; then compose pull rails sidekiq wa || return 1; fi
+  # A digest never changes, so an image already on disk is the right one: no pull, no registry login needed (A-09:
+  # the GHCR token of the deploy job expires with the job, and the packages are private).
+  if [[ "${SKIP_PULL:-0}" != 1 ]] && ! docker image inspect "$1" "$2" >/dev/null 2>&1; then
+    compose pull rails sidekiq wa || return 1
+  fi
   compose up -d --remove-orphans || return 1
   wait_healthy
 }
@@ -48,8 +52,19 @@ fi
 if rollout "$RAILS_REF" "$WA_REF"; then
   echo "$RELEASE" > "$STATE/current"
   [[ -n "$PREVIOUS" && "$PREVIOUS" != "$RELEASE" ]] && echo "$PREVIOUS" > "$STATE/previous"
+  # Images pulled by digest have no tag, so `image prune` sees them as dangling and deleted the previous release,
+  # breaking `./deploy.sh $(cat .deploy/previous)` (A-09). A local tag (never used to deploy) keeps both releases.
+  read -r -a cur <<< "$RELEASE"
+  docker tag "${cur[0]}" cynthia-keep:current-rails && docker tag "${cur[1]}" cynthia-keep:current-wa
+  if [[ -n "$PREVIOUS" && "$PREVIOUS" != "$RELEASE" ]]; then
+    read -r -a prev <<< "$PREVIOUS"
+    docker tag "${prev[0]}" cynthia-keep:previous-rails && docker tag "${prev[1]}" cynthia-keep:previous-wa \
+      || echo "deploy: previous release is not on disk; rolling back to it will pull it (needs: docker login ghcr.io)" >&2
+  fi
   docker image prune -f >/dev/null
-  echo "deploy: $RELEASE is healthy"
+  # History for the runbook (G1/G10): when, how long, which release. Who approved is in GitHub > Deployments.
+  echo "$(date -u +%FT%TZ) healthy ${SECONDS}s $RELEASE" >> "$STATE/history"
+  echo "deploy: $RELEASE is healthy (${SECONDS}s)"
   exit 0
 fi
 
@@ -58,6 +73,12 @@ compose logs --tail 40 rails wa >&2 || true
 if [[ -n "$PREVIOUS" && "$PREVIOUS" != "$RELEASE" ]]; then
   echo "deploy: rolling back to $PREVIOUS" >&2
   read -r -a prev <<< "$PREVIOUS"
-  SKIP_PULL=1 rollout "${prev[0]}" "${prev[1]}" && echo "deploy: back on $PREVIOUS" >&2 || echo "deploy: ROLLBACK FAILED, check the server" >&2
+  if SKIP_PULL=1 rollout "${prev[0]}" "${prev[1]}"; then
+    echo "$(date -u +%FT%TZ) rolled-back ${SECONDS}s $PREVIOUS (failed: $RELEASE)" >> "$STATE/history"
+    echo "deploy: back on $PREVIOUS (${SECONDS}s)" >&2
+  else
+    echo "$(date -u +%FT%TZ) ROLLBACK-FAILED ${SECONDS}s $RELEASE" >> "$STATE/history"
+    echo "deploy: ROLLBACK FAILED, check the server" >&2
+  fi
 fi
 exit 1
