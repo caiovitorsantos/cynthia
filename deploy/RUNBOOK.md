@@ -88,7 +88,28 @@ Restaurar a sessão do WhatsApp: pare o serviço `wa`, extraia o `.tgz` no volum
 
 ## 8. Monitoramento e logs
 
-- Alerta externo: um monitor (UptimeRobot, Better Stack ou Healthchecks.io) chamando `https://DOMINIO/up` a cada minuto, avisando por e-mail.
+- Alerta externo: um monitor (UptimeRobot, Better Stack ou Healthchecks.io) chamando `https://DOMINIO/up` a cada minuto, avisando por e-mail. Continua valendo com o Datadog: a checagem do agente roda de dentro da VPS e não pega "a internet não alcança o servidor".
+
+- Monitor da VPS: `monitor.sh` no cron (seção 7), avisando pelo Healthchecks.io. É o mínimo obrigatório e continua ligado com o Datadog: só ele cobre backup, disco, fila do Sidekiq, sessão do WhatsApp pelo `/health` e "a VPS parou de dar sinal".
+
+### Datadog (opcional, ADR-012)
+
+Camada opcional por cima do `monitor.sh`: traces, painel e os monitores no AirTraffic. Os limiares de 5xx (5%) e p99 (2 s) são os mesmos nos dois; com os dois ligados, o mesmo problema pode avisar duas vezes.
+
+O que liga: APM do Rails, do Sidekiq e do serviço do WhatsApp (`service:cynthia` e `service:cynthia-wa`), métricas dos contêineres e a checagem do `/up` pelo Caddy. Logs ficam **desligados** (`DD_LOGS_ENABLED=false`): o app lida com mensagens de WhatsApp; ligue só depois de confirmar que os logs não carregam conteúdo de mensagem nem telefone.
+
+1. No `.env` do servidor: `DD_API_KEY`, `DD_SITE` e as duas linhas `COMPOSE_PROFILES=datadog` e `DD_TRACE_ENABLED=true` (modelo em `.env.production.example`).
+2. `./deploy.sh $(cat .deploy/current)`: sobe o agente e reinicia os apps com o rastreio ligado. O `deploy.sh` põe a versão (`DD_VERSION`) a partir do digest da imagem.
+3. Confira: `docker compose -f docker-compose.prod.yml --env-file .env exec datadog-agent agent status` (seções APM e `http_check`). Em poucos minutos, `service:cynthia` aparece em APM → Services.
+4. Monitores, a partir do seu computador ou da VPS (a application key precisa de `monitors_write`):
+   ```
+   DD_API_KEY=... DD_APP_KEY=... DD_SITE=datadoghq.com DD_NOTIFY=@voce@exemplo.com deploy/datadog/apply-monitors.py
+   ```
+   Cria ou atualiza, pelo nome, os monitores de `deploy/datadog/monitors.json`: `/up` fora do ar, taxa de 5xx, latência p99 e erros no serviço do WhatsApp. Todos levam `service:cynthia`, que é o que o painel do AirTraffic lê (Integrações do projeto → Datadog → Serviço `cynthia`). Mude limiares no JSON e rode de novo.
+5. Desligar: remova as duas linhas do passo 1 e rode o `deploy.sh` de novo; os monitores ficam no Datadog, em "no data".
+
+O agente lê o socket do Docker (somente leitura): é o contêiner mais privilegiado da VPS. Não publica porta.
+
 - Logs: `docker compose -f docker-compose.prod.yml --env-file .env logs -f rails wa` (rotação de 10 MB × 5 arquivos por serviço).
 - Estado: `docker compose ... ps`.
 

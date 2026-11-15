@@ -34,6 +34,9 @@ wait_healthy() {
 # Called inside `if`, where `set -e` does not apply: every step has to fail the function by itself.
 rollout() {
   export IMAGE_RAILS="$1" IMAGE_WA="$2"
+  # Datadog unified tagging: the release is the Rails image digest (short), so traces and deploys line up.
+  DD_VERSION="${IMAGE_RAILS##*@sha256:}"
+  export DD_VERSION="${DD_VERSION:0:12}"
   # A digest never changes, so an image already on disk is the right one: no pull, no registry login needed (A-09:
   # the GHCR token of the deploy job expires with the job, and the packages are private).
   if [[ "${SKIP_PULL:-0}" != 1 ]] && ! docker image inspect "$1" "$2" >/dev/null 2>&1; then

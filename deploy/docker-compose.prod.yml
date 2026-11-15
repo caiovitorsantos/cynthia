@@ -4,6 +4,14 @@
 # rollout and the rollback. Third-party images are pinned by digest too; Dependabot (docker-compose) proposes updates.
 name: cynthia
 
+# Datadog APM (ADR-012). Inert unless .env has COMPOSE_PROFILES=datadog (starts the agent) and
+# DD_TRACE_ENABLED=true (the apps send traces). DD_VERSION is set by deploy.sh (image digest).
+x-datadog: &datadog
+  DD_TRACE_ENABLED: ${DD_TRACE_ENABLED:-false}
+  DD_AGENT_HOST: datadog-agent
+  DD_ENV: production
+  DD_VERSION: ${DD_VERSION:-}
+
 services:
   caddy:
     image: caddy:2@sha256:4e2425f6009577e7c651010f16679c28f7d12df3e7b1914f941a7a3370746b3c
@@ -20,6 +28,10 @@ services:
     depends_on:
       rails:
         condition: service_healthy
+    labels:
+      # The agent's http_check of /up through Caddy and TLS (only read when the datadog profile runs). It runs from
+      # inside the VPS: keep the external uptime monitor (RUNBOOK §8) for "the internet cannot reach it".
+      com.datadoghq.ad.checks: '{"http_check": {"instances": [{"name": "cynthia-up", "url": "https://%%env_DOMAIN%%/up", "timeout": 10, "tags": ["service:cynthia", "env:production"]}]}}'
     logging: &logging
       driver: json-file
       options: { max-size: '10m', max-file: '5' }
@@ -36,6 +48,8 @@ services:
       CABLE_DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia_cable
       REDIS_URL: redis://redis:6379/0
       WA_SERVICE_URL: http://wa:3001
+      <<: *datadog
+      DD_SERVICE: cynthia
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -58,6 +72,8 @@ services:
       CABLE_DATABASE_URL: postgres://cynthia:${POSTGRES_PASSWORD:?}@db:5432/cynthia_cable
       REDIS_URL: redis://redis:6379/0
       WA_SERVICE_URL: http://wa:3001
+      <<: *datadog
+      DD_SERVICE: cynthia
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -70,6 +86,10 @@ services:
     environment:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?}
       RAILS_WEBHOOK_URL: http://rails:80/webhooks/whatsapp
+      <<: *datadog
+      DD_SERVICE: cynthia-wa
+      # dd-trace loads always and stays idle while DD_TRACE_ENABLED is false.
+      NODE_OPTIONS: --require dd-trace/init
     volumes:
       # The WhatsApp session: lose it and the number has to be paired again. It is backed up (backup.sh).
       - wa_auth:/app/auth
@@ -102,6 +122,34 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging: *logging
+
+  datadog-agent:
+    # Only with COMPOSE_PROFILES=datadog. Receives APM (8126) and DogStatsD from the containers on this network,
+    # runs the /up check and collects container metrics. Logs are off by default (DD_LOGS_ENABLED): the app
+    # handles WhatsApp messages, personal data. The read-only Docker socket makes it the most privileged
+    # container here; it publishes no port.
+    image: gcr.io/datadoghq/agent:7@sha256:d0df2a5f7dcda4f702a1d47ef9bd25bdf772421140ef964537562d906129260a
+    profiles: [datadog]
+    restart: unless-stopped
+    environment:
+      DD_API_KEY: ${DD_API_KEY:-}
+      DD_SITE: ${DD_SITE:-datadoghq.com}
+      DD_HOSTNAME: ${DD_HOSTNAME:-cynthia-vps}
+      DD_ENV: production
+      DD_TAGS: service:cynthia
+      DD_APM_ENABLED: 'true'
+      DD_APM_NON_LOCAL_TRAFFIC: 'true'
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: 'true'
+      DD_LOGS_ENABLED: ${DD_LOGS_ENABLED:-false}
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: ${DD_LOGS_ENABLED:-false}
+      DD_PROCESS_AGENT_ENABLED: 'false'
+      DD_REMOTE_CONFIGURATION_ENABLED: 'false'
+      DOMAIN: ${DOMAIN:?}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
     logging: *logging
 
 volumes:

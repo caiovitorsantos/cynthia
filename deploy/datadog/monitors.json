@@ -1,0 +1,34 @@
+[
+  {
+    "name": "cynthia: /up fora do ar",
+    "type": "service check",
+    "query": "\"http.can_connect\".over(\"instance:cynthia-up\").by(\"host\").last(3).count_by_status()",
+    "message": "O /up do cynthia não responde há 3 checagens (Caddy, TLS ou Rails). RUNBOOK §8. @{notify}",
+    "tags": ["service:cynthia", "env:production", "managed-by:apply-monitors"],
+    "options": { "thresholds": { "critical": 2, "warning": 1, "ok": 1 }, "notify_no_data": true, "no_data_timeframe": 10, "renotify_interval": 60 }
+  },
+  {
+    "name": "cynthia: taxa de erro 5xx alta",
+    "type": "query alert",
+    "query": "sum(last_10m):sum:trace.rack.request.errors{service:cynthia,env:production}.as_count() / sum:trace.rack.request.hits{service:cynthia,env:production}.as_count() > 0.05",
+    "message": "Mais de 5% das requisições do Rails com erro nos últimos 10 minutos. Veja os traces no APM (service:cynthia). @{notify}",
+    "tags": ["service:cynthia", "env:production", "managed-by:apply-monitors"],
+    "options": { "thresholds": { "critical": 0.05, "warning": 0.02 }, "notify_no_data": false, "require_full_window": false }
+  },
+  {
+    "name": "cynthia: latência p99 alta",
+    "type": "query alert",
+    "query": "percentile(last_15m):p99:trace.rack.request{service:cynthia,env:production} > 2",
+    "message": "O p99 das requisições do Rails passou de 2 s nos últimos 15 minutos. @{notify}",
+    "tags": ["service:cynthia", "env:production", "managed-by:apply-monitors"],
+    "options": { "thresholds": { "critical": 2, "warning": 1 }, "notify_no_data": false }
+  },
+  {
+    "name": "cynthia: erros no serviço do WhatsApp",
+    "type": "query alert",
+    "query": "sum(last_15m):sum:trace.express.request.errors{service:cynthia-wa,env:production}.as_count() > 10",
+    "message": "O serviço do WhatsApp (cynthia-wa) teve mais de 10 requisições com erro em 15 minutos: sessão caída ou número despareado? RUNBOOK. @{notify}",
+    "tags": ["service:cynthia", "env:production", "managed-by:apply-monitors"],
+    "options": { "thresholds": { "critical": 10, "warning": 3 }, "notify_no_data": false }
+  }
+]
