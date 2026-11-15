@@ -40,6 +40,9 @@ gem "solid_cable"
 gem "sidekiq"
 gem "sidekiq-cron"
 
+# Datadog APM (ADR-012): loaded always, tracing only with DD_TRACE_ENABLED=true (config/initializers/datadog.rb).
+gem "datadog", "~> 2.49"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
