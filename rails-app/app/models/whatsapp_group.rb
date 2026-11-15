@@ -21,7 +21,7 @@ class WhatsappGroup < ApplicationRecord
   # válida ({{nome}}); linhas sem nome são descartadas.
   def self.variables_from(rows)
     rows.to_h.values.each_with_object({}) do |row, variables|
-      key = row[:name].to_s.strip.parameterize(separator: "_")
+      key = Template.key_for(row[:name])
       variables[key] = row[:value].to_s if key.present?
     end
   end
@@ -50,6 +50,11 @@ class WhatsappGroup < ApplicationRecord
 
   def self.default_signature(locale)
     I18n.t("cynthia.signature", locale: locale)
+  end
+
+  # RF-28: quando o aviso de IA de terceiro saiu neste grupo (nil = ainda não). Usado no selo de /groups/:id.
+  def ai_notice_sent_at
+    MessageLog.where(group_jid: jid, kind: MessageLog::AI_NOTICE, status: "sent").minimum(:sent_at)
   end
 
   def rule(kind)

@@ -1,6 +1,9 @@
 class Template < ApplicationRecord
   # {{nome}} ou {{nome:parametro}} (parâmetro usado por listas e regras de grupo).
   VARIABLE_PATTERN = /(?<!@)\{\{(\w+(?::\w+)?)\}\}/
+  # Qualquer {{...}} que não é menção. Para a validação: o que não casa com VARIABLE_PATTERN (hífen,
+  # espaço) sairia literal no grupo, então conta como variável sem fonte (RF-06, WHA-20).
+  PLACEHOLDER_PATTERN = /(?<!@)\{\{([^{}]+)\}\}/
 
   # Calculadas na hora do envio (ver TemplateRenderer), não precisam de valor.
   # Listas e regras de grupo acrescentam as suas.
@@ -13,8 +16,14 @@ class Template < ApplicationRecord
 
   before_destroy :ensure_unused, unless: :destroyed_by_association # apagar o grupo leva os fluxos junto
 
+  # Nome digitado ("Chave Pix", "e2e-lista") → chave que cabe em {{chave}}: só letras, dígitos e "_".
+  # parameterize mantém o hífen, que \w não aceita; por isso o tr antes.
+  def self.key_for(name)
+    name.to_s.tr("-", " ").parameterize(separator: "_")
+  end
+
   def variable_names
-    body.to_s.scan(VARIABLE_PATTERN).flatten.uniq
+    body.to_s.scan(PLACEHOLDER_PATTERN).flatten.uniq
   end
 
   private

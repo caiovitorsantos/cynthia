@@ -31,25 +31,25 @@ class GroupsController < ApplicationController
       end
     end
 
-    redirect_to group_path(group, anchor: "membros"), notice: t(".notice")
+    redirect_to group_path(group, tab: "membros", anchor: "membros"), notice: t(".notice")
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to group_path(group, anchor: "membros"), alert: t(".alert", error: e.message)
+    redirect_to group_path(group, tab: "membros", anchor: "membros"), alert: t(".alert", error: e.message)
   end
 
   def variables
     group = WhatsappGroup.find(params[:id])
     group.update!(variables: WhatsappGroup.variables_from(params.slice(:variables).permit(variables: [ :name, :value ])[:variables] || {}), signature: params[:signature].to_s.strip,
                   locale: params[:locale].presence || group.locale)
-    redirect_to group_path(group, anchor: "variaveis"), notice: t(".notice")
+    redirect_to group_path(group, tab: "variaveis", anchor: "variaveis"), notice: t(".notice")
   end
 
   def lists
     group = WhatsappGroup.find(params[:id])
     group.update_lists!(params.slice(:lists).permit(lists: [ :id, :name ])[:lists] || {})
     group.update!(params.permit(:list_style, :list_empty_text))
-    redirect_to group_path(group, anchor: "membros"), notice: t(".notice")
+    redirect_to group_path(group, tab: "membros", anchor: "membros"), notice: t(".notice")
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to group_path(group, anchor: "membros"), alert: t(".alert", error: e.message)
+    redirect_to group_path(group, tab: "membros", anchor: "membros"), alert: t(".alert", error: e.message)
   end
 
   def leave

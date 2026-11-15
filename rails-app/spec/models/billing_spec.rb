@@ -134,4 +134,23 @@ RSpec.describe Billing do
 
     expect(MessageLog.last).to have_attributes(opens_billing: true, rendered_body: "*PAGAMENTO Setembro*\n1. @1\n2. @2")
   end
+
+  describe "eventos (tracking-plan)" do
+    def events(name) = AnalyticsEvent.where(name: name).map(&:properties)
+
+    it "TT-08: open! grava cobranca_aberta com período e contagens" do
+      described_class.open!(rule, "2026-09")
+
+      expect(events("cobranca_aberta").last).to eq("whatsapp_group_id" => group.id, "periodo" => "2026-09", "mensalidades" => 2, "diarias" => 4)
+    end
+
+    it "TT-09: 💰 na lista colada grava cobranca_paga com origem colagem, uma vez por cobrança" do
+      open_billing
+      paste("INCLINO - PAGAMENTO SETEMBRO\n\n1. Adriana 💰")
+      paste("INCLINO - PAGAMENTO SETEMBRO\n\n1. Adriana 💰")
+
+      expect(events("cobranca_paga")).to eq([ { "charge_id" => charge(adriana).id, "whatsapp_group_id" => group.id, "periodo" => "2026-09",
+                                               "tipo" => "mensal", "origem" => "colagem" } ])
+    end
+  end
 end

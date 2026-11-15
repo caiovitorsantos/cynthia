@@ -19,10 +19,11 @@ class LogsController < ApplicationController
     SendGuard.check!(group_jid: log.group_jid, message: log.rendered_body)
     response = WaClient.send_message(group_jid: log.group_jid, message: log.rendered_body)
     new_log.mark_sent!(response.try(:[], "message_id"))
+    DeliverMessageJob.track_sent(new_log, origem: "reenvio")
     redirect_to logs_path, notice: t(".notice")
   rescue WaClient::NotConnected, SendGuard::DailyCapReachedError,
          SendGuard::DuplicateMessageError, SendGuard::ThrottledError, WaClient::Error => e
-    new_log.update!(status: "failed", error_message: e.message)
+    DeliverMessageJob.fail!(new_log, e, origem: "reenvio")
     redirect_to logs_path, alert: t(".alert", error: e.message)
   end
 end

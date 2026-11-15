@@ -111,3 +111,77 @@ jobs:
       - name: npm audit (dependências de produção)
         run: npm audit --omit=dev --audit-level=high
 
+  # E2E + axe (test-plan): stack de dev com wa-service e Anthropic falsos (e2e/support/fake-wa.mjs),
+  # massa e2e- e segredos descartáveis gerados no job. Nenhum segredo do repositório; nada sai do runner.
+  e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    env:
+      E2E_PORT: "3555"
+      E2E_WA_PORT: "3556"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Stack E2E
+        run: |
+          e2e/support/env.sh
+          compose="docker compose -p cynthia-e2e --env-file e2e/.env.e2e -f docker-compose.yml -f e2e/docker-compose.e2e.yml"
+          $compose up -d --build
+          $compose exec -T rails bin/rails db:prepare
+          curl -fsS --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:3555/up
+      - name: Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: e2e-results
+          path: e2e/test-results/
+          retention-days: 7
+      - name: Derruba a stack
+        if: always()
+        run: docker compose -p cynthia-e2e --env-file e2e/.env.e2e -f docker-compose.yml -f e2e/docker-compose.e2e.yml down -v
+
+  # RNF-02 (TN-02) medido onde ele vale: a imagem de produção do Rails atrás do Caddy do deploy/docker-compose.prod.yml,
+  # não o Rails de development do job e2e (lá o Propshaft e o reload do dev inflam o LCP). Mesma receita do qa
+  # (docs/environments.md); segredos descartáveis gerados no job, nada sai do runner.
+  rnf02:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Imagem de produção do Rails
+        run: docker build -t cynthia-rails:rnf02 rails-app
+      - name: Chromium
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Lighthouse CI na imagem de produção (RNF-02)
+        run: e2e/support/rnf02-prod.sh cynthia-rails:rnf02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: lighthouse-rnf02
+          path: e2e/.lighthouseci/
+          retention-days: 7

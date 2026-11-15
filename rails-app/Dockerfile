@@ -8,7 +8,7 @@
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=3.3.12
+ARG RUBY_VERSION=3.3.13
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 # Rails app lives here
@@ -17,6 +17,7 @@ WORKDIR /rails
 # Install base packages
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client && \
+    apt-get install --only-upgrade -y zlib1g && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -72,6 +73,11 @@ COPY --chown=rails:rails --from=build /rails /rails
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Start server via Thruster by default, this can be overwritten at runtime
+# Puma direto na porta 80, atrás do Caddy (TLS e compressão). Sem Thruster: até a 0.1.27 ele embute Go e
+# x/net com HIGH corrigidos (S-03/T23), e o Caddy já faz o que ele fazia aqui.
+# A porta vem de PORT (puma.rb) e o bind é 0.0.0.0 (padrão do `rails server` fora de development). O CMD
+# precisa terminar em "./bin/rails server": é o que o bin/docker-entrypoint procura para rodar o db:prepare
+# (com "-p 80" no fim, as migrações deixavam de rodar no boot e o /up ficava verde com o banco vazio).
+ENV PORT="80"
 EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+CMD ["./bin/rails", "server"]

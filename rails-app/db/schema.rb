@@ -10,9 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_31_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "analytics_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.datetime "occurred_at", null: false
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["name", "occurred_at"], name: "index_analytics_events_on_name_and_occurred_at"
+  end
 
   create_table "assistant_actions", force: :cascade do |t|
     t.string "channel", default: "panel", null: false
@@ -126,6 +135,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
     t.text "error_message"
     t.bigint "flow_id"
     t.string "group_jid"
+    t.string "kind"
     t.boolean "opens_billing", default: false, null: false
     t.boolean "opens_round", default: false, null: false
     t.text "rendered_body"
@@ -136,6 +146,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
     t.datetime "updated_at", null: false
     t.string "wa_message_id"
     t.index ["flow_id"], name: "index_message_logs_on_flow_id"
+    t.index ["group_jid", "kind"], name: "index_message_logs_on_group_jid_and_kind"
     t.index ["round_id"], name: "index_message_logs_on_round_id"
     t.index ["wa_message_id"], name: "index_message_logs_on_wa_message_id"
   end

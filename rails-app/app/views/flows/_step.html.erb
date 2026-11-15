@@ -1,5 +1,8 @@
 <%# Um passo do fluxo. index pode ser "__INDEX__" (modelo usado pelo botão "Adicionar passo"). %>
-<% steps_for = ->(type) { Flow::STEPS.select { |_, config| config[:fields].include?(type) }.keys.join(" ") } %>
+<%# Rótulos envolvem o campo (label implícito, RNF-04): os ids mudariam com __INDEX__ e com a reordenação. %>
+<%# Campos que não valem para o tipo já saem com hidden do servidor (sem salto de layout ao carregar, RNF-02). %>
+<% steps_for = ->(type) { Flow::STEPS.select { |_, config| config[:fields].include?(type) }.keys } %>
+<% shown = ->(field) { steps_for.(field).include?(step["type"]) } %>
 <% name = ->(field) { "flow[steps][#{index}][#{field}]" } %>
 <li class="bg-wa-surface rounded-lg shadow-sm p-3" data-controller="flow-step">
   <div class="flex items-center gap-2 mb-2">
@@ -11,29 +14,29 @@
     </div>
   </div>
   <div class="flex flex-wrap gap-3 items-end">
-    <div class="flex-1 min-w-52">
-      <label class="block text-xs text-wa-muted"><%= t(".type") %></label>
+    <label class="block flex-1 min-w-52">
+      <span class="block text-xs text-wa-muted"><%= t(".type") %></span>
       <%= select_tag name.("type"), options_for_select(Flow::STEPS.keys.map { |type| [ t("flow_steps.#{type}"), type ] }, step["type"]),
-            include_blank: t(".choose"), class: "w-full", data: { flow_step_target: "type", action: "flow-step#toggle" } %>
-    </div>
-    <div data-flow-step-target="field" data-types="<%= steps_for.("template_id") %>" class="min-w-48">
-      <label class="block text-xs text-wa-muted"><%= t(".template") %></label>
-      <%= select_tag name.("template_id"), options_for_select(templates, step["template_id"]), include_blank: t(".choose"), class: "w-full" %>
-    </div>
-    <div data-flow-step-target="field" data-types="<%= steps_for.("list_key") %>" class="min-w-48">
-      <label class="block text-xs text-wa-muted"><%= t(".list") %></label>
-      <%= select_tag name.("list_key"), options_for_select(lists, step["list_key"]), include_blank: t(".choose"), class: "w-full" %>
-    </div>
-    <div data-flow-step-target="field" data-types="<%= steps_for.("name") %>" class="min-w-36">
-      <label class="block text-xs text-wa-muted"><%= t(".variable") %></label>
-      <%= text_field_tag name.("name"), step["name"], placeholder: "pix", class: "w-full font-mono" %>
-    </div>
-    <div data-flow-step-target="field" data-types="<%= steps_for.("value") %>" class="flex-1 min-w-48">
-      <label class="block text-xs text-wa-muted"><%= t(".value") %></label>
-      <%= text_field_tag name.("value"), step["value"], placeholder: "{{argumento}}", class: "w-full" %>
-    </div>
+            include_blank: t(".choose"), id: nil, class: "w-full", data: { flow_step_target: "type", action: "flow-step#toggle" } %>
+    </label>
+    <label data-flow-step-target="field" data-types="<%= steps_for.("template_id").join(" ") %>" class="block min-w-48" <%= "hidden" unless shown.("template_id") %>>
+      <span class="block text-xs text-wa-muted"><%= t(".template") %></span>
+      <%= select_tag name.("template_id"), options_for_select(templates, step["template_id"]), include_blank: t(".choose"), id: nil, class: "w-full" %>
+    </label>
+    <label data-flow-step-target="field" data-types="<%= steps_for.("list_key").join(" ") %>" class="block min-w-48" <%= "hidden" unless shown.("list_key") %>>
+      <span class="block text-xs text-wa-muted"><%= t(".list") %></span>
+      <%= select_tag name.("list_key"), options_for_select(lists, step["list_key"]), include_blank: t(".choose"), id: nil, class: "w-full" %>
+    </label>
+    <label data-flow-step-target="field" data-types="<%= steps_for.("name").join(" ") %>" class="block min-w-36" <%= "hidden" unless shown.("name") %>>
+      <span class="block text-xs text-wa-muted"><%= t(".variable") %></span>
+      <%= text_field_tag name.("name"), step["name"], placeholder: "pix", id: nil, class: "w-full font-mono" %>
+    </label>
+    <label data-flow-step-target="field" data-types="<%= steps_for.("value").join(" ") %>" class="block flex-1 min-w-48" <%= "hidden" unless shown.("value") %>>
+      <span class="block text-xs text-wa-muted"><%= t(".value") %></span>
+      <%= text_field_tag name.("value"), step["value"], placeholder: "{{argumento}}", id: nil, class: "w-full" %>
+    </label>
   </div>
-  <div data-flow-step-target="field" data-types="<%= steps_for.("opens_round") %>" class="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-xs">
+  <div data-flow-step-target="field" data-types="<%= steps_for.("opens_round").join(" ") %>" class="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-xs" <%= "hidden" unless shown.("opens_round") %>>
     <% %w[opens_round opens_billing].each do |field| %>
       <label class="flex items-center gap-1.5">
         <%= hidden_field_tag name.(field), "0", id: nil %>

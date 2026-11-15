@@ -242,6 +242,8 @@
     show:
       back: "← Grupos"
       more: "Mais ações"
+      ai_notice_sent: "Aviso de IA: enviado em %{date}"
+      ai_notice_pending: "Aviso de IA: não enviado"
       remove: "Remover do painel"
       remove_confirm: "Remover %{name} do painel? Ele volta na próxima sincronização se você ainda for membro. Listas, templates e fluxos deste grupo também serão apagados."
       leave: "Sair do grupo no WhatsApp"
@@ -530,6 +532,7 @@
     typing: "Cynth.ia está digitando… sem pressa."
     placeholder: "Ex.: cria uma rotina toda terça às 14h com a lista de presença"
     send: "Enviar"
+    message_label: "Mensagem para a Cynth.ia"
     hello: "Ugh, oi. Pergunta como usar o painel ou pede pra eu criar um template, uma rotina ou uma variável. Eu mostro antes de salvar."
     no_key_html: "Ugh. Ainda não tenho cérebro: falta a chave da Anthropic. Coloque <code>ANTHROPIC_API_KEY</code> no <code>.env</code> e reinicie o painel."
     api_error: "Ugh, não consegui pensar agora: %{error}"
@@ -548,6 +551,7 @@
         create_flow: "novo fluxo \"%{name}\""
         set_variable: "variável {{%{name}}}"
       confirm_hint: "_Admin: responde *sim* a esta mensagem que eu faço. Ugh._"
+      ai_notice: "Oi, sou a Cynth.ia. Este grupo usa um painel que registra quem confirmou presença e quem pagou. Quando alguém me marca aqui, eu respondo usando a IA da Anthropic, uma empresa terceira. Para isso envio a ela a pergunta e dados deste grupo: nome de exibição dos participantes (nunca o telefone), quem é admin, listas, presença da rodada, pagamentos, templates, fluxos e o nome das variáveis (nunca o valor, como a chave Pix). Só respondo quando me marcam."
       result:
         done: "Feito: %{what}. De nada."
         failed: "Não deu (%{what}): %{result}"

@@ -26,7 +26,7 @@ RSpec.describe "Webhooks", type: :request do
     list = group.member_lists.create!(name: "Espera")
     flow = group.flows.create!(name: "Entrar", trigger: "command", command: "!entrar", steps: [ { "type" => "add_to_list", "list_key" => list.key } ])
     group.flows.create!(name: "Outro", trigger: "command", command: "!sair", steps: [ { "type" => "remove_from_list", "list_key" => list.key } ])
-    expect(RunFlowJob).to receive(:perform_async).once.with(flow.id, { "sender_jid" => "1@lid", "push_name" => "Caio", "text" => "!Entrar já" })
+    expect(RunFlowJob).to receive(:perform_async).once.with(flow.id, { "sender_jid" => "1@lid", "push_name" => "Caio", "text" => "!Entrar já", "origem" => "comando" })
 
     post "/webhooks/whatsapp", params: params.merge(kind: "command", text: "!Entrar já", push_name: "Caio"), as: :json,
                                headers: { "Authorization" => ENV.fetch("INTERNAL_API_TOKEN") }
@@ -83,6 +83,17 @@ RSpec.describe "Webhooks", type: :request do
       expect(group.reload.variables).to eq("pix" => "v@x")
       expect(MessageLog.last.rendered_body).to eq("Feito: variável {{pix}}. De nada.")
     end
+
+    it "TM-08: sim de admin a uma proposta com mais de 1 h não executa (T5)" do
+      log = MessageLog.create!(group_jid: group.jid, status: "sent", wa_message_id: "PROP2", rendered_body: "proposta", created_at: 61.minutes.ago)
+      action = AssistantAction.create!(kind: "set_variable", channel: "group", message_log: log, payload: { "group_id" => group.id, "name" => "pix", "value" => "v@x" })
+      allow(DeliverMessageJob).to receive(:perform_async)
+
+      send_event("reply", "sim", jid: "9@lid", message_id: "PROP2")
+
+      expect(action.reload.status).to eq("cancelled")
+      expect(group.reload.variables).to be_empty
+    end
   end
 
   it "ignora grupos sem regras" do
@@ -92,5 +103,42 @@ RSpec.describe "Webhooks", type: :request do
     post "/webhooks/whatsapp", params: params, as: :json, headers: { "Authorization" => ENV.fetch("INTERNAL_API_TOKEN") }
 
     expect(response).to have_http_status(:no_content)
+  end
+
+  describe "S-07 e sessão" do
+    let(:token) { { "Authorization" => ENV.fetch("INTERNAL_API_TOKEN") } }
+    let(:group) { WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei") }
+    let!(:pix) { group.flows.create!(name: "Pix", trigger: "command", command: "!pix", steps: [ { "type" => "set_variable", "name" => "pix", "value" => "x" } ]) }
+
+    before { allow(DeliverMessageJob).to receive(:perform_async) }
+
+    it "S-07: comando sem participante só vale como admin com from_me explícito" do
+      allow(RunFlowJob).to receive(:perform_async)
+      event = params.merge(kind: "command", text: "!pix", participant_jid: "")
+
+      post "/webhooks/whatsapp", params: event, as: :json, headers: token
+      expect(RunFlowJob).not_to have_received(:perform_async)
+      expect(MessageLog.last.rendered_body).to include("só pra admin")
+
+      post "/webhooks/whatsapp", params: event.merge(from_me: true), as: :json, headers: token
+      expect(RunFlowJob).to have_received(:perform_async).with(pix.id, include("origem" => "comando")).once
+    end
+
+    it "TT-11/TT-12: eventos de sessão do wa-service viram analytics_events, só com as propriedades numéricas" do
+      post "/webhooks/whatsapp", params: { kind: "session", event: "sessao_caiu", codigo: 428, logout: false, extra: "5511988887777" }, as: :json, headers: token
+      post "/webhooks/whatsapp", params: { kind: "session", event: "sessao_conectada", apos_queda_s: 3 }, as: :json, headers: token
+      post "/webhooks/whatsapp", params: { kind: "session", event: "drop_table" }, as: :json, headers: token
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(AnalyticsEvent.order(:id).map { |e| [ e.name, e.properties ] })
+        .to eq([ [ "sessao_caiu", { "codigo" => 428, "logout" => false } ], [ "sessao_conectada", { "apos_queda_s" => 3 } ] ])
+    end
+
+    it "sessão sem token: 401 e nada gravado" do
+      post "/webhooks/whatsapp", params: { kind: "session", event: "sessao_caiu" }, as: :json, headers: { "Authorization" => "errado" }
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(AnalyticsEvent.count).to eq(0)
+    end
   end
 end

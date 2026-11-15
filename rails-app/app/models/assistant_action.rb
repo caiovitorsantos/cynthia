@@ -6,6 +6,7 @@ class AssistantAction < ApplicationRecord
   YES = %w[sim s yes y si sí ok confirmo confirma confirmar 👍 ✅].freeze
   STATUSES = %w[pending done failed cancelled].freeze
   NOTE_PREFIX = "[painel]".freeze
+  GROUP_EXPIRY = 1.hour # T5: "sim" depois disso não executa (admin pode ter sido rebaixado)
 
   validates :kind, inclusion: { in: KINDS }
   validates :status, inclusion: { in: STATUSES }
@@ -22,6 +23,11 @@ class AssistantAction < ApplicationRecord
     log = MessageLog.find_by(wa_message_id: event[:message_id], group_jid: group.jid)
     actions = log ? where(message_log: log, status: "pending").order(:id).to_a : []
     return false if actions.empty?
+
+    if log.created_at < GROUP_EXPIRY.ago
+      actions.each(&:cancel!)
+      return true
+    end
 
     sender = group.group_participants.find_by(jid: event[:participant_jid])
     word = event[:text].to_s.strip.downcase.split.first.to_s.delete(".!,")
@@ -107,8 +113,9 @@ class AssistantAction < ApplicationRecord
 
   def run_set_variable
     group = group!
-    group.update!(variables: group.variables.merge(payload["name"].to_s.parameterize(separator: "_") => payload["value"].to_s))
-    "{{#{payload["name"]}}}"
+    key = Template.key_for(payload["name"])
+    group.update!(variables: group.variables.merge(key => payload["value"].to_s))
+    "{{#{key}}}"
   end
 
   def group!

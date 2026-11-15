@@ -9,5 +9,14 @@
 		-Server
 	}
 
-	reverse_proxy rails:80
+	# /assets/* tem digest no nome (Propshaft): o conteúdo nunca muda, o navegador não precisa revalidar (RNF-02).
+	# ">" = aplica depois da resposta do Rails, substituindo o Cache-Control dele (que não tem immutable).
+	@assets path /assets/*
+	header @assets >Cache-Control "public, max-age=31536000, immutable"
+
+	# TM-26: o Rails lê só o X-Forwarded-For que o Caddy reescreve; o Forwarded do cliente não passa (2ª camada,
+	# a 1ª é config/initializers/forwarded_headers.rb).
+	reverse_proxy rails:80 {
+		header_up -Forwarded
+	}
 }

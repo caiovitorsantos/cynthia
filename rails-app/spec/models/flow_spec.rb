@@ -40,6 +40,19 @@ RSpec.describe Flow do
       expect(flow.errors[:steps].join).to include("só funciona com gatilho de comando", "escolha a lista", "usa variáveis sem valor: pix")
     end
 
+    it "RF-06: lista com hífen no nome ganha chave com _ e {{lista:chave-com-hífen}} conta como variável sem fonte" do
+      lista = group.member_lists.create!(name: "e2e-lista")
+      expect(lista.key).to eq("e2e_lista")
+
+      ok = group.templates.create!(name: "Ok", body: "{{lista:e2e_lista}}")
+      literal = group.templates.create!(name: "Literal", body: "{{lista:e2e-lista}} {{ pix }}")
+      flow = ->(template) { group.flows.new(name: "x", trigger: "schedule", cron_expression: "0 9 * * 1", steps: [ step("send_message", template_id: template.id.to_s) ]) }
+
+      expect(flow.(ok)).to be_valid
+      expect(flow.(literal)).not_to be_valid
+      expect(flow.(literal).tap(&:validate).errors[:steps].join).to include("lista:e2e-lista", " pix ")
+    end
+
     it "aceita {{remetente}} em fluxos de comando e variáveis definidas por um passo anterior" do
       template = group.templates.create!(name: "Pix", body: "{{remetente}}: {{pix}}")
       flow = group.flows.new(name: "x", trigger: "command", command: "!pix", steps: [
@@ -65,7 +78,7 @@ RSpec.describe Flow do
 
     it "põe quem mandou o comando na lista e envia o template já com a lista atualizada" do
       flow = command_flow(step("add_to_list", list_key: "espera"), step("send_message", template_id: aviso.id.to_s, opens_round: "0"))
-      expect(DeliverMessageJob).to receive(:perform_in).twice.with(0, kind_of(Integer), [])
+      expect(DeliverMessageJob).to receive(:perform_in).twice.with(0, kind_of(Integer), [], nil)
 
       flow.run!(context)
       flow.run!(context) # repetido não duplica
@@ -78,8 +91,8 @@ RSpec.describe Flow do
 
     it "espaça mensagens seguidas pela janela do SendGuard e marca a que abre rodada" do
       flow = command_flow(step("send_message", template_id: aviso.id.to_s, opens_round: "1"), step("send_message", template_id: aviso.id.to_s))
-      expect(DeliverMessageJob).to receive(:perform_in).with(0, anything, anything).ordered
-      expect(DeliverMessageJob).to receive(:perform_in).with(SendGuard::THROTTLE_WINDOW + 1, anything, anything).ordered
+      expect(DeliverMessageJob).to receive(:perform_in).with(0, anything, anything, nil).ordered
+      expect(DeliverMessageJob).to receive(:perform_in).with(SendGuard::THROTTLE_WINDOW + 1, anything, anything, nil).ordered
 
       flow.run!(context)
 
@@ -137,10 +150,12 @@ RSpec.describe Flow do
     it "dispara as rotinas vencidas e calcula a próxima execução" do
       flow = group.flows.create!(name: "x", trigger: "schedule", cron_expression: "0 9 * * *", steps: [ step("send_message", template_id: aviso.id.to_s) ])
       once = group.flows.create!(name: "y", trigger: "schedule", run_at: 1.hour.from_now, steps: [ step("send_message", template_id: aviso.id.to_s) ])
-      flow.update_columns(next_run_at: 1.minute.ago)
-      once.update_columns(next_run_at: 1.minute.ago)
-      expect(RunFlowJob).to receive(:perform_async).with(flow.id)
-      expect(RunFlowJob).to receive(:perform_async).with(once.id)
+      due = 1.minute.ago.change(usec: 0)
+      flow.update_columns(next_run_at: due)
+      once.update_columns(next_run_at: due)
+      # TT-02: a origem e o horário agendado (antes de reagendar) vão no contexto do fluxo_executado.
+      expect(RunFlowJob).to receive(:perform_async).with(flow.id, { "origem" => "rotina", "agendado_para" => due.utc.iso8601 })
+      expect(RunFlowJob).to receive(:perform_async).with(once.id, { "origem" => "rotina", "agendado_para" => due.utc.iso8601 })
 
       RunDueFlowsJob.new.perform
 
@@ -148,5 +163,19 @@ RSpec.describe Flow do
       expect(once.reload).to have_attributes(next_run_at: nil, active: true)
       expect(once.last_run_at).to be_present
     end
+  end
+
+  it "TT-02: run! grava fluxo_executado com a origem do contexto" do
+    allow(DeliverMessageJob).to receive(:perform_in)
+    flow = command_flow(step("send_message", template_id: aviso.id.to_s))
+
+    flow.run!("sender_jid" => "9@lid", "push_name" => "Ellie", "text" => "!entrar", "origem" => "comando")
+    flow.run!("origem" => "executar_agora")
+
+    expect(AnalyticsEvent.where(name: "fluxo_executado").map(&:properties)).to eq([
+      { "flow_id" => flow.id, "whatsapp_group_id" => group.id, "origem" => "comando", "agendado_para" => nil, "passos" => 1 },
+      { "flow_id" => flow.id, "whatsapp_group_id" => group.id, "origem" => "executar_agora", "agendado_para" => nil, "passos" => 1 }
+    ])
+    expect(DeliverMessageJob).to have_received(:perform_in).with(0, kind_of(Integer), [], "comando")
   end
 end

@@ -102,4 +102,65 @@ RSpec.describe CynthiaAssistant do
 
     expect { described_class.new.reply("oi") }.to raise_error(CynthiaAssistant::Error, /não consegui pensar/)
   end
+
+  it "no grupo, não admin não cria proposta mesmo que a ferramenta esteja na lista (RF-26)" do
+    assistant = described_class.new(client: nil)
+    assistant.instance_variable_set(:@group, group)
+    assistant.instance_variable_set(:@channel, "group")
+    assistant.instance_variable_set(:@sender_admin, false)
+
+    output, action = assistant.send(:run_tool, "propose_variable", { "name" => "pix", "value" => "x" }, %w[propose_variable])
+
+    expect(output).to eq(error: "only group admins can propose changes")
+    expect(action).to be_nil
+    expect(AssistantAction.count).to eq(0)
+  end
+
+  it "TM-01 no painel: get_group leva só nomes e nomes de variáveis, um grupo, até 150 participantes" do
+    group.update!(variables: { "pix" => "e2e-pix@example.invalid" })
+    GroupParticipant.create!(whatsapp_group: group, jid: "5511988887777@s.whatsapp.net", phone_number: "5511988887777")
+    159.times { |i| GroupParticipant.create!(whatsapp_group: group, jid: "#{i}@lid", name: "P#{i}") }
+    WhatsappGroup.create!(jid: "g2@g.us", name: "Outro grupo")
+    peek = [ { type: "tool_use", id: "t1", name: "get_group", input: { group_id: group.id } } ]
+    stub_request(:post, api).to_return(api_response(peek, "tool_use"), api_response([ { type: "text", text: "ok" } ], "end_turn"))
+
+    described_class.new.reply("me liga no 5511988887777 ou 5511988887777@s.whatsapp.net", group: group)
+
+    bodies = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.map(&:body)
+    bodies.each { |body| expect(body).not_to include("5511988887777", "@s.whatsapp.net", "@lid", "e2e-pix@example.invalid") }
+    result = JSON.parse(JSON.parse(bodies.last)["messages"][2]["content"].sole["content"])
+    expect(result["members"].size).to eq(150)
+    expect(result["variable_names"]).to eq([ "pix" ])
+    expect(result["name"]).to eq("Vôlei")
+    expect(bodies.last).not_to include("Outro grupo")
+  end
+
+  it "TM-01 (S-02): telefone formatado e CPF na pergunta, num template e no nome do grupo viram [número]; cron, data e valor ficam" do
+    group.update!(name: "Vôlei 5511977776666")
+    group.templates.create!(name: "Pix", body: "Pix: +55 11 98888-7777 ou CPF 123.456.789-00, toda terça 0 14 * * 2, 21/10, R$ 1.234,56")
+    peek = [ { type: "tool_use", id: "t1", name: "get_group", input: { group_id: group.id } } ]
+    stub_request(:post, api).to_return(api_response(peek, "tool_use"), api_response([ { type: "text", text: "ok" } ], "end_turn"))
+
+    described_class.new.reply("liga (11) 98888-7777 ou +55 11 98888-7777", group: group)
+
+    bodies = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.map(&:body)
+    bodies.each { |body| expect(body).not_to include("98888-7777", "123.456.789-00", "5511977776666") }
+    expect(bodies.last).to include("0 14 * * 2", "21/10", "R$ 1.234,56", "[número]")
+  end
+
+  it "TM-01 (RF-29): telefone logo após @ (menção a quem não é participante) vira @[número]" do
+    expect(described_class.new.send(:redact, "@5511988887777 oi")).to eq("@[número] oi")
+  end
+
+  it "TM-01 (S-01): a migração apaga o histórico gravado antes da redação, e a próxima chamada não leva o telefone" do
+    require Rails.root.join("db/migrate/20261031140000_reset_assistant_history_for_rf29")
+    AssistantMessage.create!(role: "user", content: [ { type: "text", text: "oi" } ])
+    AssistantMessage.create!(role: "assistant", content: [ { type: "text", text: "label 5511988887777, pix segredo-pix@x" } ])
+    stub_request(:post, api).to_return(api_response([ { type: "text", text: "ok" } ], "end_turn"))
+
+    ActiveRecord::Migration.suppress_messages { ResetAssistantHistoryForRf29.new.up }
+    described_class.new.reply("e agora?")
+
+    expect(WebMock::RequestRegistry.instance.requested_signatures.hash.keys.sole.body).not_to include("5511988887777", "segredo-pix@x")
+  end
 end

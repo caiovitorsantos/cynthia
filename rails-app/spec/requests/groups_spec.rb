@@ -12,7 +12,7 @@ RSpec.describe "Groups", type: :request do
 
     patch group_path(group), params: { participants: { participant.id => { display_name: "Caio F.", member_list_ids: [ "", mensal.id, pagou.id, of_other_group.id ] } } }
 
-    expect(response).to redirect_to(group_path(group, anchor: "membros"))
+    expect(response).to redirect_to(group_path(group, tab: "membros", anchor: "membros"))
     expect(participant.reload.display_name).to eq("Caio F.")
     expect(participant.member_lists).to contain_exactly(mensal, pagou)
 
@@ -147,6 +147,11 @@ RSpec.describe "Groups", type: :request do
     expect(charge.reload).to be_paid
     patch group_charge_path(group, charge)
     expect(charge.reload).not_to be_paid
+    # TT-09/TT-10
+    expect(AnalyticsEvent.order(:id).map { |e| [ e.name, e.properties ] }.last(2)).to eq([
+      [ "cobranca_paga", { "charge_id" => charge.id, "whatsapp_group_id" => group.id, "periodo" => charge.period, "tipo" => "mensal", "origem" => "painel" } ],
+      [ "cobranca_desmarcada", { "charge_id" => charge.id, "whatsapp_group_id" => group.id, "periodo" => charge.period } ]
+    ])
     expect(caio.reload).to be_present
   end
 
@@ -159,8 +164,20 @@ RSpec.describe "Groups", type: :request do
       "2" => { name: "", value: "ignorado" }
     }, signature: " _— Cynth.ia do vôlei_ " }
 
-    expect(response).to redirect_to(group_path(group, anchor: "variaveis"))
+    expect(response).to redirect_to(group_path(group, tab: "variaveis", anchor: "variaveis"))
     expect(group.reload.variables).to eq("pix" => "pix@exemplo.com", "valor_mensal" => "R$45")
     expect(group.signature).to eq("_— Cynth.ia do vôlei_")
+  end
+
+  it "TC-28: o cabeçalho do grupo mostra se e quando o aviso de IA saiu" do
+    group = WhatsappGroup.create!(jid: "g1@g.us", name: "Vôlei")
+
+    get group_path(group)
+    expect(response.body).to include("Aviso de IA: não enviado")
+
+    MessageLog.create!(group_jid: group.jid, kind: MessageLog::AI_NOTICE, status: "failed", rendered_body: "aviso")
+    MessageLog.create!(group_jid: group.jid, kind: MessageLog::AI_NOTICE, status: "sent", rendered_body: "aviso", sent_at: Time.zone.local(2026, 10, 30, 12))
+    get group_path(group)
+    expect(response.body).to include("Aviso de IA: enviado em 30/10/2026")
   end
 end

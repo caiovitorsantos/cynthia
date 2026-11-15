@@ -1,11 +1,12 @@
 # Production on a single VPS: Caddy (automatic TLS) in front of Rails; Sidekiq, the WhatsApp service,
 # Postgres and Redis stay on the internal network. Only Caddy publishes ports.
-# Images come from the registry (GHCR) by tag; `deploy.sh <tag>` does the rollout and the rollback.
+# Images come from the registry (GHCR) pinned by digest (G10): `deploy.sh <rails@sha256:...> <wa@sha256:...>` does the
+# rollout and the rollback. Third-party images are pinned by digest too; Dependabot (docker-compose) proposes updates.
 name: cynthia
 
 services:
   caddy:
-    image: caddy:2
+    image: caddy:2@sha256:4e2425f6009577e7c651010f16679c28f7d12df3e7b1914f941a7a3370746b3c
     restart: unless-stopped
     ports:
       - '${CADDY_HTTP_PORT:-80}:80'
@@ -24,7 +25,7 @@ services:
       options: { max-size: '10m', max-file: '5' }
 
   rails:
-    image: ${IMAGE_RAILS:?}:${TAG:?}
+    image: ${IMAGE_RAILS:?}
     restart: unless-stopped
     env_file: .env
     environment:
@@ -47,7 +48,7 @@ services:
     logging: *logging
 
   sidekiq:
-    image: ${IMAGE_RAILS:?}:${TAG:?}
+    image: ${IMAGE_RAILS:?}
     command: ['bundle', 'exec', 'sidekiq']
     restart: unless-stopped
     env_file: .env
@@ -63,10 +64,11 @@ services:
     logging: *logging
 
   wa:
-    image: ${IMAGE_WA:?}:${TAG:?}
+    image: ${IMAGE_WA:?}
     restart: unless-stopped
-    env_file: .env
+    # Only what it uses (T7): no Anthropic key, admin password or master key here.
     environment:
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?}
       RAILS_WEBHOOK_URL: http://rails:80/webhooks/whatsapp
     volumes:
       # The WhatsApp session: lose it and the number has to be paired again. It is backed up (backup.sh).
@@ -74,7 +76,7 @@ services:
     logging: *logging
 
   db:
-    image: postgres:16
+    image: postgres:16@sha256:dd2bf3ce2dc83a81674cf7f217fcfd8a5009a4b325dda5b843bfee82a06cff6f
     restart: unless-stopped
     environment:
       POSTGRES_USER: cynthia
@@ -90,7 +92,7 @@ services:
     logging: *logging
 
   redis:
-    image: redis:7
+    image: redis:7@sha256:2e3eb11462c4e3759e6972678dd051d150ff54b1e60714b3c33b701260172a90
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     volumes:

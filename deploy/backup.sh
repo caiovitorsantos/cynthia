@@ -14,12 +14,12 @@ mkdir -p "$OUT"
 
 docker compose -f docker-compose.prod.yml --env-file .env exec -T db pg_dump -U cynthia -Fc cynthia > "$OUT/db-$STAMP.dump"
 # The archive is written as this user, mode 600 (it holds the WhatsApp credentials).
-docker run --rm -e OWNER="$(id -u):$(id -g)" -e STAMP="$STAMP" -v cynthia_wa_auth:/data:ro -v "$OUT":/out alpine \
+docker run --rm -e OWNER="$(id -u):$(id -g)" -e STAMP="$STAMP" -v "${COMPOSE_PROJECT_NAME:-cynthia}_wa_auth:/data:ro" -v "$OUT":/out alpine \
   sh -c 'umask 077 && tar czf "/out/wa_auth-$STAMP.tgz" -C /data . && chown "$OWNER" "/out/wa_auth-$STAMP.tgz"'
 
 # A dump that is empty or that pg_restore cannot read is not a backup.
 [[ -s "$OUT/db-$STAMP.dump" ]] || { echo "backup: empty database dump" >&2; exit 1; }
-docker run --rm -i postgres:16 pg_restore --list < "$OUT/db-$STAMP.dump" >/dev/null
+docker compose -f docker-compose.prod.yml --env-file .env exec -T db pg_restore --list < "$OUT/db-$STAMP.dump" >/dev/null
 
 find "$OUT" -type f \( -name 'db-*.dump' -o -name 'wa_auth-*.tgz' \) -mtime +14 -delete
 

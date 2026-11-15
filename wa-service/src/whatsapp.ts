@@ -36,7 +36,23 @@ type InboundEvent = {
   participant_jid: string;
   push_name: string | null;
   text: string;
+  // S-07: o Rails só trata como o próprio número (admin) com from_me explícito, não por participante vazio.
+  from_me: boolean;
 };
+
+// Eventos de sessão do tracking-plan (M4). Só código e números: sem JID nem nome.
+type SessionEvent =
+  | { kind: "session"; event: "sessao_conectada"; apos_queda_s: number | null }
+  | { kind: "session"; event: "sessao_caiu"; codigo: number | null; logout: boolean };
+
+// RNF-05b: ponto de injeção para o teste de reconexão usar um socket falso, sem WhatsApp nem ./auth.
+type Deps = {
+  makeSocket: typeof makeWASocket;
+  authState: () => ReturnType<typeof useMultiFileAuthState>;
+};
+
+let deps: Deps = { makeSocket: makeWASocket, authState: () => useMultiFileAuthState("./auth") };
+let droppedAt: number | undefined;
 
 const NUMBERED_LINE = /^\s*\d+\s*[.)-]/;
 
@@ -52,12 +68,14 @@ function mentionsMe(msg: WAMessage): boolean {
 
 // Reações, respostas que citam uma mensagem, comandos ("!..."), listas numeradas coladas e
 // menções à Cynth.ia, em grupos. O Rails decide o que fazer com cada um; o resto ele ignora.
-function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
+export function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
   const groupJid = msg.key.remoteJid;
   if (!groupJid?.endsWith("@g.us")) return undefined;
 
   const participantJid = msg.key.participant ?? "";
-  const base = { group_jid: groupJid, participant_jid: participantJid, push_name: msg.pushName ?? null };
+  // O Rails trata evento sem participante como o próprio número (admin): só o fromMe pode chegar assim (T18).
+  if (!participantJid && !msg.key.fromMe) return undefined;
+  const base = { group_jid: groupJid, participant_jid: participantJid, push_name: msg.pushName ?? null, from_me: Boolean(msg.key.fromMe) };
   const text = msg.message?.conversation ?? msg.message?.extendedTextMessage?.text ?? "";
 
   // Comandos valem também do próprio número conectado (o dono do bot digitando no celular).
@@ -89,7 +107,7 @@ function toInboundEvent(msg: WAMessage): InboundEvent | undefined {
   return undefined;
 }
 
-async function forwardToRails(event: InboundEvent): Promise<void> {
+async function forwardToRails(event: InboundEvent | SessionEvent): Promise<void> {
   const url = process.env.RAILS_WEBHOOK_URL;
   if (!url) return;
 
@@ -106,9 +124,9 @@ async function forwardToRails(event: InboundEvent): Promise<void> {
 }
 
 async function connect(): Promise<void> {
-  const { state, saveCreds } = await useMultiFileAuthState("./auth");
+  const { state, saveCreds } = await deps.authState();
 
-  sock = makeWASocket({
+  sock = deps.makeSocket({
     auth: state,
     logger: logger.child({ module: "baileys" }),
   });
@@ -145,6 +163,9 @@ async function connect(): Promise<void> {
       status = "connected";
       lastQR = undefined;
       logger.info("Conectado ao WhatsApp");
+      const aposQuedaS = droppedAt === undefined ? null : Math.round((Date.now() - droppedAt) / 1_000);
+      droppedAt = undefined;
+      void forwardToRails({ kind: "session", event: "sessao_conectada", apos_queda_s: aposQuedaS });
     }
 
     if (connection === "close") {
@@ -153,6 +174,8 @@ async function connect(): Promise<void> {
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
       status = "disconnected";
+      droppedAt = Date.now();
+      void forwardToRails({ kind: "session", event: "sessao_caiu", codigo: statusCode ?? null, logout: loggedOut });
 
       if (loggedOut) {
         // Sessão revogada (pelo celular ou pelo WhatsApp): a auth salva não serve mais, gera QR novo.
@@ -166,8 +189,9 @@ async function connect(): Promise<void> {
   });
 }
 
-export function init(): void {
-  connect();
+export function init(overrides: Partial<Deps> = {}): Promise<void> {
+  deps = { ...deps, ...overrides };
+  return connect();
 }
 
 export function getSocket(): WASocket | undefined {

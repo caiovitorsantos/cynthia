@@ -16,5 +16,9 @@ class Billing::Charge < ApplicationRecord
     group_participant&.label || guest_name
   end
 
+  def ai_label = group_participant&.ai_label || guest_name # RF-29
+
   def paid? = paid_at.present?
+
+  def event_properties = { charge_id: id, whatsapp_group_id: whatsapp_group_id, periodo: period } # sem nome (tracking-plan)
 end

@@ -238,4 +238,32 @@ RSpec.describe Attendance do
       expect(described_class.settings_from(params(read_lists: "0", extras_section: " Convidados "))).to eq("read_lists" => false, "extras_section" => "Convidados")
     end
   end
+
+  describe "eventos (tracking-plan)" do
+    def events(name) = AnalyticsEvent.where(name: name).map(&:properties)
+
+    it "TT-06/TT-07: reação, resposta e remoção gravam presenca_registrada e presenca_desfeita" do
+      record("✅")
+      record("✅") # mesma resposta: não é evento novo
+      record("❌", kind: "reply")
+      record("")
+
+      expect(events("presenca_registrada")).to eq([
+        { "rodada_id" => round.id, "whatsapp_group_id" => group.id, "participante_id" => caio.id, "convidado" => false,
+          "membro_cobrado" => true, "status" => "confirmed", "origem" => "reacao", "alterou_resposta" => false },
+        { "rodada_id" => round.id, "whatsapp_group_id" => group.id, "participante_id" => caio.id, "convidado" => false,
+          "membro_cobrado" => true, "status" => "declined", "origem" => "resposta", "alterou_resposta" => true }
+      ])
+      expect(events("presenca_desfeita")).to eq([ { "rodada_id" => round.id, "whatsapp_group_id" => group.id, "participante_id" => caio.id } ])
+    end
+
+    it "TT-06: lista colada grava origem lista; convidado só como booleano, sem nome" do
+      round.update!(rendered_body: "PRESENCA 21/10\n\n1. Caio\n\nAvulsos\n1.")
+      described_class.handle_event(rule, { kind: "list", message_id: "X", participant_jid: "1@lid", text: "PRESENCA 21/10\n\n1. Caio ✅\n\nAvulsos\n1. e2e-Pedro ✅" })
+
+      expect(events("presenca_registrada").map { |e| e.values_at("origem", "convidado", "participante_id") })
+        .to contain_exactly([ "lista", false, caio.id ], [ "lista", true, nil ])
+      expect(AnalyticsEvent.pluck(:properties).to_json).not_to include("e2e-Pedro")
+    end
+  end
 end

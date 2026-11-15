@@ -4,8 +4,8 @@ Uma VPS com Docker Compose. Caddy na frente (TLS automático), Rails, Sidekiq, s
 Postgres e Redis na rede interna. Decisão e alternativas: `docs/adr/010-deploy-vps-compose-operado.md`.
 
 ```
-GitHub (main) ─ CI verde ─▶ build das imagens (GHCR, tag = commit) ─▶ aprovação (environment production)
-        ─▶ SSH na VPS: deploy.sh <tag> ─▶ saúde ok? sim: fica · não: volta para a tag anterior ─▶ smoke https://DOMINIO/up
+GitHub (main) ─ CI verde ─▶ build + trivy das imagens ─▶ GHCR (digest) ─▶ aprovação (environment production)
+        ─▶ SSH na VPS: deploy.sh <rails@sha256> <wa@sha256> ─▶ saúde ok? sim: fica · não: volta para a anterior ─▶ smoke https://DOMINIO/up
 ```
 
 ## 1. A máquina
@@ -48,13 +48,16 @@ cp .env.production.example .env   # depois do primeiro deploy (os arquivos chega
 ## 4. Deploy normal
 
 Merge na `main` → o workflow **CI** roda → o **Deploy** constrói as imagens e espera sua aprovação no GitHub → faz o rollout → testa `https://DOMINIO/up`.
-Se a versão nova não ficar saudável em 3 minutos, o `deploy.sh` volta sozinho para a anterior e o workflow falha.
+Antes de trocar as imagens, o `deploy.sh` roda o `backup.sh` (as migrations rodam no boot, pelo `db:prepare`, e algumas só mexem em dados: a `20261031140000` apaga o histórico do chat). Se o backup falhar, nada muda e o deploy para; por isso `/var/backups/cynthia` (seção 7) precisa existir antes do primeiro deploy com versão anterior. Pular o backup só com `SKIP_BACKUP=1`, conscientemente.
+Se a versão nova não ficar saudável em 3 minutos (`/up` do Rails e `/health` do wa), o `deploy.sh` volta sozinho para a anterior e o workflow falha.
 
 ## 5. Rollback
 
-- Pelo GitHub: **Actions → Deploy → Run workflow** com a tag antiga no campo `tag` (a tag é o início do SHA do commit; a atual e a anterior estão em `~/cynthia/.deploy/`).
-- Pela VPS: `cd ~/cynthia && IMAGE_RAILS=... IMAGE_WA=... ./deploy.sh "$(cat .deploy/previous)"`.
-- **As migrations não voltam.** Escreva-as para a versão anterior continuar funcionando (adicionar coluna agora, remover só num deploy seguinte).
+- Pelo GitHub: **Actions → Deploy → Run workflow** com os digests antigos em `rails_digest` e `wa_digest` (`sha256:...`; estão no resumo do run de build que os publicou e em `~/cynthia/.deploy/current` e `previous`). Tag não serve: o deploy só aceita digest.
+- Pela VPS: `cd ~/cynthia && ./deploy.sh $(cat .deploy/previous)` (sem aspas: o arquivo tem as duas referências).
+- Rails, Sidekiq e wa são **uma release** (par de digests) e voltam juntos (S-07: o Rails novo espera o `from_me` do wa novo). Nunca troque a imagem de um só serviço à mão.
+- Ensaio local em 2026-11-15 (registro local, por digest): wa quebrado de propósito → rollback automático, os três serviços de volta na release anterior; rollback manual por `.deploy/previous` → saudável.
+- **As migrations não voltam.** Dado apagado ou alterado por migration volta só pelo backup tirado no início do deploy (seção 7). Escreva-as para a versão anterior continuar funcionando (adicionar coluna agora, remover só num deploy seguinte).
 
 ## 6. WhatsApp
 
@@ -89,8 +92,8 @@ Restaurar a sessão do WhatsApp: pare o serviço `wa`, extraia o `.tgz` no volum
 ## 9. Manutenção
 
 - Atualizações de segurança do sistema: automáticas (`unattended-upgrades`); reinicie a VPS quando o aviso de reboot aparecer.
-- Imagens base (`postgres:16`, `redis:7`, `caddy:2`): `docker compose ... pull db redis caddy && docker compose ... up -d`.
-- Rotação de segredos: edite o `.env` e rode `./deploy.sh "$(cat .deploy/current)"`.
+- Imagens base (`postgres:16`, `redis:7`, `caddy:2`): fixadas por digest no `docker-compose.prod.yml`; o Dependabot abre o PR com o digest novo (só minor/patch) e o deploy seguinte aplica. Major (ex.: Postgres 17) é migração planejada (dump/restore), não PR.
+- Rotação de segredos: edite o `.env` e rode `./deploy.sh $(cat .deploy/current)`.
 
 ## Limites conhecidos
 

@@ -242,6 +242,8 @@
     show:
       back: "← Groups"
       more: "More actions"
+      ai_notice_sent: "AI notice: sent on %{date}"
+      ai_notice_pending: "AI notice: not sent"
       remove: "Remove from panel"
       remove_confirm: "Remove %{name} from the panel? It comes back on the next sync if you're still a member. This group's lists, templates and flows will be deleted too."
       leave: "Leave group on WhatsApp"
@@ -530,6 +532,7 @@
     typing: "Cynth.ia is typing… no rush."
     placeholder: "E.g.: create a routine every Tuesday at 2pm with the attendance list"
     send: "Send"
+    message_label: "Message to Cynth.ia"
     hello: "Ugh, hi. Ask how the panel works or tell me to create a template, a routine or a variable. I'll show it before saving."
     no_key_html: "Ugh. No brain yet: the Anthropic key is missing. Put <code>ANTHROPIC_API_KEY</code> in <code>.env</code> and restart the panel."
     api_error: "Ugh, can't think right now: %{error}"
@@ -548,6 +551,7 @@
         create_flow: "new flow \"%{name}\""
         set_variable: "variable {{%{name}}}"
       confirm_hint: "_Admin: reply *yes* to this message and I'll do it. Ugh._"
+      ai_notice: "Hi, I'm Cynth.ia. This group uses a panel that records who confirmed attendance and who paid. When someone mentions me here, I answer using AI from Anthropic, a third-party company. To do that I send it the question and data from this group: participants' display names (never phone numbers), who is an admin, lists, attendance for the current round, payments, templates, flows and variable names (never their values, like the Pix key). I only answer when mentioned."
       result:
         done: "Done: %{what}. You're welcome."
         failed: "Didn't work (%{what}): %{result}"

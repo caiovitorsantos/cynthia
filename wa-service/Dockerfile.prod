@@ -11,6 +11,8 @@ FROM node:22-slim
 ENV NODE_ENV=production
 WORKDIR /app
 RUN apt-get update -qq && apt-get install --no-install-recommends -y curl && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+# S-06: the app runs with `node`, never npm; the bundled npm carries HIGH CVEs that would fail the deploy trivy.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./

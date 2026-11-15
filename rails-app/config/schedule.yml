@@ -5,3 +5,11 @@ run_due_flows:
 sync_groups:
   cron: "*/30 * * * *"
   class: "SyncGroupsJob"
+
+retention:
+  cron: "15 4 * * *"
+  class: "RetentionJob"
+
+assistant_retention:
+  cron: "20 4 * * *"
+  class: "AssistantRetentionJob"

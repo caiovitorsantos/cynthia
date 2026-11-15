@@ -10,7 +10,7 @@ class TemplatesController < ApplicationController
     @template = @group.templates.new(template_params)
 
     if @template.save
-      redirect_to group_path(@group, anchor: "templates"), notice: t(".notice")
+      redirect_to group_path(@group, tab: "templates", anchor: "templates"), notice: t(".notice")
     else
       render :new, status: :unprocessable_entity
     end
@@ -21,7 +21,7 @@ class TemplatesController < ApplicationController
 
   def update
     if @template.update(template_params)
-      redirect_to group_path(@group, anchor: "templates"), notice: t(".notice")
+      redirect_to group_path(@group, tab: "templates", anchor: "templates"), notice: t(".notice")
     else
       render :edit, status: :unprocessable_entity
     end
@@ -29,9 +29,9 @@ class TemplatesController < ApplicationController
 
   def destroy
     if @template.destroy
-      redirect_to group_path(@group, anchor: "templates"), notice: t(".notice")
+      redirect_to group_path(@group, tab: "templates", anchor: "templates"), notice: t(".notice")
     else
-      redirect_to group_path(@group, anchor: "templates"), alert: t(".alert", errors: @template.errors.full_messages.to_sentence)
+      redirect_to group_path(@group, tab: "templates", anchor: "templates"), alert: t(".alert", errors: @template.errors.full_messages.to_sentence)
     end
   end
 

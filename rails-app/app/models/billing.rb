@@ -50,6 +50,10 @@ module Billing
         charges(group).find_or_create_by!(group_participant_id: response.group_participant_id, guest_name: response.guest_name,
                                           period: period, kind: "avulso", date: response.message_log.sent_at.to_date)
       end
+
+      counts = charges(group).where(period: period).group(:kind).count
+      AnalyticsEvent.track(:cobranca_aberta, whatsapp_group_id: group.id, periodo: period,
+                                             mensalidades: counts["mensal"].to_i, diarias: counts["avulso"].to_i)
     end
 
     def current_period(rule)
@@ -126,7 +130,10 @@ module Billing
         charge = find_charge(group, period, date, name, people)
 
         if charge
-          charge.update!(paid_at: Time.current) unless charge.paid?
+          unless charge.paid?
+            charge.update!(paid_at: Time.current)
+            AnalyticsEvent.track(:cobranca_paga, **charge.event_properties, tipo: charge.kind, origem: "colagem")
+          end
         else
           unmatched << name
         end

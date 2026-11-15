@@ -242,6 +242,8 @@
     show:
       back: "← Grupos"
       more: "Más acciones"
+      ai_notice_sent: "Aviso de IA: enviado el %{date}"
+      ai_notice_pending: "Aviso de IA: no enviado"
       remove: "Quitar del panel"
       remove_confirm: "¿Quitar %{name} del panel? Vuelve en la próxima sincronización si sigues siendo miembro. Las listas, plantillas y flujos de este grupo también se borrarán."
       leave: "Salir del grupo en WhatsApp"
@@ -530,6 +532,7 @@
     typing: "Cynth.ia está escribiendo… sin prisa."
     placeholder: "Ej.: crea una rutina cada martes a las 14h con la lista de asistencia"
     send: "Enviar"
+    message_label: "Mensaje para Cynth.ia"
     hello: "Ugh, hola. Pregunta cómo usar el panel o pídeme crear una plantilla, una rutina o una variable. Te lo muestro antes de guardar."
     no_key_html: "Ugh. Todavía no tengo cerebro: falta la clave de Anthropic. Pon <code>ANTHROPIC_API_KEY</code> en el <code>.env</code> y reinicia el panel."
     api_error: "Ugh, no puedo pensar ahora: %{error}"
@@ -548,6 +551,7 @@
         create_flow: "nuevo flujo \"%{name}\""
         set_variable: "variable {{%{name}}}"
       confirm_hint: "_Admin: responde *sí* a este mensaje y lo hago. Ugh._"
+      ai_notice: "Hola, soy Cynth.ia. Este grupo usa un panel que registra quién confirmó asistencia y quién pagó. Cuando alguien me menciona aquí, respondo usando la IA de Anthropic, una empresa tercera. Para eso le envío la pregunta y datos de este grupo: nombre visible de los participantes (nunca el teléfono), quién es admin, listas, asistencia de la ronda, pagos, plantillas, flujos y el nombre de las variables (nunca el valor, como la clave Pix). Solo respondo cuando me mencionan."
       result:
         done: "Hecho: %{what}. De nada."
         failed: "No funcionó (%{what}): %{result}"

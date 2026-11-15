@@ -1,0 +1,22 @@
+# Stack E2E: docker compose -p cynthia-e2e -f docker-compose.yml -f e2e/docker-compose.e2e.yml up -d --build
+# wa-service falso (e2e/support/fake-wa.mjs), env próprio (e2e/.env.e2e, gerado por e2e/support/env.sh)
+# e porta própria (E2E_PORT, padrão 3555) para não colidir com o dev em :3000. Nunca lê app/.env.
+services:
+  rails:
+    env_file: !override e2e/.env.e2e
+    command: ["bin/rails", "server", "-b", "0.0.0.0", "-P", "/tmp/server.pid"]
+    ports: !override
+      - "127.0.0.1:${E2E_PORT:-3555}:3000"
+
+  sidekiq:
+    env_file: !override e2e/.env.e2e
+
+  wa:
+    build: !reset null
+    image: node:22-alpine
+    command: ["node", "/e2e/fake-wa.mjs"]
+    volumes: !override
+      - ./e2e/support:/e2e:ro
+    # Só o wa falso publica porta (o teste muda o estado por /__state); o wa real nunca (TM-14).
+    ports:
+      - "127.0.0.1:${E2E_WA_PORT:-3556}:3001"

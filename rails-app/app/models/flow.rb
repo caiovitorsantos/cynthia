@@ -41,7 +41,7 @@ class Flow < ApplicationRecord
       next unless step
 
       values = step[:fields].index_with { |field| row[field].to_s.strip }.compact_blank
-      values["name"] = values["name"].parameterize(separator: "_") if values.key?("name")
+      values["name"] = Template.key_for(values["name"]) if values.key?("name")
       { "type" => row[:type] }.merge(values)
     end
   end
@@ -63,8 +63,11 @@ class Flow < ApplicationRecord
     steps.filter_map { |step| step["template_id"].to_i if step["type"] == "send_message" }
   end
 
-  # context (fluxo de comando): "sender_jid", "push_name" e "text" da mensagem do comando.
+  # context (fluxo de comando): "sender_jid", "push_name" e "text" da mensagem do comando. "origem" (rotina,
+  # comando, executar_agora) e "agendado_para" só vão para o evento fluxo_executado (tracking-plan).
   def run!(context = {})
+    AnalyticsEvent.track(:fluxo_executado, flow_id: id, whatsapp_group_id: whatsapp_group_id, origem: context["origem"],
+                                           agendado_para: context["agendado_para"], passos: steps.size)
     sender = whatsapp_group.participant_for!(context["sender_jid"], context["push_name"]) if context["sender_jid"].present?
     variables = sender ? { "remetente" => sender.label, "argumento" => context["text"].to_s.strip.split(" ", 2)[1].to_s } : {}
     delay = 0
@@ -75,7 +78,7 @@ class Flow < ApplicationRecord
 
       case step["type"]
       when "send_message"
-        send_template(whatsapp_group.templates.find(step["template_id"]), variables, step, delay: delay)
+        send_template(whatsapp_group.templates.find(step["template_id"]), variables, step, delay: delay, origem: context["origem"])
         # ponytail: espaça os envios pela janela do SendGuard; fila por grupo se ficar lento.
         delay += SendGuard::THROTTLE_WINDOW + 1
       when "add_to_list" then list.group_participants << sender unless list.group_participants.include?(sender)
@@ -103,7 +106,7 @@ class Flow < ApplicationRecord
     self.next_run_at = schedule? ? ScheduleCalculator.next_run(self) : nil
   end
 
-  def send_template(template, variables, step, delay:)
+  def send_template(template, variables, step, delay:, origem:)
     now = Time.current.in_time_zone(timezone)
     whatsapp_group.group_rules.each { |rule| rule.handler.before_message(rule, step, now) }
     result = TemplateRenderer.call(template, variables, whatsapp_group: whatsapp_group, now: now)
@@ -114,7 +117,7 @@ class Flow < ApplicationRecord
     whatsapp_group.group_rules.each { |rule| rule.handler.prepare_message(rule, message_log, template) }
     message_log.save!
 
-    DeliverMessageJob.perform_in(delay, message_log.id, result.mentioned_jids)
+    DeliverMessageJob.perform_in(delay, message_log.id, result.mentioned_jids, origem)
   end
 
   def schedule_is_valid
