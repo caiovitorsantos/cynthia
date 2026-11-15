@@ -34,6 +34,9 @@ wait_healthy() {
 # Called inside `if`, where `set -e` does not apply: every step has to fail the function by itself.
 rollout() {
   export IMAGE_RAILS="$1" IMAGE_WA="$2"
+  # Datadog unified tagging: the release is the Rails image digest (short), so traces and deploys line up.
+  DD_VERSION="${IMAGE_RAILS##*@sha256:}"
+  export DD_VERSION="${DD_VERSION:0:12}"
   if [[ "${SKIP_PULL:-0}" != 1 ]]; then compose pull rails sidekiq wa || return 1; fi
   compose up -d --remove-orphans || return 1
   wait_healthy
