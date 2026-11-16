@@ -25,6 +25,9 @@ find "$OUT" -type f \( -name 'db-*.dump' -o -name 'wa_auth-*.tgz' \) -mtime +14 
 
 if [[ -n "${BACKUP_REMOTE:-}" ]]; then
   command -v rclone >/dev/null || { echo "backup: BACKUP_REMOTE is set but rclone is not installed" >&2; exit 1; }
+  # The archives hold the WhatsApp session and personal data: never copy them to a remote that does not encrypt (L-03).
+  rclone config show "${BACKUP_REMOTE%%:*}" 2>/dev/null | grep -q '^type = crypt' \
+    || { echo "backup: BACKUP_REMOTE is not an rclone crypt remote, nothing copied" >&2; exit 1; }
   rclone copy "$OUT" "$BACKUP_REMOTE" --include 'db-*.dump' --include 'wa_auth-*.tgz'
 fi
 # monitor.sh alerts when this is older than 26 h: written only after every step above succeeded.

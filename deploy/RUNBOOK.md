@@ -38,7 +38,7 @@ cp .env.production.example .env   # depois do primeiro deploy (os arquivos chega
 
 ## 3. Configurar o GitHub (uma vez)
 
-1. Gere a chave do deploy: `ssh-keygen -t ed25519 -f deploy_key -C cynthia-deploy`. A pública vai para `~deploy/.ssh/authorized_keys` na VPS.
+1. Gere a chave do deploy: `ssh-keygen -t ed25519 -f deploy_key -C cynthia-deploy`. A pública vai para `~deploy/.ssh/authorized_keys` na VPS, com `restrict ` na frente da linha (sem terminal nem encaminhamento; `scp` e os comandos do deploy continuam funcionando).
 2. `ssh-keyscan -t ed25519 IP_DA_VPS` gera o `known_hosts`: confira a impressão digital com a do painel do provedor.
 3. A aprovação é o próprio **Run workflow**: o deploy não tem gatilho automático e só quem tem escrita no repositório (o dono) pode dispará-lo (ADR-010, revisão 2026-11-15). Num repositório privado do GitHub Free não há revisor obrigatório em environment; o environment `production` fica só como registro (GitHub → Deployments).
 4. Crie os **secrets de repositório** (Settings → Secrets and variables → Actions) `DEPLOY_HOST`, `DEPLOY_USER` (`deploy`), `DEPLOY_SSH_KEY` (a privada) e `DEPLOY_KNOWN_HOSTS`, e a **variable** `DOMAIN`. De repositório porque segredo de environment em repositório privado exige GitHub Pro ou superior. Não dê escrita no repositório a mais ninguém sem rever isso: quem tem escrita pode implantar.
@@ -74,7 +74,7 @@ Agende `backup.sh` (Postgres + sessão do WhatsApp) no cron do usuário `deploy`
 
 A segunda linha é o monitor (`monitor.sh`, precisa de `jq` no host): WhatsApp desconectado, contêiner parado, taxa de 5xx, p99, fila do Sidekiq, disco e backup sem sucesso há 26 h, avisando pelo Healthchecks.io. O backup só conta como feito quando grava `last-ok`; o monitor alerta sem ele. Detalhes, limiares e ações: `docs/runbook.md` do projeto.
 
-Guarda 14 dias em `/var/backups/cynthia` (crie a pasta com dono `deploy`). Para copiar para fora da máquina, instale o `rclone`, configure um remoto com `crypt` e ponha `BACKUP_REMOTE=nome:pasta` no `.env`. **Backup só na própria VPS não é backup.**
+Guarda 14 dias em `/var/backups/cynthia` (crie a pasta com dono `deploy`). Para copiar para fora da máquina, instale o `rclone`, configure um remoto com `crypt` e ponha `BACKUP_REMOTE=nome-crypt:pasta` no `.env`. O `backup.sh` recusa remoto que não seja `crypt` (os arquivos têm a sessão do WhatsApp e dados pessoais). No provedor, use uma credencial que grava mas não apaga objetos (ou versionamento/object lock no bucket): assim uma invasão da VPS não leva os backups junto. **Backup só na própria VPS não é backup.**
 
 Restaurar o banco (num banco novo, para conferir antes de trocar):
 

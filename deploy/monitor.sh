@@ -63,7 +63,8 @@ disk="$(df --output=pcent / | tail -1 | tr -dc 0-9)"
 (( disk < ${MAX_DISK_PCT:-85} )) || problems+=("disk: ${disk}% used")
 
 # Backup: backup.sh touches last-ok only when the dump, the WhatsApp archive and the remote copy all worked.
-backup_ok="${BACKUP_DIR:-/var/backups/cynthia}/last-ok"
+backup_dir="${BACKUP_DIR:-$(sed -n 's/^BACKUP_DIR=//p' .env 2>/dev/null)}"   # same override backup.sh reads from .env
+backup_ok="${backup_dir:-/var/backups/cynthia}/last-ok"
 [[ -n "$(find "$backup_ok" -mmin -$((26 * 60)) 2>/dev/null)" ]] || problems+=("backup: no successful backup in 26 h ($backup_ok)")
 
 if (( ${#problems[@]} == 0 )); then

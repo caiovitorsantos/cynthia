@@ -135,7 +135,8 @@ jobs:
       (needs.build.result == 'skipped' && github.event_name == 'workflow_dispatch' &&
        github.ref == 'refs/heads/main' && inputs.rails_digest != ''))
     runs-on: ubuntu-latest
-    # The required reviewers of this environment are the human approval of the production release.
+    # Only a record in GitHub > Deployments: there are no required reviewers (private repo on GitHub Free). The
+    # human approval is the manual Run workflow (ADR-010, revision 2026-11-15).
     environment: production
     permissions:
       contents: read

@@ -72,7 +72,10 @@ if rollout "$RAILS_REF" "$WA_REF"; then
 fi
 
 echo "deploy: $RELEASE did not become healthy" >&2
-compose logs --tail 40 rails wa >&2 || true
+# The app logs can carry group names and JIDs: they stay on the server (mode 600), never in the CI log (L-02).
+( umask 077; compose logs --tail 200 rails sidekiq wa > "$STATE/last-failure.log" 2>&1 ) || true
+echo "deploy: logs of the failed release are in $PWD/$STATE/last-failure.log" >&2
+compose ps --all >&2 || true
 if [[ -n "$PREVIOUS" && "$PREVIOUS" != "$RELEASE" ]]; then
   echo "deploy: rolling back to $PREVIOUS" >&2
   read -r -a prev <<< "$PREVIOUS"
