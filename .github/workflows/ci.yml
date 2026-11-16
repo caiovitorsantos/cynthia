@@ -184,4 +184,6 @@ jobs:
         with:
           name: lighthouse-rnf02
           path: e2e/.lighthouseci/
+          # .lighthouseci is a hidden directory: without this the artifact came out empty (lhr-*.json has the numbers).
+          include-hidden-files: true
           retention-days: 7

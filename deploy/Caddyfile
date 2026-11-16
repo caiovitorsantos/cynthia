@@ -2,6 +2,19 @@
 {$DOMAIN} {
 	encode zstd gzip
 
+	# Access log (JSON, stdout -> docker logs) for monitor.sh: 5xx rate and p99 come from `status` and `duration`.
+	# No PII beyond what diagnosis needs: request/response headers dropped, IP cut to /16, query string dropped.
+	log {
+		output stdout
+		format filter {
+			request>headers delete
+			resp_headers delete
+			request>remote_ip ip_mask 16 32
+			request>client_ip ip_mask 16 32
+			request>uri regexp \?.* ""
+		}
+	}
+
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"

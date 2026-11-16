@@ -42,7 +42,10 @@ test("TM-16/TM-17/TM-10: compose de produção válido, só o caddy publica port
   const withPorts = Object.entries(services).filter(([, s]: any) => (s.ports ?? []).length).map(([n]) => n);
   expect(withPorts).toEqual(["caddy"]);
   expect(services.wa.env_file ?? []).toEqual([]);
-  expect(Object.keys(services.wa.environment).sort()).toEqual(["INTERNAL_API_TOKEN", "RAILS_WEBHOOK_URL"]);
+  // Config do tracer do Datadog (ADR-012) não é segredo; a chave da API não pode chegar ao wa.
+  const tracer = ["DD_AGENT_HOST", "DD_ENV", "DD_SERVICE", "DD_TRACE_ENABLED", "DD_VERSION", "NODE_OPTIONS"];
+  const waEnv = Object.keys(services.wa.environment).filter((k) => !tracer.includes(k)).sort();
+  expect(waEnv).toEqual(["INTERNAL_API_TOKEN", "RAILS_WEBHOOK_URL"]);
   const caddy = read("deploy/Caddyfile");
   expect([...caddy.matchAll(/reverse_proxy\s+(\S+)/g)].map((m) => m[1])).toEqual(["rails:80"]);
   expect(caddy).toMatch(/Strict-Transport-Security\s+"max-age=\d+/);
@@ -60,14 +63,13 @@ test("TM-18: imagens de produção sem root e sem modo dev", () => {
   expect(read("rails-app/Dockerfile")).toMatch(/^USER 1000:1000$/m);
 });
 
-test("TM-19/TM-24: deploy.yml só constrói push na main deste repo e o dispatch só a partir da main", () => {
+test("TM-19/TM-24: deploy.yml só por Run workflow a partir da main, com CI verde no commit", () => {
   const yml = read(".github/workflows/deploy.yml");
   expect(yml).toMatch(/^permissions: \{\}$/m);
+  // ADR-010 (revisão 2026-11-15): sem gatilho automático; o clique do dono é a aprovação.
+  expect(yml).not.toMatch(/^\s*workflow_run:/m);
   const build = yml.slice(yml.indexOf("  build:"), yml.indexOf("  deploy:"));
-  for (const cond of ["github.event.workflow_run.conclusion == 'success'", "github.event.workflow_run.event == 'push'",
-    "github.event.workflow_run.head_branch == 'main'", "github.event.workflow_run.head_repository.full_name == github.repository"]) {
-    expect(build).toContain(cond);
-  }
+  expect(build).toContain("gh run list -R \"$GITHUB_REPOSITORY\" -w CI -c \"$SHA\" -e push");
   const deploy = yml.slice(yml.indexOf("  deploy:"));
   expect(deploy).toMatch(/needs: build/);
   expect(deploy).toMatch(/needs\.build\.result == 'success'/);

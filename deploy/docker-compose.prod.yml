@@ -12,6 +12,8 @@ x-datadog: &datadog
   DD_ENV: production
   DD_VERSION: ${DD_VERSION:-}
 
+# IMAGE_RAILS / IMAGE_WA are exported by deploy.sh (digest only). Without them (backup.sh, monitor.sh, a manual
+# `docker compose ps|logs|exec|restart`), compose falls back to the local tags deploy.sh puts on the running release.
 services:
   caddy:
     image: caddy:2@sha256:4e2425f6009577e7c651010f16679c28f7d12df3e7b1914f941a7a3370746b3c
@@ -37,7 +39,7 @@ services:
       options: { max-size: '10m', max-file: '5' }
 
   rails:
-    image: ${IMAGE_RAILS:?}
+    image: ${IMAGE_RAILS:-cynthia-keep:current-rails}
     restart: unless-stopped
     env_file: .env
     environment:
@@ -62,7 +64,7 @@ services:
     logging: *logging
 
   sidekiq:
-    image: ${IMAGE_RAILS:?}
+    image: ${IMAGE_RAILS:-cynthia-keep:current-rails}
     command: ['bundle', 'exec', 'sidekiq']
     restart: unless-stopped
     env_file: .env
@@ -80,7 +82,7 @@ services:
     logging: *logging
 
   wa:
-    image: ${IMAGE_WA:?}
+    image: ${IMAGE_WA:-cynthia-keep:current-wa}
     restart: unless-stopped
     # Only what it uses (T7): no Anthropic key, admin password or master key here.
     environment:

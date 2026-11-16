@@ -1,26 +1,22 @@
-# Build once, deploy the same images: CI green on main -> trivy -> images in GHCR (tag = commit, for people) ->
-# approval in the `production` environment -> rollout on the VPS by digest (deploy/deploy.sh, with automatic
-# rollback) -> smoke test. The deploy never uses a tag (G10): the digest comes from the push of the scanned image.
+# Build once, deploy the same images: the owner clicks Run workflow on main (that click is the human approval) ->
+# CI green for that commit -> trivy -> images in GHCR (tag = commit, for people) -> rollout on the VPS by digest
+# (deploy/deploy.sh, with automatic rollback) -> smoke test. The deploy never uses a tag (G10): the digest comes from the push of the scanned image.
 # Rollback or redeploy of an older version: Actions > Deploy > Run workflow, with the two digests (they are in the
 # summary of the build that published them and in ~/cynthia/.deploy/ on the server).
 #
 # Accepted deviation (ADR-010): no staging and no OIDC. There is no cloud account; GHCR uses GITHUB_TOKEN and the
-# VPS is reached by an SSH key that only exists as a secret of the `production` environment (required reviewer).
+# VPS is reached by an SSH key kept as a GitHub secret.
+# Manual deploy only (ADR-010, revision 2026-11-15): a private repository on GitHub Free has no required reviewers in
+# environments, so nothing deploys by itself; only someone with write access (the owner) can run this workflow.
 #
-# One-time setup (see deploy/RUNBOOK.md): environment `production` with a required reviewer, its secrets
-# DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS and the variable DOMAIN.
+# One-time setup (see deploy/RUNBOOK.md): secrets DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS and the
+# variable DOMAIN (in the `production` environment when the plan allows it, otherwise in the repository).
 name: Deploy
 
-# Security: `workflow_run` runs with this repository's permissions, and `branches: [main]` also matches a pull request
-# from a fork whose branch is called `main`. The condition below only builds a push to `main` of this very repository.
-# A manual run (workflow_dispatch) only deploys when started from `main` (T22): the deploy files, deploy.sh and this
-# workflow then come from the reviewed branch, never from a feature branch.
+# Security: a run only deploys when started from `main` (T22): the deploy files, deploy.sh and this workflow then
+# come from the reviewed branch, never from a feature branch. No `workflow_run` trigger: a merge never deploys alone.
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       rails_digest:
@@ -41,16 +37,12 @@ concurrency:
 jobs:
   build:
     if: >-
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'main' &&
-       github.event.workflow_run.head_repository.full_name == github.repository) ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.rails_digest == '')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      actions: read # to check that CI passed on this commit
     outputs:
       rails_image: ${{ steps.push.outputs.rails_image }}
       wa_image: ${{ steps.push.outputs.wa_image }}
@@ -58,7 +50,7 @@ jobs:
       - name: Resolve the commit and the tag
         id: meta
         env:
-          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          SHA: ${{ github.sha }}
           OWNER: ${{ github.repository_owner }}
         run: |
           {
@@ -66,6 +58,14 @@ jobs:
             echo "tag=${SHA:0:12}"
             echo "owner=${OWNER,,}"
           } >> "$GITHUB_OUTPUT"
+      # Replaces the old workflow_run gate: never build a commit whose CI (push on main) did not pass.
+      - name: CI is green for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          c="$(gh run list -R "$GITHUB_REPOSITORY" -w CI -c "$SHA" -e push -L 1 --json conclusion --jq '.[0].conclusion')"
+          [[ "$c" == success ]] || { echo "CI on $SHA is '${c:-not run}', not success: merge, wait for CI, run again"; exit 1; }
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ steps.meta.outputs.sha }}
@@ -135,7 +135,8 @@ jobs:
       (needs.build.result == 'skipped' && github.event_name == 'workflow_dispatch' &&
        github.ref == 'refs/heads/main' && inputs.rails_digest != ''))
     runs-on: ubuntu-latest
-    # The required reviewers of this environment are the human approval of the production release.
+    # Only a record in GitHub > Deployments: there are no required reviewers (private repo on GitHub Free). The
+    # human approval is the manual Run workflow (ADR-010, revision 2026-11-15).
     environment: production
     permissions:
       contents: read
@@ -164,7 +165,7 @@ jobs:
           { echo "RAILS_IMAGE=$rails"; echo "WA_IMAGE=$wa"; } >> "$GITHUB_ENV"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: SSH access
         env:
