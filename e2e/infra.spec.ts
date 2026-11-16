@@ -42,7 +42,10 @@ test("TM-16/TM-17/TM-10: compose de produção válido, só o caddy publica port
   const withPorts = Object.entries(services).filter(([, s]: any) => (s.ports ?? []).length).map(([n]) => n);
   expect(withPorts).toEqual(["caddy"]);
   expect(services.wa.env_file ?? []).toEqual([]);
-  expect(Object.keys(services.wa.environment).sort()).toEqual(["INTERNAL_API_TOKEN", "RAILS_WEBHOOK_URL"]);
+  // Config do tracer do Datadog (ADR-012) não é segredo; a chave da API não pode chegar ao wa.
+  const tracer = ["DD_AGENT_HOST", "DD_ENV", "DD_SERVICE", "DD_TRACE_ENABLED", "DD_VERSION", "NODE_OPTIONS"];
+  const waEnv = Object.keys(services.wa.environment).filter((k) => !tracer.includes(k)).sort();
+  expect(waEnv).toEqual(["INTERNAL_API_TOKEN", "RAILS_WEBHOOK_URL"]);
   const caddy = read("deploy/Caddyfile");
   expect([...caddy.matchAll(/reverse_proxy\s+(\S+)/g)].map((m) => m[1])).toEqual(["rails:80"]);
   expect(caddy).toMatch(/Strict-Transport-Security\s+"max-age=\d+/);
